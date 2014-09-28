@@ -1,0 +1,77 @@
+{
+    "General_Config": {
+        
+        "URL"			        : "https://example.com",
+        "static_resources_URL"  : "https://static.example.com",
+        "cookie_path"		    : "/",
+        "cookie_domain"		    : ".example.com",
+        "index"			        : "",
+        "hp_name"		        : "My Homepage",
+        "dir_upload"		    : "uploads",
+        "admin_name"		    : "John Doe",
+        "admin_mail"		    : "admin@example.com",
+        "mail"			        : "support@example.com",
+        "minify_css"	    	: true,
+        "minify_js"		        : false,
+        "minify_hp"		        : false,
+        "log_count"		        : 50,
+        "timezone"		        : "Europe/Berlin",
+        "file_rewrite"	    	: "{$index}?request=",
+        "link_rewrite"	    	: "{$index}?site=",
+        "upload_quota"	    	: 0,        
+        "display_stats"         : true,        
+        "index_content"         : "index",        
+        "session_timeout"       : 1800,        
+        "client_info_cache_time": 43200000,
+        "use_http"              : true,
+        "use_ssl"               : true,
+        "HTTP_port"             : 1234,
+        "SSL_port"              : 1235
+    },
+    "SSL_Config": {
+        "key"                   : "skellods-network.key",
+        "cert"                  : "skellods-network.crt",
+        "ca"                    : "ca-bundle.pem"
+    },
+    "Database_Config": {
+        
+        "default": {
+            
+            "DB_Host"           : "localhost",
+            "DB_Port"           : 3306,
+            "DB_Name"           : "",
+            "DB_User"           : "",
+            "DB_Pass"           : "",
+            "DB_Pre"            : "HP_",
+            "DB_Type"           : "SHPS_SQL_MYSQL",
+            "DB_ConnectionLimit": 20
+        },
+        "logging": {
+            
+            "DB_Host"           : "localhost",
+            "DB_Port"           : 3306,
+            "DB_Name"           : "",
+            "DB_User"           : "",
+            "DB_Pass"           : "",
+            "DB_Pre"            : "HP_",
+            "DB_Type"           : "SHPS_SQL_MYSQL",
+            "DB_ConnectionLimit": 20
+        },
+        "usermanagement": {
+            
+            "DB_Host"           : "localhost",
+            "DB_Port"           : 3306,
+            "DB_Name"           : "",
+            "DB_User"           : "",
+            "DB_Pass"           : "",
+            "DB_Pre"            : "HP_",
+            "DB_Type"           : "SHPS_SQL_MYSQL",
+            "DB_ConnectionLimit": 20
+        },
+        "Security_Config": {
+            
+            "login_delay"           : 1,
+            "max_login_delay"       : 3600
+        }
+    }
+}
