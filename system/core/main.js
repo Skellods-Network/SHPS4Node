@@ -27,6 +27,7 @@ var async = require('async');
 var colors = require('colors');
 var helper = require('./helper.js');
 var https = require('http2');
+var spdy = require('spdy');
 var http = require('http');
 
 var log = require('./log.js');
@@ -37,7 +38,7 @@ var cmd = require('./commandline.js');
 var config = [];
 var debug = false;
 var directories = {};
-var domain = '';
+var domain = [];
 
 
 /**
@@ -57,17 +58,6 @@ var _getDir
 }
 
 /**
- * Get full domain with subdomain
- * 
- * @return string
- */
-var _getDomain
-= me.getDomain = function () {
-    
-    return domain;
-}
-
-/**
  * Get setting from config file
  *
  * @param $group
@@ -82,7 +72,7 @@ var _getHPConfig
         typeof domain[$domain].$group !== 'undefined' &&
         typeof domain[$domain].$group.$key !== 'undefined') {
 
-            return domain[$domain].$group.$key;
+            return domain[$domain].$group.$key.value;
     }
 
     return;
@@ -151,44 +141,76 @@ var _listen
     
     for (var $c in config) {
         
-        if (config[$c].General_Config.use_ssl) {
+        if (config[$c].generalConfig.useHTTP2.value) {
+            
+            if (config[$c].generalConfig.useHTTP1.value) {
+                
+                var p = config[$c].generalConfig.HTTP1Port.value;
+                if (port.indexOf(p) == -1) {
+                    
+                    http.createServer(function ($req, $res) {
+                        
+                        var rs = helper.requestState();
+                        var domain = helper.SHPS_domain($req.url);
+                        rs.uri = domain.host;
+                        rs.config = _getConfig(rs.uri);
+                        rs.locked = true;
 
-            var p = config[$c].General_Config.SSL_port;
+                        request.handleRequest($req, $res, rs);
+                    })
+                .listen(p);
+                    
+                    log.write('HTTP/1.1 port opened on ' + p);
+                    port += p;
+                }
+            }
+
+            var p = config[$c].generalConfig.HTTP2Port.value;
             if (port.indexOf(p) == -1) {
                 
                 https.createServer({
-                    key: fs.readFileSync('./cert/' + config[$c].SSL_Config.key),
-                    cert: fs.readFileSync('./cert/' + config[$c].SSL_Config.cert),
-                    ca: fs.readFileSync('./cert/' + config[$c].SSL_Config.ca),
-                    
-                    //windowSize: 1024 * 1024,
-                    
-                    //autoSpdy31: true
+                    key: fs.readFileSync('./cert/' + config[$c].SSLConfig.key.value),
+                    cert: fs.readFileSync('./cert/' + config[$c].SSLConfig.cert.value),
+                    ca: fs.readFileSync('./cert/' + config[$c].SSLConfig.ca.value)
                 }, function ($res, $req) {
                     
-                    var conf = config[$c];
-                    request.handleRequest($res, $req, conf);
+                    var rs = helper.requestState();
+                    rs.uri = helper.SHPS_domain($req.url).host;
+                    rs.locked(true);
+
+                    request.handleRequest($res, $req, rs);
                 })
                 .listen(p);
                 
-                log.write('HTTP/2.0 ' + String.fromCharCode(0x300C) + '\u300C?SSL? port opened on ' + p);
+                log.write('HTTP/2.0 port opened on ' + p);
                 port += p;
             }
         }
-
-        if (config[$c].General_Config.use_http) {
+        
+        if (config[$c].generalConfig.useSPDY.value) {
             
-            var p = config[$c].General_Config.HTTP_port;
+            var p = config[$c].generalConfig.SPDYPort.value;
             if (port.indexOf(p) == -1) {
                 
-                http.createServer(function ($res, $req) {
+                spdy.createServer({
+                    key: fs.readFileSync('./cert/' + config[$c].SSLConfig.key.value),
+                    cert: fs.readFileSync('./cert/' + config[$c].SSLConfig.cert.value),
+                    ca: fs.readFileSync('./cert/' + config[$c].SSLConfig.ca.value),
                     
-                    var conf = config[$c];
-                    request.handleRequest($res, $req, conf);
+                    windowSize: 1024 * 1024,
+                    
+                    autoSpdy31: true
+                }, function ($res, $req) {
+
+                    var rs = helper.requestState();
+                    rs.uri = helper.SHPS_domain($req.url).host;
+                    rs.locked(true);
+
+                    request.handleRequest($res, $req, rs);
                 })
                 .listen(p);
                 
-                log.write('HTTP/1.1 port opened on ' + p);
+                log.write('SPDY port opened on ' + p);
                 port += p;
             }
         }
@@ -204,11 +226,135 @@ var _listen
  * @param string $firstTemplate //Default: site
  */
 var _make 
-= me.make = function ($requestState, $firstTemplate) {
-    $firstTemplate = typeof $firstTemplate !== 'undefined' ? $firstTemplate : 'site';
-    
-    // Read from cache
+= me.make = function ($template2Start, $requestState) {
+    $template2Start = (typeof $template2Start !== null ? $template2Start : $requestState.config.generalConfig.rootTemplate.value);
 
+    // Read from cache
+    
+    log.log('Starting to build the homepage');
+
+    //EVENT: onBeforeMake
+    //pluginEngine.callEvent('onBeforeMake', {$template2Start}, $requestState);
+    
+    async.waterfall([
+        
+    function ($cb) {
+            
+        sql.newSQL('default', $requestState).then(function ($sql) {
+        
+            $cb(null, $sql);
+        }, function ($p1) {
+
+            $cb('ERROR: Failed to connect to the DB server ' + $p1);
+        });
+    },
+    
+    function ($sql, $cb) {
+        
+        var rowsTemplate = [false];
+        var rowsContent = [false];
+        async.parallel([
+
+        function ($cb) {
+
+            var tblTemplate = $sql.openTable('template');
+            var tblNamespace = $sql.openTable('namespace');
+            $sql.query()
+            .get(tblTemplate.col('content'))
+            .fulfilling()
+            .equal(tblTemplate.col('name'), $template2Start)
+            .equal(tblTemplate.col('namespace'), tblNamespace.col('ID'))
+            .equal(tblNamespace.col('name'), _getNamespace($requestState))
+            .execute()
+            .then(function ($rows) {
+                
+                rowsTemplate = $rows;
+                $cb();
+            }, function ($p1) {
+                
+                log.error('ERROR: Failed to get initial template ' + $p1);
+                $cb();
+            });
+        },
+
+        function ($cb) {
+            
+            if ($requestState.GET.site == null) {
+                
+                var site = $requestState.config.generalConfig.indexContent.value;
+            }
+            else {
+                
+                var site = $requestState.GET.site;
+            }
+
+            var tblContent = $sql.openTable('content');
+            var tblNamespace = $sql.openTable('namespace');
+            $sql.query()
+            .get(tblContent.col('content'))
+            .fulfilling()
+            .equal(tblContent.col('name'), site)
+            .equal(tblContent.col('namespace'), tblNamespace.col('ID'))
+            .equal(tblContent.col('name'), _getNamespace($requestState))
+            .execute()
+            .then(function ($rows) {
+                
+                rowsContent = $rows;
+                $cb();
+            }, function ($p1) {
+                
+                log.error('ERROR: Failed to get initial template ' + $p1);
+                $cb();
+            });
+        },
+            
+        ], function () {
+
+            $cb(null, rowsTemplate, rowsContent);
+        });//end parallel $template2Starts
+        
+    },
+
+    function ($template, $content, $cb) {
+        
+        if ($template[0] === false) {
+            
+            return;
+        }
+
+        var body = $template[0].content;
+        body = _parseTemplateVars(body);
+        body = body.replace('{$body}', $content[0].content);
+        body = _parseTemplateVars(body);
+        //body = body.replace('</body>', js.getLink() + '</body>');
+        //body = body.replace('</head>', css.getLink() + '</head>');
+        //body = optimizer.optimize(body);
+        
+        // EVENT: onAfterMake
+        //pluginEngine.callEvent('onAfterMake', {$template2Start}, $requestState);
+
+        $cb(null, body)
+    },
+    ], function () {
+
+        
+    });// end waterfall
+}
+
+var _getNamespace
+= me.getNamespace = function ($requestState) {
+    
+    var r = 'default';
+    if ($requestState.POST.ns != null) {
+
+        r = $requestState.POST.ns;
+    }
+    else if ($requestState.GET.ns != null) {
+        
+        r = $requestState.GET.ns;
+    }
+
+    return r;
 }
 
 /**
@@ -253,18 +399,30 @@ var _readConfig
 
                 if (c !== '') {
                     
-                    config[helper.SHPS_domain(c.General_Config.URL).host] = c;
+                    config[helper.SHPS_domain(c.generalConfig.URL.value).host] = c;
                     
                     log.write('Config file was ' + 'loaded successfully'.green);
                 }
 
-                $callback();
+                $cb();
             });
         }, function ($err) {
             
             $cb();
         });
     });
+}
+
+/**
+ * Get whole configuration of certain homepage
+ * 
+ * @param string $uri
+ * @return array|null
+ */
+var _getConfig
+= me.getConfig = function ($uri) {
+    
+    return config[$uri];   
 }
 
 /**
