@@ -1,10 +1,97 @@
-﻿//"use strict";  Not possible, see cls()
+//"use strict";  Not possible, see cls()
 
 var colors = require('colors');
 var util = require('util');
+var event = require('events').EventEmitter;
 
 var me = module.exports;
 
+
+/**
+ * Level of logging
+ * Possible values are:
+ * 0 - everything
+ * 1 - smart (only log errors and fatals, but include last X info/trace/error entries)
+ * 2 - trace (and up)
+ * 3 - error (and up)
+ * 4 - fatal
+ *
+ * @var integer
+ */
+var level = 1;
+
+/**
+ * Max number of info/trace/error entries to include with smart logging
+ *
+ * @var integer
+ */
+var smartTraceLimit = 10;
+
+/**
+ * Length of smart trace list
+ *
+ * @var integer
+ */
+var traceLength = 0;
+
+/**
+ * Last X info/trace/error entries
+ *
+ * @var array of object(level/message)
+ */
+var trace = {first:null, last:null};
+
+
+/**
+ * Add entry to trace
+ *
+ * @param string $level
+ * @param string $message
+ */
+var addToTrace = function($level, $message) {
+
+    var nextEntry = {next:null, level:$level, message:$message};
+    if (first == null) {
+
+        first = nextEntry;
+        last = first;
+        traceLength = 1;
+    }
+    else {
+
+        last.next = nextEntry;
+        last = last.next;
+
+        if (traceLength >= smartTraceLimit) {
+
+            first = first.next;
+        }
+        else {
+
+            traceLength++;
+        }
+    }
+}
+
+/**
+ * Serialize the complete trace to JSON format
+ *
+ * @return string
+ */
+var traceToJSON = function() {
+
+    var elem = first;
+    var result = []
+    var i = traceLength - 1;
+    while (elem != null) {
+
+        result[i] = {level:elem.level, message:elem.message};
+        elem = elem.next;
+        i--;
+    }
+
+    return result;
+}
 
 /**
  * Clear screen
@@ -19,17 +106,65 @@ var cls
 }
 
 /**
- * Write error and try to handle it (restabilize SHPS)
+ * Write to log
+ *
+ * @param integer $level
+ */
+var _log = function($level) {
+
+    if (level == 1 || level >= $level) {
+
+        $str = typeof $str !== 'undefined' ? $str : '';
+    
+        console.error($str.red.bold);
+        if (level == 1) {
+
+            event.emit('error', $level, $str, trace);
+        }
+        else {
+
+            event.emit('error', $level, $str);
+        }
+    }
+
+    var strLevel = 'UNKNOWN';
+    switch ($level) {
+
+    case 0: strLevel = 'INFO'; break;
+    case 2: strLevel = 'TRACE'; break;
+    case 3: strLevel = 'ERROR'; break;
+    case 4: strLevel = 'FATAL'; break;
+    }
+
+    addToTrace(strLevel, $str);
+}
+
+/**
+ * Write error
  *
  * @param string $str
+ * @return module
  */
 var error 
 = me.error = function ($str) {
-    $str = typeof $str !== 'undefined' ? $str : '';
-    
-    console.error($str.red.bold);
-    throw $str;
+
+    _log(3);
+    return me;
 };
+
+/**
+ * Write fatal
+ *
+ * @param string $str
+ * @return module
+ */
+var fatal
+= me.fatal = function ($str) {
+
+    _log(4);
+    return me;
+};
+
 
 /**
  * Write string top log without outputting it
