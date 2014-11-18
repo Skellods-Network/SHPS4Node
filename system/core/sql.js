@@ -1,6 +1,6 @@
 ﻿"use strict";
 
-var me = module.exports;
+me = module.exports;
 
 GLOBAL.SHPS_SQL_MYSQL = 0;
 GLOBAL.SHPS_SQL_MSSQL = 10;
@@ -8,12 +8,9 @@ GLOBAL.SHPS_SQL_MSSQL = 10;
 
 var mysql = require('mysql');
 var pooling = require('generic-pool');
-var async = require('async');
-var Promise = require('promise');
 
 var main = require('./main.js');
 var log = require('./log.js');
-var helper = require('./helper.js');
 
 
 var _sqlConnectionPool = {};
@@ -68,23 +65,32 @@ var _conditionbuilder = null;
  * SQL Class<br>
  * For SQLite, a new file will be created if the database file is missing
  * 
- * @param \requestState $requestState
- * @param mixed $connection Pooled connection to DB server
- * @param string $alias
+ * @param string $user
+ * @param string $passwd
+ * @param string $database
+ * @param string $host
+ * @param string $prefix
+ * @param array $mcServers [[(Sting)'Host',(Integer)['Port']],[...]]
  */
-var SQL = function ($requestState, $connection, $alias) {
+var SQL = function ($user,
+                    $passwd,
+                    $database,
+                    $host,
+                    $port,
+                    $prefix,
+                    $dbType,
+                    $mcServers,
+                    $requestState) {
 
-    if (typeof $requestState == 'undefined') {
+    $host = (typeof $host !== 'undefined' ? $host : 'localhost');
+    $port = (typeof $port !== 'undefined' ? $port : 3306);
+    $prefix = (typeof $prefix !== 'undefined' ? $prefix : 'HP_');
+    $dbType = (typeof $dbType !== 'undefined' ? $dbType : GLOBAL.SHPS_SQL_MYSQL);
+    $mcServers = (typeof $mcServers !== 'undefined' ? $mcServers : []);
+    if (typeof $requestState !== 'undefined') {
         
         log.error('Cannot connect with undefined requestState!');
     }
-    
-    if (typeof $connection == 'undefined') {
-        
-        log.error('No connection available!');
-    }
-    
-    var dbConfig = eval('$requestState.config.databaseConfig.' + $alias);
     
     /**
      * Total count of SQL queries
@@ -112,49 +118,63 @@ var SQL = function ($requestState, $connection, $alias) {
      * 
      * @var integer
      */
-    var _dbType = dbConfig.type.value;
+    var _dbType = $dbType;
+    
+    /**
+     * Database host
+     * 
+     * @var string
+     */
+    var _host = $host;
+    
+    /**
+     * Database server port
+     * 
+     * @var integer
+     */
+    var _port = $port;
     
     /**
      * Database name
      * 
      * @var string
      */
-    var _db = dbConfig.name.value;
+    var _db = $database;
     
     /**
      * Table prefix
      * 
      * @var string
      */
-    var _prefix = dbConfig.pre.value;
+    var _prefix = $prefix;
     
     /**
      * Database user
      * 
      * @var string
      */
-    var _user = dbConfig.user.value;
+    var _user = $user;
     
     /**
      * Database password
      * 
      * @var string
      */
-    var _passwd = dbConfig.pass.value;
+    var _passwd = $passwd;
     
     /**
-     * Connection
+     * PDO link
      * 
-     * @var Connection
+     * @var PDO
      */
-    var _connection = $connection;
+    var _connection = null;
     
     /**
      * Connection status
      * 
      * @var boolean
      */
-    var _free = true;
+    var _free = false;
     
     /**
      * Containes the last executed query
@@ -164,11 +184,18 @@ var SQL = function ($requestState, $connection, $alias) {
     var _lastQuery = '';
     
     /**
-     * Result rows
+     * Containes the last query's statement
      * 
-     * @var Rows
+     * @var PDOStatement
      */
-    var _resultRows = [];
+    var _statement = null;
+    
+    /**
+     * Contains Table/Col info : [INDEX][table,columne]
+     * 
+     * @var array of array of strings
+     */
+    var _tblInfo = [];
     
     /**
      * Index of next row to fetch
@@ -178,90 +205,18 @@ var SQL = function ($requestState, $connection, $alias) {
     var _fetchIndex = 0;
     
     /**
-     * Just run the given query<br>
-     * It is not recommended to use custom queries!
+     * Server Type
      * 
-     * @param string $query
-     * @param []|null $param
+     * @var string
      */
-    var query
-    = this.query = function ($query, $param) {
-        
-        _free = false;
-        _fetchIndex = -1;
-        _resultRows = [];
-
-        if (typeof $param !== null) {
-
-            $query = mysql.format($query, $param, true, main.getHPConfig('generalConfig', 'timezone', $requestState.uri));
-        }
-        
-        if (typeof $query !== null) {
-            
-            _lastQuery = $query;
-            _queryCount++;
-            var start = process.hrtime();
-            
-            return new Promise(function ($fulfill, $reject) {
-                _connection.query($query, function ($err, $rows, $fields) {
-                    
-                    var t = process.hrtime(start);
-                    _lastQueryTime = t[0] + (t[1] / 1000000000);
-                    _queryTime += _lastQueryTime;
-                    
-                    if ($err) {
-                        
-                        $reject($err);
-                    }
-                    else {
-                        
-                        _resultRows = $rows;
-                        $fulfill($rows, $fields);
-                    }
-                });
-            });
-        }
-
-        return new QueryBuilder();
-    }
+    var _serverType = '';
     
     /**
-     * Returns all result rows of previous query
+     * Tables to include in current query
      * 
-     * @return []
+     * @var array of string
      */
-    var _fetchResult
-    = this.fetchResult = function () {
-        
-        return _resultRows;
-    }
-    
-    /**
-     * Returns next result row of previous query
-     * 
-     * @return []
-     */
-    var _fetchRow
-    = this.fetchRow = function () {
-        
-        _fetchIndex++;
-        return _resultRows[_fetchIndex];
-    }
-    
-    
-    /**
-     * CONSTRUCTOR
-     */
-    switch (_dbType) {
-
-        case 'SHPS_SQL_MYSQL': {
-
-            this.query('SET NAMES \'UTF8\';');
-            break;
-        }
-    }
-
-    _free = true;
+    var _includeTable = [];
 }
 
 
@@ -272,13 +227,12 @@ var SQL = function ($requestState, $connection, $alias) {
  */
 var _getConnectionCount 
 = me.getConnectionCount = function ($requestState) {
-
     if (typeof $requestState !== 'undefined') {
         
         log.error('Cannot connect with undefined requestState!');
     }
     
-    return _alias_connections.length();
+    
 }
 
 /**
@@ -289,39 +243,37 @@ var _getConnectionCount
  */
 var _newSQL 
 = me.newSQL = function ($alias, $requestState) {
-    $alias = (typeof $alias !== null ? $alias : 'default');
-    if (typeof $requestState === null) {
+    $alias = (typeof $alias !== 'undefined' ? $alias : 'default');
+    if (typeof $requestState !== 'undefined') {
         
         log.error('Cannot connect with undefined requestState!');
     }
     
-    var dbConfig = eval('$requestState.config.databaseConfig.' + $alias);
-    var poolName = dbConfig.host.value +
-        dbConfig.port.value +
-        dbConfig.name.value +
-        dbConfig.user.value +
-        dbConfig.pre.value;
+    var dbConfig = $requestState.Database_Config[$alias];
+    var poolName = dbConfig.DB_Host +
+        dbConfig.DB_Port +
+        dbConfig.DB_Name +
+        dbConfig.DB_User +
+        dbConfig.DB_Pre;
 
     var nPool = _sqlConnectionPool[poolName];
-    if (nPool == null) {
+    if (nPool === 'undefined') {
         
-        switch (dbConfig.type.value) {
+        switch (dbConfig.DB_Type) {
 
             case "SHPS_SQL_MYSQL": {
                 
                 _sqlConnectionPool[poolName] = nPool = mysql.createPool({
                     
-                    connectionLimit: dbConfig.connectionLimit.value,
-                    host: dbConfig.host.value,
-                    port: dbConfig.port.value,
-                    user: dbConfig.user.value,
-                    database: dbConfig.name.value,
+                    connectionLimit: dbConfig.DB_ConnectionLimit,
+                    host: dbConfig.DB_Host,
+                    port: dbConfig.DB_Port,
+                    user: dbConfig.DB_User,
+                    database: dbConfig.DB_Name,
                     charset: 'utf8mb4_general_ci',
-                    timezone: main.getHPConfig('generalConfig', 'timezone'),
+                    timezone: $requestState.General_Config.timezone,
                     multipleStatements: true
                 });
-
-                break;
             }
 
             default: {
@@ -331,23 +283,7 @@ var _newSQL
         }
     }
 
-    var connection = new Promise(function ($resolve, $reject) {
-        
-
-        nPool.getConnection(function ($err, $connection) {
-            
-            if ($err) {
-                
-                $reject($err.Message);
-            }
-            else {
-
-                $resolve(new SQL($requestState, $connection, $alias));
-            }
-        });
-    });
-    
-    return connection;
+    return new SQL($requestState, nPool.getConnection());
 };
 
 /**

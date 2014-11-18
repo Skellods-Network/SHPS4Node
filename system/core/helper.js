@@ -13,7 +13,7 @@ var log = require('./log.js');
 me.SHPS_domain = function ($uri) {
     
     var parsed = url.parse($uri, true, true);
-    /*var a = parsed.host.split('.');
+    var a = parsed.host.split('.');
     
     parsed.tld = a[a.length - 1];
     a.splice(a.length - 1, 1);
@@ -27,12 +27,7 @@ me.SHPS_domain = function ($uri) {
     parsed.toString = function () {
         
         return this.href;
-    };*/
-
-    if (parsed.host === null) {
-     
-        parsed.host = 'localhost';
-    }
+    };
 
     return parsed;
 }
@@ -42,115 +37,98 @@ me.SHPS_domain = function ($uri) {
  * - Domain info
  * - GET and POST variables
  */
-me.requestState = function () {
+me.requestState = {
+    
+    _data: {
 
-    return {
+        locked: false,
+        uri: '',
+        GET: {},
+        POST: {},
+        SESSION: {},
+    },
+
+    get locked() {
         
-        _data: {
-            
-            locked: false,
-            uri: '',
-            GET: {},
-            POST: {},
-            SESSION: {},
-            config: {},
-        },
+        return locked;
+    },
+
+    set locked($locked) {
         
-        get locked() {
-            
-            return this._data.locked;
-        },
-        
-        set locked($locked) {
+        if (this._data.locked || $locked) {
             
             this._data.locked = true;
-        },
+        }
         
-        get uri() {
-            
-            return this._data.uri;
-        },
+        return this._data.locked;
+    },
+    
+    get uri() {
         
-        set uri($uri) {
-            
-            if (this._data.locked) {
-                
-                log.error('Tried to write to locked state!');
-            }
-            else {
-                
-                this._data.uri = $uri;
-            }
-        },
+        return this._data.uri;
+    },
+    
+    set uri($uri) {
         
-        get GET() {
+        if (this._data.locked) {
             
-            return this._data.GET;
-        },
-        
-        set GET($GET) {
+            log.error('Tried to write to locked state!');
+        }
+        else {
             
-            if (locked) {
-                
-                log.error('Tried to write to locked state!');
-            }
-            else {
-                
-                this._data.GET = $GET;
-            }
-        },
-        
-        get POST() {
-            
-            return this._data.POST;
-        },
-        
-        set POST($POST) {
-            
-            if (this._data.locked) {
-                
-                log.error('Tried to write to locked state!');
-            }
-            else {
-                
-                this._data.POST = $POST;
-            }
-        },
-        
-        get SESSION() {
-            
-            // if empty, fill session
-            return this._data.SESSION;
-        },
-        
-        set SESSION($SESSION) {
-            
-            if (this._data.locked) {
-                
-                log.error('Tried to write to locked state!');
-            }
-            else {
-                
-                this._data.SESSION = $SESSION;
-            }
-        },
+            this._data.uri = $uri;
+        }
+    },
 
-        get config() {
+    get GET() {
+    
+        return this._data.GET;
+    },
+
+    set GET($GET) {
+
+        if (locked) {
             
-            // if empty, fill session
-            return this._data.config;
-        },
+            log.error('Tried to write to locked state!');
+        }
+        else {
+
+            this._data.GET = $GET;
+        }
+    },
+
+    get POST() {
         
-        set config($config) {
+        return this._data.POST;
+    },
+    
+    set POST($POST) {
+        
+        if (this._data.locked) {
             
-            if (this._data.locked) {
-                
-                log.error('Tried to write to locked state!');
-            }
-            else {
-                
-                this._data.config = $config;
-            }
-        },
-    }
+            log.error('Tried to write to locked state!');
+        }
+        else {
+            
+            this._data.POST = $POST;
+        }
+    },
+
+    get SESSION() {
+        
+        // if empty, fill session
+        return this._data.SESSION;
+    },
+    
+    set SESSION($SESSION) {
+        
+        if (this._data.locked) {
+            
+            log.error('Tried to write to locked state!');
+        }
+        else {
+            
+            this._data.SESSION = $SESSION;
+        }
+    },
 }

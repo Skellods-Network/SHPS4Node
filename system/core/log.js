@@ -1,9 +1,10 @@
-//"use strict";  Not possible, see cls()
+﻿//"use strict";  Not possible, see cls()
 
 var colors = require('colors');
 var util = require('util');
-var event = require('events').EventEmitter;
+var events = require('events');
 
+var event = new events.EventEmitter();
 var me = module.exports;
 
 
@@ -98,7 +99,7 @@ var traceToJSON = function() {
  *
  * @return module
  */
-var cls 
+var _cls
 = me.cls = function () {
     
     process.stdout.write('\033c');
