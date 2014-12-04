@@ -110,14 +110,14 @@ var _cls
  * Write to log
  *
  * @param integer $level
+ * @param string $str
  */
-var _log = function($level) {
+var _log = function ($level, $str) {
+    $str = typeof $str !== 'undefined' ? $str : '';
 
     if (level == 1 || level >= $level) {
 
-        $str = typeof $str !== 'undefined' ? $str : '';
-    
-        console.error($str.red.bold);
+        console.error(colors.red(colors.bold($str)));
         if (level == 1) {
 
             event.emit('error', $level, $str, trace);
@@ -149,7 +149,7 @@ var _log = function($level) {
 var error 
 = me.error = function ($str) {
 
-    _log(3);
+    _log(3, $str);
     return me;
 };
 

@@ -70,11 +70,11 @@
         },
         "HTTP1Port"              : {
             "description": "Port to serve HTTP/1.1 on",
-            "value": 12380
+            "value": 1280
         },
         "HTTP2Port"              : {
             "description": "Port to serve HTTP/2.0 on",
-            "value": 123443
+            "value": 12443
         },
         "SPDYPort"              : {
             "description": "Port to serve SPDY on",
@@ -124,7 +124,7 @@
                 "description": "User's password",
                 "value": ""
             },
-            "pre"            : {
+            "prefix"            : {
                 
                 "description": "Table prefix",
                 "value": "HP_"
@@ -171,7 +171,7 @@
                 "description": "User's password",
                 "value": ""
             },
-            "pre"            : {
+            "prefix"            : {
                 
                 "description": "Table prefix",
                 "value": "HP_"
@@ -218,7 +218,7 @@
                 "description": "User's password",
                 "value": ""
             },
-            "pre"            : {
+            "prefix"            : {
                 
                 "description": "Table prefix",
                 "value": "HP_"

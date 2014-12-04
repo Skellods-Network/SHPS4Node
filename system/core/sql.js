@@ -1,6 +1,6 @@
 ﻿"use strict";
 
-me = module.exports;
+var me = module.exports;
 
 GLOBAL.SHPS_SQL_MYSQL = 0;
 GLOBAL.SHPS_SQL_MSSQL = 10;
@@ -8,6 +8,8 @@ GLOBAL.SHPS_SQL_MSSQL = 10;
 
 var mysql = require('mysql');
 var pooling = require('generic-pool');
+var async = require('vasync');
+var Promise = require('promise');
 
 var main = require('./main.js');
 var log = require('./log.js');
@@ -257,24 +259,16 @@ var sql_queryBuilder = function ($sql) {
  * @param string $prefix
  * @param array $mcServers [[(Sting)'Host',(Integer)['Port']],[...]]
  */
-var SQL = function ($user,
-                    $passwd,
-                    $database,
-                    $host,
-                    $port,
-                    $prefix,
-                    $dbType,
-                    $mcServers,
-                    $requestState) {
+var SQL = function ($dbConfig, $connection) {
 
-    $host = (typeof $host !== 'undefined' ? $host : 'localhost');
-    $port = (typeof $port !== 'undefined' ? $port : 3306);
-    $prefix = (typeof $prefix !== 'undefined' ? $prefix : 'HP_');
-    $dbType = (typeof $dbType !== 'undefined' ? $dbType : GLOBAL.SHPS_SQL_MYSQL);
-    $mcServers = (typeof $mcServers !== 'undefined' ? $mcServers : []);
-    if (typeof $requestState !== 'undefined') {
+    if (typeof $dbConfig === 'undefined') {
         
-        log.error('Cannot connect with undefined requestState!');
+        log.error('Cannot work with undefined dbConfig!');
+    }
+    
+    if (typeof $connection === 'undefined') {
+        
+        log.error('Cannot work without connection!');
     }
     
     /**
@@ -303,7 +297,7 @@ var SQL = function ($user,
      * 
      * @var integer
      */
-    var _dbType = $dbType;
+    var _dbType = eval('return ' + $dbConfig.type.value + ';');
     
     /**
      * Database host
@@ -388,8 +382,23 @@ var SQL = function ($user,
      * @var type 
      */
     var _fetchIndex = 0;
+    
+    /**
+     * Server Type
+     * 
+     * @var string
+     */
+    var _serverType = '';
+    
+    /**
+     * Tables to include in current query
+     * 
+     * @var array of string
+     */
+    var _includeTable = [];
 
-    var query
+
+    var _query
     = this.query = function ($query, $param) {
         
         _free = false;
@@ -429,23 +438,168 @@ var SQL = function ($user,
 
         return new sql_queryBuilder(this);
     }
-
     
     /**
-     * Server Type
+     * Standardizes names in a SQL query by adding determinators
      * 
-     * @var string
+     * @param string $var
+     * @return string
      */
-    var _serverType = '';
+    var _standardizeName
+    = this.standardizeName = function ($var) {
+        
+        /*let*/var s = _variabledeterminator[_dbType][0];
+        /*let*/var e = _variabledeterminator[_dbType][1];
+        if ($var !== '*'
+            && $var.substring(0, 1) !== s
+            && $var.substring(-1) !== e) {
+
+            $var = s + sffm.cleanStr($var) + e;
+        }
+
+        return $var;
+    }
     
     /**
-     * Tables to include in current query
+     * Standardizes strings in a SQL query by adding determinators
      * 
-     * @var array of string
+     * @param string $str
+     * @return string
      */
+    var _standardizeString
+    = this.standardizeString = function ($str) {
 
-    var _includeTable = [];
+        $str = sffm.cleanStr($str);
+        /*let*/var s = _stringdeterminator[_dbType];
+        if ($str.substring(0, 1) != s 
+            && $str.substring(r, -1) != s) {
 
+            $str = s + $str + $s;
+        }
+        
+        return $str;
+    }
+    
+    /**
+     * Get query count
+     * 
+     * @return integer
+     */
+    var _getQueryCount
+    = this.getQueryCount = function () {
+        
+        return 0;
+    }
+
+    /**
+     * Get overall query time
+     * 
+     * @return integer
+     */
+    var _getQueryTime
+    = this.getQueryTime = function () {
+        
+        return 0;
+    }
+    
+    /**
+     * Get time the last query needed to complete
+     * 
+     * @return integer
+     */
+    var _getLastQueryTime 
+    = this.getLastQueryTime = function () {
+        
+        return _lastQueryTime;
+    }
+    
+    /**
+     * Get connection count
+     * 
+     * @return integer
+     */
+    var _getConnectionCount
+    = this.getConnectionCount = function () {
+        
+        return 0;
+    }
+    
+    /**
+     * Create a custom Table and return table object
+     * 
+     * @param string $name
+     * @param [] $cols Array of sql_colspec
+     * @param boolean $ifNotExists Throws error if table exists //Default: true
+     * @param boolean $temp If true table is only temporary (in memory) //Default: false
+     * @return sql_table
+     */
+    var _createTable
+    = this.createTable = function ($name, $cols, $ifNotExists/* = true*/, $temp/* = false*/) {
+        
+        log.error('Not implemented yet');
+    }
+    
+    /**
+     * Get Server Type
+     * 
+     * @return string
+     */
+    var _getServerType
+    = this.getServerType = function () {
+        
+        return 'MySQL';
+    }
+    
+    /**
+     * Return table object
+     * 
+     * @param string $name
+     * @return sql_table
+     */
+    var _openTable
+    = this.openTable = function ($name) {
+        
+        return new sql_table(this, $name);
+    }
+    
+    /**
+     * Return last SQL Query as string
+     * 
+     * @return string
+     */
+    var _getLastQuery
+    = this.getLastQuery = function () {
+        
+        return _lastQuery;
+    }
+    
+    /**
+     * Return last error
+     * 
+     * @return string
+     */
+    var _getLastError
+    = this.getLastError = function () {
+        
+        return '';
+    }
+    
+    /**
+     * Get all results
+     * 
+     * @return Array of sql_resultrow
+     */
+    var _fetchResult 
+    = this.fetchResult = function () {
+        
+        return [];
+    }
+    
+    /**
+     * Get one result row
+     * 
+     * @return sql_resultrow
+     */
     var _fetchRow
     = this.fetchRow = function () {
         
@@ -493,36 +647,40 @@ var _getConnectionCount
 var _newSQL 
 = me.newSQL = function ($alias, $requestState) {
     $alias = (typeof $alias !== 'undefined' ? $alias : 'default');
-    if (typeof $requestState !== 'undefined') {
+    if (typeof $requestState === 'undefined') {
         
         log.error('Cannot connect with undefined requestState!');
     }
     
-    var dbConfig = $requestState.Database_Config[$alias];
-    var poolName = dbConfig.DB_Host +
-        dbConfig.DB_Port +
-        dbConfig.DB_Name +
-        dbConfig.DB_User +
-        dbConfig.DB_Pre;
+    var config = $requestState.config;
+    var dbConfig = config.databaseConfig[$alias];
+    var poolName = dbConfig.host.value +
+        dbConfig.port.value +
+        dbConfig.name.value +
+        dbConfig.user.value +
+        dbConfig.prefix.value;
 
     var nPool = _sqlConnectionPool[poolName];
-    if (nPool === 'undefined') {
+    if (typeof nPool === 'undefined') {
         
-        switch (dbConfig.DB_Type) {
+        switch (dbConfig.type.value) {
 
             case "SHPS_SQL_MYSQL": {
                 
                 _sqlConnectionPool[poolName] = nPool = mysql.createPool({
                     
-                    connectionLimit: dbConfig.DB_ConnectionLimit,
-                    host: dbConfig.DB_Host,
-                    port: dbConfig.DB_Port,
-                    user: dbConfig.DB_User,
-                    database: dbConfig.DB_Name,
+                    connectionLimit: dbConfig.connectionLimit.value,
+                    host: dbConfig.host.value,
+                    port: dbConfig.port.value,
+                    user: dbConfig.user.value,
+                    password: dbConfig.pass.value,
+                    database: dbConfig.name.value,
                     charset: 'utf8mb4_general_ci',
-                    timezone: $requestState.General_Config.timezone,
+                    timezone: config.generalConfig.timezone.value,
                     multipleStatements: true
                 });
+
+                break;
             }
 
             default: {

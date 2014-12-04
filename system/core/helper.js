@@ -13,8 +13,13 @@ var log = require('./log.js');
 me.SHPS_domain = function ($uri) {
     
     var parsed = url.parse($uri, true, true);
+    if (parsed.href.substring(0, 9) === 'localhost') {
+        
+        parsed.host = 'localhost';
+    }
+
     var a = parsed.host.split('.');
-    
+
     parsed.tld = a[a.length - 1];
     a.splice(a.length - 1, 1);
     parsed.sld = a[a.length - 1];
@@ -46,6 +51,7 @@ me.requestState = {
         GET: {},
         POST: {},
         SESSION: {},
+        config: {},
     },
 
     get locked() {
@@ -129,6 +135,24 @@ me.requestState = {
         else {
             
             this._data.SESSION = $SESSION;
+        }
+    },
+
+    get config() {
+        
+        // if empty, fill session
+        return this._data.config;
+    },
+    
+    set config($config) {
+        
+        if (this._data.locked) {
+            
+            log.error('Tried to write to locked state!');
+        }
+        else {
+            
+            this._data.config = $config;
         }
     },
 }
