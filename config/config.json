@@ -62,11 +62,11 @@
         },
         "useHTTP2"              : {
             "description": "Start HTTP/2.0 server",
-            "value": true
+            "value": false
         },
         "useSPDY"              : {
             "description": "Start SPDY server",
-            "value": true
+            "value": false
         },
         "HTTP1Port"              : {
             "description": "Port to serve HTTP/1.1 on",
@@ -79,6 +79,10 @@
         "SPDYPort"              : {
             "description": "Port to serve SPDY on",
             "value": 123444
+        },
+        "eastereggs"            : {
+            "description": "Enable eastereggs which might give information about the used SHPS version to a third party",
+            "value": true
         }
     },
     "SSLConfig": {

@@ -202,7 +202,7 @@ var writeWelcome
 = me.writeWelcome = function () {
     
     write('\n WELCOME to a world of no worries.\n WELCOME to SHPS!\n'.underline.green.bold);
-    write('You are currently running SHPS v' + SHPS_VERSION.cyan.bold + ', but you may call it ' + SHPS_INTERNAL_NAME.cyan.bold + '!');
+    write('You are currently running SHPS v' + SHPS_VERSION.cyan.bold + ', but you may call her ' + SHPS_INTERNAL_NAME.cyan.bold + '!');
 
     return me;
 };

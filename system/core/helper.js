@@ -48,6 +48,7 @@ me.requestState = {
 
         locked: false,
         uri: '',
+        path: '/',
         GET: {},
         POST: {},
         SESSION: {},
@@ -56,7 +57,7 @@ me.requestState = {
 
     get locked() {
         
-        return locked;
+        return this._data.locked;
     },
 
     set locked($locked) {
@@ -85,6 +86,23 @@ me.requestState = {
             this._data.uri = $uri;
         }
     },
+    
+    get path() {
+        
+        return this._data.path;
+    },
+    
+    set path($path) {
+        
+        if (this._data.locked) {
+            
+            log.error('Tried to write to locked state!');
+        }
+        else {
+            
+            this._data.path = $path;
+        }
+    },
 
     get GET() {
     
@@ -93,7 +111,7 @@ me.requestState = {
 
     set GET($GET) {
 
-        if (locked) {
+        if (this._data.locked) {
             
             log.error('Tried to write to locked state!');
         }

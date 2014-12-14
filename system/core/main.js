@@ -20,7 +20,7 @@ GLOBAL.SHPS_MAJOR_VERSION = 3;
 GLOBAL.SHPS_MINOR_VERSION = 1;
 GLOBAL.SHPS_PATCH_VERSION = 0;
 GLOBAL.SHPS_VERSION = SHPS_MAJOR_VERSION + '.' + SHPS_MINOR_VERSION + '.' + SHPS_PATCH_VERSION;
-GLOBAL.SHPS_INTERNAL_NAME = 'BYAKUEI';
+GLOBAL.SHPS_INTERNAL_NAME = 'IROKOKOU';
 
 var fs = require('fs');
 var async = require('vasync');
@@ -143,30 +143,31 @@ var _listen
     
     for (var $c in config) {
         
-        if (config[$c].generalConfig.useHTTP2.value) {
-            
-            if (config[$c].generalConfig.useHTTP1.value) {
-                
-                var p = config[$c].generalConfig.HTTP1Port.value;
-                if (port.indexOf(p) == -1) {
+        if (config[$c].generalConfig.useHTTP1.value) {
+        
+            var p = config[$c].generalConfig.HTTP1Port.value;
+            if (port.indexOf(p) == -1) {
                     
-                    http.createServer(function ($req, $res) {
+                http.createServer(function ($req, $res) {
                         
-                        var rs = helper.requestState;
-                        var domain = new helper.SHPS_domain($req.headers.host);
-                        rs.uri = domain.host;
-                        rs.config = _getConfig(rs.uri);
-                        //rs.locked = true;
+                    var rs = helper.requestState;
+                    var domain = new helper.SHPS_domain($req.headers.host);
+                    rs.uri = domain.host;
+                    rs.config = _getConfig(rs.uri);
+                    rs.path = $req.url;
+                    //rs.locked = true;
                         
-                        request.handleRequest($req, $res, rs);
-                    })
-                .listen(p);
+                    request.handleRequest($req, $res, rs);
+                })
+            .listen(p);
                     
-                    log.write('HTTP/1.1 port opened on ' + p);
-                    port += p;
-                }
+                log.write('HTTP/1.1 port opened on ' + p);
+                port += p;
             }
-            
+        }
+        
+        if (config[$c].generalConfig.useHTTP2.value) {
+
             var p = config[$c].generalConfig.HTTP2Port.value;
             if (port.indexOf(p) == -1) {
                 
@@ -180,6 +181,7 @@ var _listen
                     //var domain = new helper.SHPS_domain($req.headers.host);
                     //rs.uri = domain.host;
                     //rs.config = _getConfig(rs.uri);
+                    //rs.path = $req.url;
                     //rs.locked(true);
                     
                     request.handleRequest($res, $req, rs);
