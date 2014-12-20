@@ -1,88 +1,73 @@
-﻿var e = module.exports;
+﻿'use strict';
+
+var me = module.exports;
 
 var main = require('./main.js');
 var io = require('./io.js');
+var plugin = require('./plugin.js');
 
 
-e.handleRequest = handleRequest = function ($req, $res, $requestState) {
+var _handleRequest
+= me.handleRequest = function handleRequest($requestState) {
 
-    var request = $requestState.path.split('?');
-    var reqPath = request[0];
-    if (reqPath[0] == '/') {
-    
-        reqPath = reqPath.substring(1);
+    $requestState.httpStatus = 501;
+    var unblock;
+    if (typeof $requestState.GET['favicon.ico'] !== 'undefined') {
+
+        // annoying browsers ask for favicon.ico if not specified... have to handle this...
     }
-    
-    var reqParams = reqPath.split('/');
-    var i = 0;
-    
-    var httpStatus = -1;
-    var responseBody = '';
-    var modus = -1;
-    
-    while (true) {
+    else if (typeof $requestState.GET['request'] !== 'undefined') {
 
-        // while with if-typeof is the fastest loop.
-        if (typeof reqParams[i] === 'undefined') {
+        // handle request
+    }
+    else if (typeof $requestState.GET['plugin'] !== 'undefined') {
 
-            break;
+        // call plugin
+        unblock = plugin.callPluginEvent('onDirectCall', $requestState.GET['plugin'], $requestState);
+    }
+    else if (typeof $requestState.GET['file'] !== 'undefined') {
+
+        // serve file
+    }
+    else if (typeof $requestState.GET['js'] !== 'undefined') {
+
+        // present JS
+    }
+    else if (typeof $requestState.GET['css'] !== 'undefined') {
+
+        // render css
+    }
+    else if (typeof $requestState.GET['site'] !== 'undefined') {
+
+        // transmit site
+    }
+    else if (typeof $requestState.GET['HTCPCP'] !== 'undefined') {
+
+        if ($requestState.config.generalConfig.eastereggs.value) {
+            
+            $requestState.httpStatus = 418;
+            $requestState.responseBody = 'ERROR 418: I\'m a teapot!';
         }
-        
-        switch (reqParams[i]) {
-        
-            case 'site': {
-            
-                i++;
-                responseBody = main.make(reqParams[i]);
-                
-                break;
-            }
-            
-            case 'request': {
-            
-                i++;
-                responseBody = io.handleScript(reqParams[i]);
-                
-                break;
-            }
-            
-            case 'file': {
-            
-                i++;
-            }
-            
-            case 'favicon.ico': {
-                
-                responseBody = io.handleFile(reqParams[i]);
-                if (httpStatus == -1) {
-                
-                    httpStatus = 200;
-                }
-                
-                break;
-            }
-            
-            case 'HTCPCP': {
-            
-                if ($requestState.config.generalConfig.eastereggs.value) {
-                
-                    httpStatus = 418;
-                    responseBody = 'ERROR 418: This is a teapot!';
-                    
-                    break;
-                }
-            }
-        }
-        
-        i++;
+    }
+    else {
+
+        // if they don't know what they want, they should just get the index site...
+        $requestState.GET['site'] = $requestState.config.generalConfig.indexContent.value;
+        // transmit site
     }
     
-    if (httpStatus == -1) {
-    
-        httpStatus = 200;
-        responseBody = main.make($requestState.config.generalConfig.indexContent.value);
+    if (typeof unblock === 'undefined') {
+
+        $requestState.result.writeHead($requestState.httpStatus);
+        $requestState.result.end($requestState.responseBody);
+    }
+    else {
+
+        unblock.then(function () {
+        
+            $requestState.result.writeHead($requestState.httpStatus);
+            $requestState.result.end($requestState.responseBody);
+        }).done();
     }
     
-    $res.writeHead(httpStatus);
-    $res.end(responseBody);
 }

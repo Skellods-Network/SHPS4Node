@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 
 /**
  * SHPS Main<br>
@@ -12,6 +12,11 @@
  * @link http://skellods.de Skellods
  */
 
+/**
+ * Points of Interest
+ * 
+ * Performance array vs object: http://stackoverflow.com/questions/8423493/what-is-the-performance-of-objects-arrays-in-javascript-specifically-for-googl
+ */
 
 var me = module.exports;
 
@@ -19,25 +24,33 @@ GLOBAL.SHPS_ = 1;
 GLOBAL.SHPS_MAJOR_VERSION = 3;
 GLOBAL.SHPS_MINOR_VERSION = 1;
 GLOBAL.SHPS_PATCH_VERSION = 0;
-GLOBAL.SHPS_VERSION = SHPS_MAJOR_VERSION + '.' + SHPS_MINOR_VERSION + '.' + SHPS_PATCH_VERSION;
+GLOBAL.SHPS_BUILD = 'ALPHA';
 GLOBAL.SHPS_INTERNAL_NAME = 'IROKOKOU';
+GLOBAL.SHPS_VERSION = SHPS_MAJOR_VERSION + '.' + SHPS_MINOR_VERSION + '.' + SHPS_PATCH_VERSION;
+
 
 var fs = require('fs');
 var async = require('vasync');
 var colors = require('colors');
-var helper = require('./helper.js');
 var https = require('http2');
 var http = require('http');
+var path = require('path');
 
+var scheduler = require('./schedule.js');
+var optimize = require('./optimize.js');
+var helper = require('./helper.js');
 var log = require('./log.js');
 var request = require('./request.js');
 var cmd = require('./commandline.js');
 var sql = require('./sql.js');
-
+var plugin = require('./plugin.js');
 
 var config = [];
 var debug = false;
-var directories = {};
+var directories = {
+
+    'plugins': path.dirname(require.main.filename) + '/system/plugins/'
+};
 var domain = [];
 
 /**
@@ -51,7 +64,7 @@ var _getDir
     
     if (directories.hasOwnProperty($key)) {
         
-        return directories.$key;
+        return directories[$key];
     }
     else return;
 }
@@ -95,7 +108,7 @@ var _getInstance
  * @param SHPS_domain $domain
  */
 var _init
-= me.init = function () {
+= me.init = function func_init () {
     
     if (typeof _init.initialized !== 'undefined') return;
     
@@ -106,10 +119,11 @@ var _init
         'funcs': [
             //update  //log.write('Checking for new versions...');
             function func_init_readConfig ($_p1, $_p2) { _readConfig($_p2); }
-            //,loadPlugins  //log.write('Preparing plugins...');
-            , function func_init_listen ($_p1, $_p2) { _listen($_p2); }
+            , function func_init_loadPlugins ($_p1, $_p2) { plugin.loadPlugins($_p2); }
+            , function func_init_listen($_p1, $_p2) { _listen($_p2); }
+            , function func_init_event($_p1, $_p2) { scheduler.sendSignal('onMainInit', $_p1); $_p2(); }
         ]
-    }, function ($err) {
+    }, function func_init_done ($err) {
     
         log.write('\nWe done here! SHPS at your service - what can we do for you?');
         log.writeInfo();
@@ -137,7 +151,7 @@ var _isDebug
 var _listen 
 = me.listen = function ($cb) {
     
-    log.write('Starting servers...');
+    log.write('\nStarting servers...');
     
     var port = [];
     
@@ -150,19 +164,20 @@ var _listen
                     
                 http.createServer(function ($req, $res) {
                         
-                    var rs = helper.requestState;
+                    var rs = new helper.requestState();
                     var domain = new helper.SHPS_domain($req.headers.host);
                     rs.uri = domain.host;
                     rs.config = _getConfig(rs.uri);
                     rs.path = $req.url;
-                    //rs.locked = true;
-                        
-                    request.handleRequest($req, $res, rs);
+                    rs.request = $req;
+                    rs.result = $res;
+                    request.handleRequest(rs);
                 })
             .listen(p);
                     
-                log.write('HTTP/1.1 port opened on ' + p);
+                log.write('HTTP/1.1 port opened on ' + (p + '').green);
                 port += p;
+                scheduler.sendSignal('onListenStart', 'HTTP/1.1', p);
             }
         }
         
@@ -177,19 +192,20 @@ var _listen
                     ca: fs.readFileSync('./cert/' + config[$c].SSLConfig.ca.value)
                 }, function ($res, $req) {
                     
-                    var rs = helper.requestState;
+                    var rs = new helper.requestState();
                     //var domain = new helper.SHPS_domain($req.headers.host);
                     //rs.uri = domain.host;
                     //rs.config = _getConfig(rs.uri);
                     //rs.path = $req.url;
                     //rs.locked(true);
                     
-                    request.handleRequest($res, $req, rs);
+                    request.handleRequest(rs);
                 })
                 .listen(p);
                 
-                log.write('HTTP/2.0 port opened on ' + p);
+                log.write('HTTP/2.0 port opened on ' + (p + '').green);
                 port += p;
+                scheduler.sendSignal('onListenStart', 'HTTP/2.0', p);
             }
         }
     }
@@ -320,7 +336,7 @@ var _make
         },
     ], function () {
 
-        
+        scheduler.sendSignal('onMake', $requestState);
     });// end waterfall
 }
 
@@ -371,23 +387,25 @@ var _readConfig
                         log.error($err);
                     }
                     
-                    log.write('Config file found: ' + $file.green);
+                    log.write('Config file found: ' + $file);
                     
                     var c = '';
                     try {
                         
                         c = JSON.parse($data);
                     }
-                catch ($e) {
+                    catch ($e) {
                         
-                        log.write('Config file was ' + 'invalid'.red.bold + '! ' + 'SKIPPED'.red.bold);
+                        log.write('Config file `' + $file + '` was ' + 'invalid'.red.bold + '! ' + 'SKIPPED'.red.bold);
+                        scheduler.sendSignal('onConfigLoaded', $file, false);
                     }
                     
                     if (c !== '') {
                         
                         config[helper.SHPS_domain(c.generalConfig.URL.value).host] = c;
                         
-                        log.write('Config file was ' + 'loaded successfully'.green);
+                        log.write('Config file `' + $file + '` was ' + 'loaded successfully'.green);
+                        scheduler.sendSignal('onConfigLoaded', $file, true);
                     }
                     
                     $callback();
@@ -426,4 +444,5 @@ var _setDebug
     $onOff = typeof $onOff !== 'undefined' ? $onOff : true;
 
     debug = $onOff;
+    scheduler.sendSignal('onDebugChange', $onOff);
 }
