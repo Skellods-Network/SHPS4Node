@@ -98,13 +98,11 @@ var traceToJSON = function () {
 /**
  * Clear screen
  *
- * @return module
  */
 var _cls 
 = me.cls = function () {
     
     process.stdout.write('\033c');
-    return me;
 };
 
 /**
@@ -146,26 +144,22 @@ var _log = function ($level, $str) {
  * Write error
  *
  * @param string $str
- * @return module
  */
 var error 
 = me.error = function ($str) {
 
     _log(4, $str);
-    return me;
 };
 
 /**
  * Write fatal
  *
  * @param string $str
- * @return module
  */
 var fatal
 = me.fatal = function ($str) {
 
     _log(5, $str);
-    return me;
 };
 
 
@@ -173,20 +167,17 @@ var fatal
  * Write string top log without outputting it
  *
  * @param string $str
- * @return module
  */
 var log 
 = me.log = function ($str) {
     
     _log(2, $str);
-    return me;
 };
 
 /**
  * Write string to console and to log
  *
  * @param string $str
- * @return module
  */
 var write
 = me.write = function ($str) {
@@ -194,15 +185,12 @@ var write
 
     console.log($str);
     log($str);
-
-    return me;
 };
 
 /**
  * Write warning to console and to log
  *
  * @param string $str
- * @return module
  */
 var writeWarning 
 = me.writeWarning = function ($str) {
@@ -210,15 +198,12 @@ var writeWarning
     
     console.log(('WARNING: ' + $str).yellow.bold);
     _log(3, $str);
-
-    return me;
 };
 
 /**
  * Write error to console and to log
  *
  * @param string $str
- * @return module
  */
 var writeError
 = me.writeError = function ($str) {
@@ -226,15 +211,12 @@ var writeError
     
     console.log(('ERROR: ' + $str).red.bold);
     _log(4, $str);
-    
-    return me;
 };
 
 /**
  * Write fatal error to console and to log
  *
  * @param string $str
- * @return module
  */
 var writeFatal
 = me.writeFatal = function ($str) {
@@ -242,14 +224,10 @@ var writeFatal
     
     console.log(('FATAL ERROR: ' + $str).red.bold);
     _log(5, $str);
-    
-    return me;
 };
 
 /**
  * Write welcome message
- *
- * @return module
  */
 var writeWelcome
 = me.writeWelcome = function () {
@@ -263,19 +241,4 @@ var writeWelcome
     }
 
     write('You are currently running SHPS v' + SHPS_VERSION.cyan.bold + build.yellow + ', but please call her ' + SHPS_INTERNAL_NAME.cyan.bold + '!');
-
-    return me;
-};
-
-/**
- * Write info test
- *
- * @return module
- */
-var writeInfo 
-= me.writeInfo = function () {
-    
-    write('For help, please input `help` (or just `h` and press [TAB]) and hit [ENTER].\n');
-    
-    return me;
 };

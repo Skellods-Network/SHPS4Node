@@ -10,7 +10,7 @@ var log = require('./log.js');
 
 var completer = function ($line, $callback) {
     
-    var completions = 'exit help'.split(' ');
+    var completions = 'exit help run'.split(' ');
     
     // IDEA
     // get last command -> complete.
@@ -32,6 +32,8 @@ var handleRequest
         output: process.stdout,
         completer: completer
     });
+    
+    log.write('For help, please input `help` (or just `h` and press [TAB]) and hit [ENTER].\n');
 
     rl.setPrompt('SHPS> ');
     rl.prompt();
@@ -66,6 +68,23 @@ var handleRequest
                 var buf = new Buffer('DQpCaWcgYm94DQpTbWFsbCBib3gNCkNyeXN0YWwgYmFsbA0KU2luZ2xlIGRvb3JiZWxsDQpEb3VibGUgZG9vcmJlbGwNCkljZSBjcmVhbSBjb25lDQpGZWVkIHRoZSBwaWdlb25zDQpGb3J3YXJkIHN3aW0NCkJlYXQgdGhlIGhvcnNlDQpCdXRjaGVyIHRoZSBoaXBwbw0KR3JvcGUgdGhlIG9yYW5ndXRhbg0KU3BhbmsgdGhlIG1vbmV5DQoNCkFuZCBmaW5hbGx5DQpMaWNrIHRoZSBsaXphcmQ===', 'base64');
                 log.write(buf.toString('utf-8') + '\n');
                 break;
+            }
+
+            default: {
+
+                switch (true) {
+
+                    case /run .*/i.test($line): {
+                        
+                        log.write(eval($line.substring(4)));
+                        break;
+                    }
+
+                    default: {
+
+                        log.write('Command not found!');
+                    }
+                }
             }
         }
 

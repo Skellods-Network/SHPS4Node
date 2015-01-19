@@ -25,9 +25,6 @@
         "unix",
         "win32"
     ],
-    "cpu":  [
-        "x64"
-    ],
     "scripts": {
         "start": "node SHPS.js"
     },

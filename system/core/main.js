@@ -121,12 +121,16 @@ var _init
             function func_init_readConfig ($_p1, $_p2) { _readConfig($_p2); }
             , function func_init_loadPlugins ($_p1, $_p2) { plugin.loadPlugins($_p2); }
             , function func_init_listen($_p1, $_p2) { _listen($_p2); }
-            , function func_init_event($_p1, $_p2) { scheduler.sendSignal('onMainInit', $_p1); $_p2(); }
+            , function func_init_event($_p1, $_p2) {
+                
+                log.write('');
+                scheduler.sendSignal('onMainInit', $_p1);
+                $_p2();
+            }
         ]
     }, function func_init_done ($err) {
     
         log.write('\nWe done here! SHPS at your service - what can we do for you?');
-        log.writeInfo();
         cmd.handleRequest();
     });
 }
