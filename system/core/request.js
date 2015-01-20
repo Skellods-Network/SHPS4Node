@@ -71,3 +71,18 @@ var _handleRequest
     }
     
 }
+
+
+var _focus
+= me.focus = function f_request_focus($requestState) {
+    if (typeof $requestState !== 'undefined') {
+        
+        log.error('Cannot focus undefined requestState!');
+    }
+    
+
+    this.handleRequest = function f_request_focus_handleRequest() {
+        
+        _handleRequest($requestState);
+    };
+}

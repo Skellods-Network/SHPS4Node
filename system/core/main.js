@@ -231,9 +231,7 @@ var _make
     
     log.log('Starting to build the homepage');
     
-    //EVENT: onBeforeMake
-    //pluginEngine.callEvent('onBeforeMake', {$template2Start}, $requestState);
-
+    plugin.callEvent('onBeforeMake', $template2Start, $requestState);
 
     async.waterfall([
         
@@ -309,7 +307,7 @@ var _make
                                 log.error('ERROR: Failed to get initial template ' + $p1);
                                 $cb();
                             });
-                    },
+                    }
                 ]
             }, function () {
                 
@@ -333,8 +331,7 @@ var _make
             //body = body.replace('</head>', css.getLink() + '</head>');
             //body = optimizer.optimize(body);
             
-            // EVENT: onAfterMake
-            //pluginEngine.callEvent('onAfterMake', {$template2Start}, $requestState);
+            plugin.callEvent('onAfterMake', $template2Start, $requestState);
             
             $cb(null, body)
         },
@@ -401,7 +398,7 @@ var _readConfig
                     catch ($e) {
                         
                         log.write('Config file `' + $file + '` was ' + 'invalid'.red.bold + '! ' + 'SKIPPED'.red.bold);
-                        scheduler.sendSignal('onConfigLoaded', $file, false);
+                        scheduler.sendSignal('onConfigLoaded', $file, true, null);
                     }
                     
                     if (c !== '') {
@@ -409,7 +406,7 @@ var _readConfig
                         config[helper.SHPS_domain(c.generalConfig.URL.value).host] = c;
                         
                         log.write('Config file `' + $file + '` was ' + 'loaded successfully'.green);
-                        scheduler.sendSignal('onConfigLoaded', $file, true);
+                        scheduler.sendSignal('onConfigLoaded', $file, true, c);
                     }
                     
                     $callback();
@@ -449,4 +446,59 @@ var _setDebug
 
     debug = $onOff;
     scheduler.sendSignal('onDebugChange', $onOff);
+}
+
+/**
+ * Focus all actions on a given requestState
+ * Basically this is a wrapper so web developers don't have to worry about which domain their scripts are served to
+ *
+ * @param requestState $requestState
+ */
+var _focus
+= me.focus = function f_main_focus($requestState) {
+    if (typeof $requestState !== 'undefined') {
+        
+        log.error('Cannot focus undefined requestState!');
+    }
+    
+
+    this.getDir = function f_main_focus_getDir($key) {
+        
+        return _getDir($key);
+    };
+
+    this.getHPConfig = function f_main_focus_getHPConfig($group, $key) {
+        
+        return _getHPConfig($group, $key, $requestState.config.generalConfig.URL.value);
+    };
+    
+    this.getInstance = function f_main_focus_getInstance() {
+        
+        return this;
+    };
+
+    this.getNamespace = function f_main_focus_getNamespace() {
+        
+        return _getNamespace($requestState);
+    };
+
+    this.isDebug = function f_main_focus_isDebug() {
+        
+        return _isDebug();
+    };
+
+    this.make = function f_main_focus_make($template2Start) {
+        
+        return _make($template2Start, $requestState);
+    };
+
+    this.readConfig = function f_main_focus_readConfig($cb) {
+        
+        return _readConfig($cb);
+    };
+
+    this.setDebug = function f_main_focus_setDebug($onOff) {
+        
+        return _setDebug($onOff);
+    };
 }

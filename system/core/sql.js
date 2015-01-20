@@ -706,14 +706,12 @@ var _focus
         log.error('Cannot focus undefined requestState!');
     }
 
-    var self = this;
-    
     /**
      * Get connection count
      * 
      * @return integer
      */
-    var getConnectionCount = function () {
+    var getConnectionCount = function f_sql_focus_getConnectionCount() {
         
         return _getConnectionCount($requestState);
     };
@@ -724,7 +722,7 @@ var _focus
      * @param string $alias //Default: 'default'
      * @return sql
      */
-    var newSQL = function ($alias) {
+    this.newSQL = function f_sql_focus_newSQL($alias) {
 
         return _newSQL($alias, $requestState);
     };

@@ -21,3 +21,14 @@ scheduler.addSlot('onMainInit', function () {
         log.write('SHPS will optimize garbage collection!'.green);
     }
 });
+
+scheduler.addSlot('onConfigLoaded', function ($file, $successful, $config) {
+
+    if ($successful) {
+
+        if ($config.generalConfig.eastereggs.value) {
+
+            log.writeWarning('Public eastereggs are enabled for ' + $config.generalConfig.URL.value + ' in ' + $file + '!');
+        }
+    }
+});
