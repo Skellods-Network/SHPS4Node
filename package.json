@@ -1,0 +1,45 @@
+﻿{
+    "name": "SHPS",
+    "version": "3.1.0",
+    "description":  "Skellods HomePage System",
+    "homepage": "https://shps.io",
+    "author": {
+        "name": "Marco Alka",
+        "email": "marco@skellods.de",
+        "url": "https://marco-alka.de"
+    },
+	"repository": {
+		"type" : "git",
+		"url" : "https://github.com/Skellods-Network/SHPS4Node.git"
+	},
+    "files": [
+        "./SHPS.js",
+        "./LICENCE.md",
+        "./README.md",
+        "./package.json",
+        "./system"
+    ],
+    "engines": {
+        "node" : ">=0.10.0",
+        "npm" : ">=1.4.0"
+    },
+    "os": [
+        "linux",
+        "win32"
+    ],
+    "scripts": {
+        "start": "node SHPS.js"
+    },
+    "preferGlobal":  true,
+    "dependencies": {
+        "vasync": ">=1.6.2",
+        "backbone": ">=1.1.2",
+        "colors": ">=0.6.2",
+        "generic-pool": ">=2.1.1",
+        "mysql": ">=2.4.2",
+        "http2": ">=2.7.1",
+        "underscore": ">=1.6.0",
+        "cli-table":  ">=0.3.0",
+        "promise":  ">=6.0.0"
+    }
+}

@@ -1,4 +1,1 @@
-SHPS4Node
-=========
-
-Homepage Management System
+﻿SHPS is a system to make homepages and web applications in an easy, secure and structured way which is portabel and always up2date.
