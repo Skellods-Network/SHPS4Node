@@ -8,6 +8,10 @@
         "email": "marco@skellods.de",
         "url": "https://marco-alka.de"
     },
+	"repository": {
+		"type" : "git",
+		"url" : "https://github.com/Skellods-Network/SHPS4Node.git"
+	},
     "files": [
         "./SHPS.js",
         "./LICENCE.md",
@@ -21,8 +25,6 @@
     },
     "os": [
         "linux",
-        "bsd",
-        "unix",
         "win32"
     ],
     "scripts": {
@@ -38,7 +40,6 @@
         "http2": ">=2.7.1",
         "underscore": ">=1.6.0",
         "cli-table":  ">=0.3.0",
-        "spdy":  ">=1.28.1",
         "promise":  ">=6.0.0"
     }
 }

@@ -397,7 +397,13 @@ var SQL = function ($dbConfig, $connection) {
      */
     var _includeTable = [];
 
-
+    /**
+     * Make a new SQL query
+     * 
+     * @param string $query OPTIONAL
+     * @param mixed $param several parameters for SQL statement
+     * @return mixed Promise if a query was given, else a queryBuilder object is returned
+     */
     var _query
     = this.query = function ($query, $param) {
         
@@ -436,7 +442,7 @@ var SQL = function ($dbConfig, $connection) {
             });
         }
 
-        return new sql_queryBuilder(this);
+        return new _sql_queryBuilder(this);
     }
     
     /**
@@ -629,7 +635,7 @@ var SQL = function ($dbConfig, $connection) {
  * @return integer
  */
 var _getConnectionCount 
-= me.getConnectionCount = function ($requestState) {
+= me.getConnectionCount = function f_sql_getConnectionCount($requestState) {
     if (typeof $requestState !== 'undefined') {
         
         log.error('Cannot connect with undefined requestState!');
@@ -642,10 +648,11 @@ var _getConnectionCount
  * Create new managed SQL connection from alias (see config file)
  * 
  * @param string $alias //Default: 'default'
+ * @param $requestState requestState Object
  * @return sql
  */
 var _newSQL 
-= me.newSQL = function ($alias, $requestState) {
+= me.newSQL = function f_sql_newSQL($alias, $requestState) {
     $alias = (typeof $alias !== 'undefined' ? $alias : 'default');
     if (typeof $requestState === 'undefined') {
         
@@ -692,6 +699,101 @@ var _newSQL
 
     return new SQL($requestState, nPool.getConnection());
 };
+
+var _sql_queryBuilder = function f_sql_sql_queryBuilder($sql) {
+    if (typeof $sql !== typeof SQL) {
+
+        log.error('The queryBuilder needs a valid sql object!');
+        return;
+    }
+
+
+    /**
+     * Contains type of operation
+     * 0 = UNDEFINED
+     * 1 = GET
+     * 2 = INSERT
+     * 3 = ALTER
+     * 4 = DELETE
+     * 
+     * @var int
+     */
+    var $operation = 0;
+    
+    /**
+     * Data to work with
+     * GET: cols to get
+     * SET: col=>value to set
+     * 
+     * @var [] of sql_col
+     */
+    var $buf = [];
+    
+    /**
+     * Table to use for set or delete operations
+     * 
+     * @var \SHPS\sql_table
+     */
+    var $table = null;
+
+
+}
+
+/**
+ * SHPS_sql_colspec
+ * 
+ * @param $table sql_table Object
+ * @param $col string
+ */
+var sql_colspec = function f_sql_sql_colspec($table, $col) {
+    if (typeof $table !== typeof sql_table || typeof $col !== 'string') {
+
+        log.error('Wrong parameters: ' + typeof $table + ' / ' + typeof $col + '!');
+        return;
+    }
+    
+
+    /**
+     * Columne as SQL string
+     * 
+     * @return string
+     */
+    var _toString =
+    this.toString = function f_sql_sql_colspec_toString() {
+
+        return $table.getSQL().standardizeName($table.getSQL().getDB()) +
+                '.' . $table.getSQL().standardizeName($table.getFullName()) +
+                '.' . $table.getSQL().standardizeName($col);
+    }
+
+    /**
+     * Get table
+     * 
+     * @return SHPS_sql_table
+     */
+    var _getTable = 
+    this.getTable = function f_sql_sql_colspec_getTable() {
+
+        return $table;
+    }
+    
+    /**
+     * Get Columne name
+     * 
+     * @return string
+     */
+    var _getColName =
+    this.getColName = function f_sql_sql_colspec_getColName() {
+
+        return $col;
+    }
+    
+    var _getSQL =
+    this.getSQL = function f_sql_sql_colspec_getSQL() {
+
+        return $table.getSQL();
+    }
+}
 
 /**
  * Focus all DB actions on a given requestState

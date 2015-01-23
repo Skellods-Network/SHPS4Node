@@ -64,10 +64,6 @@
             "description": "Start HTTP/2.0 server",
             "value": false
         },
-        "useSPDY"              : {
-            "description": "Start SPDY server",
-            "value": false
-        },
         "HTTP1Port"              : {
             "description": "Port to serve HTTP/1.1 on",
             "value": 1280
@@ -75,10 +71,6 @@
         "HTTP2Port"              : {
             "description": "Port to serve HTTP/2.0 on",
             "value": 12443
-        },
-        "SPDYPort"              : {
-            "description": "Port to serve SPDY on",
-            "value": 123444
         },
         "eastereggs"            : {
             "description": "Enable eastereggs which might give information about the used SHPS version to a third party",

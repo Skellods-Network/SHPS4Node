@@ -46,7 +46,6 @@ var handleRequest
                 
                 log.cls();
                 log.writeWelcome();
-                log.writeInfo();
                 break;
             }
 
@@ -65,29 +64,36 @@ var handleRequest
             case 'lick': {
             
                 // I'm sorry, but I had to put this here...
-                var buf = new Buffer('DQpCaWcgYm94DQpTbWFsbCBib3gNCkNyeXN0YWwgYmFsbA0KU2luZ2xlIGRvb3JiZWxsDQpEb3VibGUgZG9vcmJlbGwNCkljZSBjcmVhbSBjb25lDQpGZWVkIHRoZSBwaWdlb25zDQpGb3J3YXJkIHN3aW0NCkJlYXQgdGhlIGhvcnNlDQpCdXRjaGVyIHRoZSBoaXBwbw0KR3JvcGUgdGhlIG9yYW5ndXRhbg0KU3BhbmsgdGhlIG1vbmV5DQoNCkFuZCBmaW5hbGx5DQpMaWNrIHRoZSBsaXphcmQ===', 'base64');
+                /*let*/var buf = new Buffer('DQpCaWcgYm94DQpTbWFsbCBib3gNCkNyeXN0YWwgYmFsbA0KU2luZ2xlIGRvb3JiZWxsDQpEb3VibGUgZG9vcmJlbGwNCkljZSBjcmVhbSBjb25lDQpGZWVkIHRoZSBwaWdlb25zDQpGb3J3YXJkIHN3aW0NCkJlYXQgdGhlIGhvcnNlDQpCdXRjaGVyIHRoZSBoaXBwbw0KR3JvcGUgdGhlIG9yYW5ndXRhbg0KU3BhbmsgdGhlIG1vbmV5DQoNCkFuZCBmaW5hbGx5DQpMaWNrIHRoZSBsaXphcmQ===', 'base64');
                 log.write(buf.toString('utf-8') + '\n');
+                break;
+            }
+
+            case 'version': {
+
+                var build = SHPS_BUILD;
+                if (build != '') {
+                    
+                    build = ' ' + build;
+                }
+                
+                log.write('You are currently running SHPS v' + SHPS_VERSION.cyan.bold + build.yellow + ', but please call her ' + SHPS_INTERNAL_NAME.cyan.bold + '!');
+                break;
+            }
+
+            case /^!.+/i.test($line)?$line:false: {
+
+                log.write(eval($line.substring(1)));
                 break;
             }
 
             default: {
 
-                switch (true) {
-
-                    case /run .*/i.test($line): {
-                        
-                        log.write(eval($line.substring(4)));
-                        break;
-                    }
-
-                    default: {
-
-                        log.write('Command not found!');
-                    }
-                }
+                log.write('Command not found!');
             }
         }
-
+        
+        log.write('');
         rl.prompt();
     });
 }

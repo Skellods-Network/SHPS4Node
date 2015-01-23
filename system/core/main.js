@@ -28,6 +28,10 @@ GLOBAL.SHPS_BUILD = 'ALPHA';
 GLOBAL.SHPS_INTERNAL_NAME = 'IROKOKOU';
 GLOBAL.SHPS_VERSION = SHPS_MAJOR_VERSION + '.' + SHPS_MINOR_VERSION + '.' + SHPS_PATCH_VERSION;
 
+GLOBAL.SHPS_DIR_PLUGINS = 0;
+GLOBAL.SHPS_DIR_CERTS = 1;
+GLOBAL.SHPS_DIR_CONFIGS = 2;
+
 
 var fs = require('fs');
 var async = require('vasync');
@@ -47,10 +51,6 @@ var plugin = require('./plugin.js');
 
 var config = [];
 var debug = false;
-var directories = {
-
-    'plugins': path.dirname(require.main.filename) + '/system/plugins/'
-};
 var domain = [];
 
 /**
@@ -62,11 +62,13 @@ var domain = [];
 var _getDir
 = me.getDir = function ($key) {
     
-    if (directories.hasOwnProperty($key)) {
-        
-        return directories[$key];
+    switch ($key) {
+
+        case SHPS_DIR_PLUGINS: return path.dirname(require.main.filename) + '/system/plugins/';
+        case SHPS_DIR_CERTS: return path.dirname(require.main.filename) + '/cert/';
+        case SHPS_DIR_CONFIGS: return path.dirname(require.main.filename) + '/config/';
+        default: return;
     }
-    else return;
 }
 
 /**
@@ -191,17 +193,18 @@ var _listen
             if (port.indexOf(p) == -1) {
                 
                 https.createServer({
-                    key: fs.readFileSync('./cert/' + config[$c].SSLConfig.key.value),
-                    cert: fs.readFileSync('./cert/' + config[$c].SSLConfig.cert.value),
-                    ca: fs.readFileSync('./cert/' + config[$c].SSLConfig.ca.value)
+                    key: fs.readFileSync(_getDir(SHPS_DIR_CERTS) + config[$c].SSLConfig.key.value),
+                    cert: fs.readFileSync(_getDir(SHPS_DIR_CERTS) + config[$c].SSLConfig.cert.value),
+                    ca: fs.readFileSync(_getDir(SHPS_DIR_CERTS) + config[$c].SSLConfig.ca.value)
                 }, function ($res, $req) {
                     
                     var rs = new helper.requestState();
-                    //var domain = new helper.SHPS_domain($req.headers.host);
-                    //rs.uri = domain.host;
-                    //rs.config = _getConfig(rs.uri);
-                    //rs.path = $req.url;
-                    //rs.locked(true);
+                    var domain = new helper.SHPS_domain($req.headers.host);
+                    rs.uri = domain.host;
+                    rs.config = _getConfig(rs.uri);
+                    rs.path = $req.url;
+                    rs.request = $req;
+                    rs.result = $res;
                     
                     request.handleRequest(rs);
                 })
@@ -214,6 +217,8 @@ var _listen
         }
     }
     
+    scheduler.sendSignal('onServerStart', port);
+
     $cb();
 }
 
@@ -235,7 +240,7 @@ var _make
 
     async.waterfall([
         
-        function func_make_wf_1 ($cb) {
+        function f_main_make_wf_1 ($cb) {
             
             var _sql = sql.newSQL('default', $requestState)
             if (typeof _sql !== 'undefined') {
@@ -248,7 +253,7 @@ var _make
             }
         },
     
-        function func_make_wf_2 ($sql, $cb) {
+        function f_main_make_wf_2 ($sql, $cb) {
             
             var rowsTemplate = [false];
             var rowsContent = [false];
@@ -256,7 +261,7 @@ var _make
                 
                 'funcs': [
 
-                    function func_make_wf_2_1 ($_p1, $cb) {
+                    function f_main_make_wf_2_1 ($_p1, $cb) {
                         
                         var tblTemplate = $sql.openTable('template');
                         var tblNamespace = $sql.openTable('namespace');
@@ -267,18 +272,18 @@ var _make
                             .equal(tblTemplate.col('namespace'), tblNamespace.col('ID'))
                             .equal(tblNamespace.col('name'), _getNamespace($requestState))
                             .execute()
-                            .then(function ($rows) {
+                            .then(function f_main_make_wf_2_1_then($rows) {
                             
                                 rowsTemplate = $rows;
                                 $cb();
-                            }, function ($p1) {
+                            }, function f_main_make_wf_2_1_else($p1) {
                             
                                 log.error('ERROR: Failed to get initial template ' + $p1);
                                 $cb();
                             });
                     },
 
-                    function func_make_wf_2_2 ($cb) {
+                    function f_main_make_wf_2_2 ($cb) {
                         
                         if ($requestState.GET.site == null) {
                             
@@ -298,11 +303,11 @@ var _make
                             .equal(tblContent.col('namespace'), tblNamespace.col('ID'))
                             .equal(tblContent.col('name'), _getNamespace($requestState))
                             .execute()
-                            .then(function ($rows) {
+                            .then(function f_main_make_wf_2_2_then($rows) {
                             
                                 rowsContent = $rows;
                                 $cb();
-                            }, function ($p1) {
+                            }, function f_main_make_wf_2_2_else($p1) {
                             
                                 log.error('ERROR: Failed to get initial template ' + $p1);
                                 $cb();
@@ -364,11 +369,17 @@ var _getNamespace
  * @todo: if no config available: ask user to input config step-by-step and write config file
  */
 var _readConfig
-= me.readConfig = function ($cb) {
+= me.readConfig = function f_main_readConfig($cb) {
     
     log.write('Detecting configurations...');
+    
+    var dir;
+    if(!(dir = _getDir(SHPS_DIR_CONFIGS))) {
 
-    var dir = './config/';
+        log.writeError("Could not retrive config directory!");
+        return false;
+    }
+
     fs.readdir(dir, function ($err, $files) {
 
         if ($err) {
@@ -381,6 +392,14 @@ var _readConfig
             'inputs': $files,
             'func': function ($file, $callback) {
                 
+                if ($file.substring($file.length - 5) != '.json') {
+                    
+                    i++;
+                    schedule.sendSignal('onFilePollution', dir, 'config', $file);
+                    $callback();
+                    return;
+                }
+
                 fs.readFile(dir + $file, 'utf-8', function ($err, $data) {
                     
                     if ($err) {
@@ -410,7 +429,7 @@ var _readConfig
                     }
                     
                     $callback();
-                })
+                });
             }
         }, function ($err) {
             
@@ -420,6 +439,8 @@ var _readConfig
             }
         });
     });
+
+    return true;
 }
 
 /**

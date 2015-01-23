@@ -116,7 +116,6 @@ var _log = function ($level, $str) {
     
     if ((level == 1 && $level > 3) || (level != 1 && level <= $level)) {
         
-        console.error(colors.red(colors.bold($str)));
         if (level == 1) {
             
             schedule.sendSignal('SHPSError', $level, $str, trace);
@@ -242,3 +241,10 @@ var writeWelcome
 
     write('You are currently running SHPS v' + SHPS_VERSION.cyan.bold + build.yellow + ', but please call her ' + SHPS_INTERNAL_NAME.cyan.bold + '!');
 };
+
+var _writeHint
+= me.writeHint = function ($str) {
+    $str = typeof $str !== 'undefined' ? $str : '';
+
+    console.log(('HINT: ' + $str).grey);
+}

@@ -15,7 +15,7 @@ var _plugins = {};
 var _loadPlugins 
 = me.loadPlugins = function ($cb) {
     
-    var dir = main.getDir('plugins');
+    var dir = main.getDir(SHPS_DIR_PLUGINS);
     fs.readdir(dir, function ($err, $files) {
         
         log.write('\nDetecting plugins...');
@@ -25,6 +25,13 @@ var _loadPlugins
             var file = $files[i];
             if (fs.statSync(dir + file).isFile()) {
                 
+                if (file.substring(file.length - 3) != '.js') {
+                    
+                    i++;
+                    schedule.sendSignal('onFilePollution', dir, 'plugin', file);
+                    continue;
+                }
+
                 var pname = file.substring(0, file.length - 3);
                 
                 log.write('Plugin found: ' + pname);
