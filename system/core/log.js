@@ -4,8 +4,15 @@ var me = module.exports;
 
 var colors = require('colors');
 var util = require('util');
+var cluster = require('cluster');
+var readline = require('readline');
 
 var schedule = require('./schedule.js');
+var cl = require('./commandline.js');
+var main = require('./main.js');
+var helper = require('./helper.js');
+
+var self = this;
 
 
 /**
@@ -174,6 +181,21 @@ var log
 };
 
 /**
+ * STDOUT function with fork optimization
+ * 
+ * @param $str string
+ * @param $forceWrite boolean Force output even from worker
+ */
+var _out = function ($str, $forceWrite) {
+    $forceWrite = typeof $forceWrite !== 'undefined' ? $forceWrite : false;
+    
+    if (cluster.isMaster || $forceWrite) {
+        
+        console.log($str);
+    }
+};
+
+/**
  * Write string to console and to log
  *
  * @param string $str
@@ -181,8 +203,8 @@ var log
 var write
 = me.write = function ($str) {
     $str = typeof $str !== 'undefined' ? $str : '';
-
-    console.log($str);
+    
+    _out($str);
     log($str);
 };
 
@@ -190,12 +212,13 @@ var write
  * Write warning to console and to log
  *
  * @param string $str
+ * @param $forceWrite boolean Force output even from worker
  */
 var writeWarning 
-= me.writeWarning = function ($str) {
+= me.writeWarning = function ($str, $forceWrite) {
     $str = typeof $str !== 'undefined' ? $str : '';
     
-    console.log(('WARNING: ' + $str).yellow.bold);
+    _out(('WARNING: ' + $str).yellow.bold, $forceWrite);
     _log(3, $str);
 };
 
@@ -203,12 +226,13 @@ var writeWarning
  * Write error to console and to log
  *
  * @param string $str
+ * @param $forceWrite boolean Force output even from worker
  */
 var writeError
-= me.writeError = function ($str) {
+= me.writeError = function ($str, $forceWrite) {
     $str = typeof $str !== 'undefined' ? $str : '';
-    
-    console.log(('ERROR: ' + $str).red.bold);
+
+    _out(('ERROR: ' + $str).red.bold, $forceWrite);
     _log(4, $str);
 };
 
@@ -216,12 +240,13 @@ var writeError
  * Write fatal error to console and to log
  *
  * @param string $str
+ * @param $forceWrite boolean Force output even from worker
  */
 var writeFatal
-= me.writeFatal = function ($str) {
+= me.writeFatal = function ($str, $forceWrite) {
     $str = typeof $str !== 'undefined' ? $str : '';
     
-    console.log(('FATAL ERROR: ' + $str).red.bold);
+    _out(('FATAL ERROR: ' + $str).red.bold, $forceWrite);
     _log(5, $str);
 };
 
@@ -238,13 +263,41 @@ var writeWelcome
 
         build = ' ' + build;
     }
-
-    write('You are currently running SHPS v' + SHPS_VERSION.cyan.bold + build.yellow + ', but please call her ' + SHPS_INTERNAL_NAME.cyan.bold + '!');
+    
+    main.printVersion();
 };
 
-var _writeHint
-= me.writeHint = function ($str) {
+/**
+ * Write hint to console
+ * 
+ * @param string $str
+ * @param $forceWrite boolean Force output even from worker
+ */
+var _outHint 
+= me.writeHint = function ($str, $forceWrite) {
     $str = typeof $str !== 'undefined' ? $str : '';
+    
+    _out(('HINT: ' + $str).grey, $forceWrite);
+};
 
-    console.log(('HINT: ' + $str).grey);
-}
+/**
+ * Grouphuggable
+ * https://github.com/php-fig/fig-standards/blob/master/proposed/psr-8-hug/psr-8-hug.md
+ * Breaks after 3 hugs per partner
+ * 
+ * @param $hug
+ *  Huggable caller
+ */
+var _hug 
+= me.hug = function f_log_hug($h) {
+    
+    return helper.genericHug($h, self, function f_helper_log_hug($hugCount) {
+        
+        if ($hugCount > 3) {
+            
+            return false;
+        }
+        
+        return true;
+    });
+};

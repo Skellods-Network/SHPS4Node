@@ -2,19 +2,20 @@
     "configHeader": {
       
         "SHPSVERSION_MA": 3,
-        "SHPSVERSION_MI": 1
+        "SHPSVERSION_MI": 1,
+		"type": "hp"
     },
     "generalConfig": {
         
         "URL"			: {
             
             "description": "Your domain",
-            "value": "https://localhost"
+            "value": "localhost"
         },
         "staticResourcesURL"    : {
             
             "description": "Your resource URL",
-            "value": "https://localhost"
+            "value": "localhost"
         },
         "dirUpload"		: {
             

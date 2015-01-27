@@ -5,9 +5,12 @@ var me = module.exports;
 var url = require('url');
 var promise = require('promise');
 var qs = require('querystring');
+var u = require('util');
 
 var log = require('./log.js');
 var request = require('./request.js');
+
+var self = this;
 
 
 /**
@@ -45,7 +48,7 @@ me.SHPS_domain = function ($uri) {
  * - Domain info
  * - GET and POST variables
  */
-me.requestState = function() {
+me.requestState = function () {
     
     var _lem = 'Tried to write to locked state!';
     var _data = {
@@ -92,16 +95,16 @@ me.requestState = function() {
     */
 
     var __getData =
-    this._getData = function () {
-
+ this._getData = function () {
+        
         return _data;
     }
-
+    
     this.__defineGetter__("locked", function () {
         
         return _data.locked;
     });
-
+    
     this.__defineSetter__("locked", function ($locked) {
         
         if (_data.locked || $locked) {
@@ -128,7 +131,7 @@ me.requestState = function() {
             _data.uri = $uri;
         }
     });
-
+    
     this.__defineGetter__("path", function () {
         
         return _data.path;
@@ -145,7 +148,7 @@ me.requestState = function() {
             _data.path = $path;
         }
     });
-
+    
     this.__defineGetter__("GET", function () {
         
         if (_data.GET === null) {
@@ -185,10 +188,10 @@ me.requestState = function() {
                 i++;
             }
         }
-
+        
         return _data.GET;
     });
-
+    
     this.__defineSetter__("GET", function ($GET) {
         
         if (_data.locked) {
@@ -200,7 +203,7 @@ me.requestState = function() {
             _data.GET = $GET;
         }
     });
-
+    
     this.__defineGetter__("POST", function () {
         
         var prom = new promise.Promise();
@@ -228,7 +231,7 @@ me.requestState = function() {
                 });
 
             }
-
+            
             return prom.then(function ($r) {
                 
                 _data.POST = $r;
@@ -236,7 +239,7 @@ me.requestState = function() {
             });
         }
         else {
-
+            
             return _data.POST;
         }
     });
@@ -252,7 +255,7 @@ me.requestState = function() {
             _data.POST = $POST;
         }
     });
-
+    
     this.__defineGetter__("SESSION", function () {
         
         return _data.SESSION;
@@ -269,7 +272,7 @@ me.requestState = function() {
             _data.SESSION = $SESSION;
         }
     });
-
+    
     this.__defineGetter__("config", function () {
         
         return _data.config;
@@ -286,7 +289,7 @@ me.requestState = function() {
             _data.config = $config;
         }
     });
-
+    
     this.__defineGetter__("site", function () {
         
         return _data.site;
@@ -303,7 +306,7 @@ me.requestState = function() {
             _data.site = $site;
         }
     });
-
+    
     this.__defineGetter__("namespace", function () {
         
         return _data.namespace;
@@ -320,7 +323,7 @@ me.requestState = function() {
             _data.namespace = $ns;
         }
     });
-
+    
     this.__defineGetter__("httpStatus", function () {
         
         return _data.httpStatus;
@@ -337,7 +340,7 @@ me.requestState = function() {
             _data.httpStatus = $val;
         }
     });
-
+    
     this.__defineGetter__("responseBody", function () {
         
         return _data.responseBody;
@@ -354,7 +357,7 @@ me.requestState = function() {
             _data.responseBody = $val;
         }
     });
-
+    
     this.__defineGetter__("request", function () {
         
         return _data.request;
@@ -371,7 +374,7 @@ me.requestState = function() {
             _data.request = $val;
         }
     });
-
+    
     this.__defineGetter__("result", function () {
         
         return _data.result;
@@ -388,4 +391,97 @@ me.requestState = function() {
             _data.result = $val;
         }
     });
-}
+};
+
+/**
+ * Grouphuggable
+ * https://github.com/php-fig/fig-standards/blob/master/proposed/psr-8-hug/psr-8-hug.md
+ * Breaks after when $breakCondition returns false
+ * 
+ * @param $hug object
+ *  Huggable caller
+ *  
+ * @param $self object
+ *  Hugged object
+ *  
+ * @param $breakCondition function(int)
+ *  break condition (returns false on break)
+ *  Takes number of preceded hugs from specific partner as first parameter
+ */
+var _genericHug 
+= me.genericHug = function f_helper_genericHug($h, $self, $breakCondition) {
+    
+    if (typeof $self.hug.lastPartner === 'undefined') {
+        
+        $self.hug.lastPartner = [];
+    }
+    
+    if (typeof $self.hug.lastPartner[$self] === 'undefined') {
+        
+        $self.hug.lastPartner[$self] = $h;
+    }
+    
+    if (typeof $self.hug.count === 'undefined') {
+        
+        $self.hug.count = [];
+    }
+
+    if ($self.hug.lastPartner[$self] != $h) {
+        
+        $self.hug.lastPartner[$self] = $h;
+        $self.hug.count[$self] = [];
+    }
+    
+    if (typeof $self.hug.count[$self] === 'undefined') {
+
+        $self.hug.count[$self] = [];
+    }
+    
+    if (!u.isArray($h)) {
+        
+        $h = [$h];
+    }
+    
+    var i = 0;
+    var l = $h.length;
+    while (i < l) {
+        
+        if (!$self.hug.count[$self][$h[i]]) {
+            
+            $self.hug.count[$self][$h[i]] = 0;
+        }
+        
+        $self.hug.count[$self][$h[i]]++;
+        if (!$breakCondition($self.hug.count[$self][$h[i]])) {
+            
+            i++;
+            continue;
+        }
+        
+        $h[i].hug($self);
+        i++;
+    }
+
+    return $self;
+};
+
+/**
+ * Grouphuggable
+ * Breaks after 3 hugs per partner
+ * 
+ * @param $hug
+ *  Huggable caller
+ */
+var _hug 
+= me.hug = function f_helper_hug($h) {
+    
+    return helper.genericHug($h, self, function f_helper_hug_hug($hugCount) {
+        
+        if ($hugCount > 3) {
+            
+            return false;
+        }
+        
+        return true;
+    });
+};

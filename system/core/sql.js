@@ -1,10 +1,9 @@
-﻿"use strict";
+﻿'use strict';
 
 var me = module.exports;
 
 GLOBAL.SHPS_SQL_MYSQL = 0;
 GLOBAL.SHPS_SQL_MSSQL = 10;
-
 
 var mysql = require('mysql');
 var pooling = require('generic-pool');
@@ -16,9 +15,8 @@ var log = require('./log.js');
 var helper = require('./helper.js');
 var sffm = require('./SFFM.js');
 
-
 var _sqlConnectionPool = {};
-
+var self = this;
 
 
 /**
@@ -747,12 +745,12 @@ var _sql_queryBuilder = function f_sql_sql_queryBuilder($sql) {
  */
 var sql_colspec = function f_sql_sql_colspec($table, $col) {
     if (typeof $table !== typeof sql_table || typeof $col !== 'string') {
-
+        
         log.error('Wrong parameters: ' + typeof $table + ' / ' + typeof $col + '!');
         return;
     }
     
-
+    
     /**
      * Columne as SQL string
      * 
@@ -760,12 +758,12 @@ var sql_colspec = function f_sql_sql_colspec($table, $col) {
      */
     var _toString =
     this.toString = function f_sql_sql_colspec_toString() {
-
+        
         return $table.getSQL().standardizeName($table.getSQL().getDB()) +
-                '.' . $table.getSQL().standardizeName($table.getFullName()) +
-                '.' . $table.getSQL().standardizeName($col);
+                '.'.$table.getSQL().standardizeName($table.getFullName()) +
+                '.'.$table.getSQL().standardizeName($col);
     }
-
+    
     /**
      * Get table
      * 
@@ -773,7 +771,7 @@ var sql_colspec = function f_sql_sql_colspec($table, $col) {
      */
     var _getTable = 
     this.getTable = function f_sql_sql_colspec_getTable() {
-
+        
         return $table;
     }
     
@@ -784,16 +782,38 @@ var sql_colspec = function f_sql_sql_colspec($table, $col) {
      */
     var _getColName =
     this.getColName = function f_sql_sql_colspec_getColName() {
-
+        
         return $col;
     }
     
     var _getSQL =
     this.getSQL = function f_sql_sql_colspec_getSQL() {
-
+        
         return $table.getSQL();
     }
-}
+};
+
+/**
+ * Grouphuggable
+ * Breaks after 3 hugs per partner
+ * 
+ * @param $hug
+ *  Huggable caller
+ */
+var _hug 
+= me.hug = function f_sql_hug($h) {
+    
+    return helper.genericHug($h, self, function f_sql_hug_hug($hugCount) {
+        
+        if ($hugCount > 3) {
+            
+            return false;
+        }
+        
+        return true;
+    });
+};
+
 
 /**
  * Focus all DB actions on a given requestState

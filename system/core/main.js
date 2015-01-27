@@ -21,8 +21,8 @@
 var me = module.exports;
 
 GLOBAL.SHPS_ = 1;
-GLOBAL.SHPS_MAJOR_VERSION = 3;
-GLOBAL.SHPS_MINOR_VERSION = 1;
+GLOBAL.SHPS_MAJOR_VERSION = 4;
+GLOBAL.SHPS_MINOR_VERSION = 0;
 GLOBAL.SHPS_PATCH_VERSION = 0;
 GLOBAL.SHPS_BUILD = 'ALPHA';
 GLOBAL.SHPS_INTERNAL_NAME = 'IROKOKOU';
@@ -39,6 +39,8 @@ var colors = require('colors');
 var https = require('http2');
 var http = require('http');
 var path = require('path');
+var cluster = require('cluster');
+var os = require('os');
 
 var scheduler = require('./schedule.js');
 var optimize = require('./optimize.js');
@@ -48,10 +50,13 @@ var request = require('./request.js');
 var cmd = require('./commandline.js');
 var sql = require('./sql.js');
 var plugin = require('./plugin.js');
+var cl = require('./commandline.js');
 
 var config = [];
+var master = [];
 var debug = false;
 var domain = [];
+var self = this;
 
 /**
  * Get directory path
@@ -62,14 +67,33 @@ var domain = [];
 var _getDir
 = me.getDir = function ($key) {
     
+    var r = null;
     switch ($key) {
 
-        case SHPS_DIR_PLUGINS: return path.dirname(require.main.filename) + '/system/plugins/';
-        case SHPS_DIR_CERTS: return path.dirname(require.main.filename) + '/cert/';
-        case SHPS_DIR_CONFIGS: return path.dirname(require.main.filename) + '/config/';
-        default: return;
+        case SHPS_DIR_PLUGINS: r = path.dirname(require.main.filename) + '/system/plugins/'; break;
+        case SHPS_DIR_CERTS: r = path.dirname(require.main.filename) + '/cert/'; break;
+        case SHPS_DIR_CONFIGS: r = path.dirname(require.main.filename) + '/config/'; break;
     }
-}
+
+    if (r !== null) {
+    
+        r = path.normalize(r);    
+    }
+
+    return r;
+};
+
+var _printVersion 
+= me.printVersion = function () {
+    
+    /*let*/var build = SHPS_BUILD;
+    if (build != '') {
+        
+        build = ' ' + build;
+    }
+
+    log.write('You are currently running SHPS v' + SHPS_VERSION.cyan.bold + build.yellow + ', but please call her ' + SHPS_INTERNAL_NAME.cyan.bold + '!');
+};
 
 /**
  * Get setting from config file
@@ -90,7 +114,7 @@ var _getHPConfig
     }
 
     return;
-}
+};
 
 /**
  * Return singelton instance
@@ -120,10 +144,10 @@ var _init
         
         'funcs': [
             //update  //log.write('Checking for new versions...');
-            function func_init_readConfig ($_p1, $_p2) { _readConfig($_p2); }
-            , function func_init_loadPlugins ($_p1, $_p2) { plugin.loadPlugins($_p2); }
-            , function func_init_listen($_p1, $_p2) { _listen($_p2); }
-            , function func_init_event($_p1, $_p2) {
+            function f_init_readConfig($_p1, $_p2) { _readConfig($_p2); }
+            , function f_init_loadPlugins($_p1, $_p2) { plugin.loadPlugins($_p2); }
+            , function f_init_parallelize($_p1, $_p2) { _parallelize($_p2); }
+            , function f_init_event($_p1, $_p2) {
                 
                 log.write('');
                 scheduler.sendSignal('onMainInit', $_p1);
@@ -136,6 +160,43 @@ var _init
         cmd.handleRequest();
     });
 }
+
+var _parallelize = function ($cb) {
+    
+    var numWorkers = master.workers.value;
+    if (numWorkers == -1) {
+        
+        numWorkers = os.cpus().length; // Smart regulation later on
+    }
+
+    if (cluster.isMaster && numWorkers > 0) {
+        
+        for (var i = 1; i < numWorkers; i++) {
+
+            var worker = cluster.fork();
+
+            worker.on('message', function ($msg) {
+
+                if ($msg.cmd && $msg.cmd == 'workerOptimizeRequest') {
+
+                    optimize.handleWorkerMessage($msg.data.event, $msg.data.params);
+                }
+            });
+
+            cluster.on('online', function ($worker) {
+            
+                log.write('Worker ' + $worker.id + ' is now ' + 'online'.green);
+                cl.prompt();
+            });
+        }
+
+        $cb();
+    }
+    else {
+
+        _listen($cb);
+    }
+};
 
 /**
  * Return debug status
@@ -400,7 +461,7 @@ var _readConfig
                     return;
                 }
 
-                fs.readFile(dir + $file, 'utf-8', function ($err, $data) {
+                fs.readFile(dir + $file, 'utf8', function ($err, $data) {
                     
                     if ($err) {
                         
@@ -410,23 +471,38 @@ var _readConfig
                     log.write('Config file found: ' + $file);
                     
                     var c = '';
+                    var status = false;
                     try {
                         
                         c = JSON.parse($data);
+                        switch (c.configHeader.type) {
+
+                            case 'master': {
+
+                                log.write('Master file was ' + 'loaded successfully'.green);
+                                master = c.config;
+                                break;
+                            }
+
+                            case 'hp': {
+                                
+                                config[helper.SHPS_domain(c.generalConfig.URL.value).host] = c;
+                                log.write('Config file `' + $file + '` was ' + 'loaded successfully'.green);
+                                break;
+                            }
+                        }
+
+                        status = true;
                     }
                     catch ($e) {
                         
                         log.write('Config file `' + $file + '` was ' + 'invalid'.red.bold + '! ' + 'SKIPPED'.red.bold);
-                        scheduler.sendSignal('onConfigLoaded', $file, true, null);
+                    }
+                    finally {
+                        
+                        scheduler.sendSignal('onConfigLoaded', $file, status, c);
                     }
                     
-                    if (c !== '') {
-                        
-                        config[helper.SHPS_domain(c.generalConfig.URL.value).host] = c;
-                        
-                        log.write('Config file `' + $file + '` was ' + 'loaded successfully'.green);
-                        scheduler.sendSignal('onConfigLoaded', $file, true, c);
-                    }
                     
                     $callback();
                 });
@@ -441,7 +517,7 @@ var _readConfig
     });
 
     return true;
-}
+};
 
 /**
  * Get whole configuration of certain homepage
@@ -463,11 +539,44 @@ var _getConfig
  */
 var _setDebug
 = me.setDebug = function ($onOff) {
-    $onOff = typeof $onOff !== 'undefined' ? $onOff : true;
+    $onOff = typeof $onOff !== 'undefined' 
+ $onOff : true;
 
     debug = $onOff;
     scheduler.sendSignal('onDebugChange', $onOff);
 }
+
+/**
+ * Tries to determine if SHPS is running on io.js or node.js
+ */
+var _isIOJS
+= me.isIOJS = function f_main_isIOJS() {
+    
+    f_main_isIOJS.isIOJS = f_main_isIOJS.isIOJS || path.basename(process.title, '.exe') == 'iojs';
+    return f_main_isIOJS.isIOJS;
+}
+
+/**
+ * Grouphuggable
+ * Breaks after 3 hugs per partner
+ * 
+ * @param $hug
+ *  Huggable caller
+ */
+var _hug 
+= me.hug = function f_main_hug($h) {
+    
+    return helper.genericHug($h, self, function f_main_hug_hug($hugCount) {
+        
+        if ($hugCount > 3) {
+            
+            return false;
+        }
+        
+        return true;
+    });
+};
+
 
 /**
  * Focus all actions on a given requestState
@@ -475,19 +584,19 @@ var _setDebug
  *
  * @param requestState $requestState
  */
-var _focus
+var _focus 
 = me.focus = function f_main_focus($requestState) {
     if (typeof $requestState !== 'undefined') {
         
         log.error('Cannot focus undefined requestState!');
     }
     
-
+    
     this.getDir = function f_main_focus_getDir($key) {
         
         return _getDir($key);
     };
-
+    
     this.getHPConfig = function f_main_focus_getHPConfig($group, $key) {
         
         return _getHPConfig($group, $key, $requestState.config.generalConfig.URL.value);
@@ -497,29 +606,31 @@ var _focus
         
         return this;
     };
-
+    
     this.getNamespace = function f_main_focus_getNamespace() {
         
         return _getNamespace($requestState);
     };
-
+    
     this.isDebug = function f_main_focus_isDebug() {
         
         return _isDebug();
     };
-
+    
     this.make = function f_main_focus_make($template2Start) {
         
         return _make($template2Start, $requestState);
     };
-
+    
     this.readConfig = function f_main_focus_readConfig($cb) {
         
         return _readConfig($cb);
     };
-
+    
     this.setDebug = function f_main_focus_setDebug($onOff) {
         
         return _setDebug($onOff);
     };
-}
+};
+
+

@@ -2,14 +2,15 @@
 
 var me = module.exports;
 
+var fs = require('fs');
+
 var log = require('./log.js');
 var main = require('./main.js');
 var schedule = require('./schedule.js');
-
-var fs = require('fs');
-
+var helper = require('./helper.js');
 
 var _plugins = {};
+var self = this;
 
 
 var _loadPlugins 
