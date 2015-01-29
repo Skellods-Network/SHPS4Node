@@ -12,7 +12,9 @@ var cl = require('./commandline.js');
 var main = require('./main.js');
 var helper = require('./helper.js');
 
-var self = this;
+var mp = {
+    self: this
+};
 
 
 /**
@@ -118,7 +120,8 @@ var _cls
  * @param integer $level
  * @param string $str
  */
-var _log = function ($level, $str) {
+var _log
+= me.log = function ($level, $str) {
     $str = typeof $str !== 'undefined' ? $str : '';
     
     if ((level == 1 && $level > 3) || (level != 1 && level <= $level)) {
@@ -170,23 +173,13 @@ var fatal
 
 
 /**
- * Write string top log without outputting it
- *
- * @param string $str
- */
-var log 
-= me.log = function ($str) {
-    
-    _log(2, $str);
-};
-
-/**
  * STDOUT function with fork optimization
  * 
  * @param $str string
  * @param $forceWrite boolean Force output even from worker
  */
-var _out = function ($str, $forceWrite) {
+var _out 
+= mp.out = function ($str, $forceWrite) {
     $forceWrite = typeof $forceWrite !== 'undefined' ? $forceWrite : false;
     
     if (cluster.isMaster || $forceWrite) {
@@ -205,7 +198,7 @@ var write
     $str = typeof $str !== 'undefined' ? $str : '';
     
     _out($str);
-    log($str);
+    _log($str);
 };
 
 /**
@@ -291,7 +284,7 @@ var _outHint
 var _hug 
 = me.hug = function f_log_hug($h) {
     
-    return helper.genericHug($h, self, function f_helper_log_hug($hugCount) {
+    return helper.genericHug($h, mp, function f_helper_log_hug($hugCount) {
         
         if ($hugCount > 3) {
             

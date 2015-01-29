@@ -2,9 +2,14 @@
 
 var me = module.exports;
 
+var path = require('path');
+var _ = require('lodash');
+
 var helper = require('./helper.js');
 
-var self = this;
+var mp = {
+    self: this
+};
 
 
 var _cleanStr
@@ -23,7 +28,7 @@ var _cleanStr
 var _hug 
 = me.hug = function f_SFFM_hug($h) {
     
-    return helper.genericHug($h, self, function f_SFFM_hug_hug($hugCount) {
+    return helper.genericHug($h, mp, function f_SFFM_hug_hug($hugCount) {
         
         if ($hugCount > 3) {
             
@@ -32,4 +37,21 @@ var _hug
         
         return true;
     });
+};
+
+/**
+ * Tries to determine if SHPS is running on io.js or node.js
+ * 
+ * @return boolean
+ */
+var _isIOJS 
+= me.isIOJS = function f_SFFM_isIOJS() {
+    
+    f_SFFM_isIOJS.isIOJS = 
+        f_SFFM_isIOJS.isIOJS ||
+        path.basename(process.title, '.exe') == 'iojs' ||
+        _.indexOf(process.argv, 'iojs') >= 0 ||
+        _.indexOf(process.argv, 'iojs.exe') >= 0;
+    
+    return f_SFFM_isIOJS.isIOJS;
 };

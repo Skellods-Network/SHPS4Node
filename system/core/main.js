@@ -547,16 +547,6 @@ var _setDebug
 }
 
 /**
- * Tries to determine if SHPS is running on io.js or node.js
- */
-var _isIOJS
-= me.isIOJS = function f_main_isIOJS() {
-    
-    f_main_isIOJS.isIOJS = f_main_isIOJS.isIOJS || path.basename(process.title, '.exe') == 'iojs';
-    return f_main_isIOJS.isIOJS;
-}
-
-/**
  * Grouphuggable
  * Breaks after 3 hugs per partner
  * 

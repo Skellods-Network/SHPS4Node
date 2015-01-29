@@ -1,6 +1,9 @@
 ﻿'use strict';
 
 var me = module.exports;
+var mp = {
+    self: this
+};
 
 GLOBAL.SHPS_SQL_MYSQL = 0;
 GLOBAL.SHPS_SQL_MSSQL = 10;
@@ -16,7 +19,6 @@ var helper = require('./helper.js');
 var sffm = require('./SFFM.js');
 
 var _sqlConnectionPool = {};
-var self = this;
 
 
 /**
@@ -257,7 +259,8 @@ var sql_queryBuilder = function ($sql) {
  * @param string $prefix
  * @param array $mcServers [[(Sting)'Host',(Integer)['Port']],[...]]
  */
-var SQL = function ($dbConfig, $connection) {
+var _SQL 
+= mp.SQL = function ($dbConfig, $connection) {
 
     if (typeof $dbConfig === 'undefined') {
         
@@ -698,45 +701,6 @@ var _newSQL
     return new SQL($requestState, nPool.getConnection());
 };
 
-var _sql_queryBuilder = function f_sql_sql_queryBuilder($sql) {
-    if (typeof $sql !== typeof SQL) {
-
-        log.error('The queryBuilder needs a valid sql object!');
-        return;
-    }
-
-
-    /**
-     * Contains type of operation
-     * 0 = UNDEFINED
-     * 1 = GET
-     * 2 = INSERT
-     * 3 = ALTER
-     * 4 = DELETE
-     * 
-     * @var int
-     */
-    var $operation = 0;
-    
-    /**
-     * Data to work with
-     * GET: cols to get
-     * SET: col=>value to set
-     * 
-     * @var [] of sql_col
-     */
-    var $buf = [];
-    
-    /**
-     * Table to use for set or delete operations
-     * 
-     * @var \SHPS\sql_table
-     */
-    var $table = null;
-
-
-}
-
 /**
  * SHPS_sql_colspec
  * 
@@ -803,7 +767,7 @@ var sql_colspec = function f_sql_sql_colspec($table, $col) {
 var _hug 
 = me.hug = function f_sql_hug($h) {
     
-    return helper.genericHug($h, self, function f_sql_hug_hug($hugCount) {
+    return helper.genericHug($h, mp, function f_sql_hug_hug($hugCount) {
         
         if ($hugCount > 3) {
             
