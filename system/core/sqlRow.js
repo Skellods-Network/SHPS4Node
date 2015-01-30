@@ -32,13 +32,17 @@ var _hug
 };
 
 var _newRow 
-= me.newRow = function ($table, $col) {
+= me.newRow = function f_sqlRow_newRow($table) {
     
-    return new _sqlRow($table, $col);
+    return new _sqlRow($table);
 };
 
-var _sqlRow = function ($table, $col) {
+var _sqlRow = function c_sqlRow($table) {
     
+    var mp = {
+        self: this
+    };
+
     /**
      * Result data
      * 
@@ -183,5 +187,26 @@ var _sqlRow = function ($table, $col) {
         }
         
         return r;
+    };
+
+    /**
+     * Grouphuggable
+     * Breaks after 3 hugs per partner
+     * 
+     * @param $hug
+     *  Huggable caller
+     */
+    var _hug 
+    = me.hug = function f_main_hug($h) {
+        
+        return helper.genericHug($h, mp, function f_main_hug_hug($hugCount) {
+            
+            if ($hugCount > 3) {
+                
+                return false;
+            }
+            
+            return true;
+        });
     };
 };

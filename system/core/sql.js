@@ -17,6 +17,9 @@ var main = require('./main.js');
 var log = require('./log.js');
 var helper = require('./helper.js');
 var sffm = require('./SFFM.js');
+var row = require('./sqlRow.js');
+var col = require('./sqlCol.js');
+var table = require('./sqlTable.js');
 
 var _sqlConnectionPool = {};
 
@@ -63,6 +66,15 @@ var _memcached = null;
  * @var SHPS_sql_conditionBuilder
  */
 var _conditionbuilder = null;
+
+var _newCol 
+= me.newCol = col.newCol;
+
+var _newRow 
+= me.newRow = row.newRow;
+
+var _newTable 
+= me.newTable = table.newTable;
 
 /**
  * SQL Query Builder
@@ -415,6 +427,7 @@ var _SQL
         if (typeof $param !== null) {
 
             $query = mysql.format($query, $param, true, main.getHPConfig('generalConfig', 'timezone', $requestState.uri));
+            mysql.createQuery($query, cb);
         }
         
         if (typeof $query !== null) {

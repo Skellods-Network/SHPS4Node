@@ -202,6 +202,20 @@ var write
 };
 
 /**
+ * Write ntoe to console and to log
+ *
+ * @param string $str
+ * @param $forceWrite boolean Force output even from worker
+ */
+var writeNote
+= me.writeNote = function ($str, $forceWrite) {
+    $str = typeof $str !== 'undefined' ? $str : '';
+    
+    _out($str.bold, $forceWrite);
+    _log(3, $str);
+};
+
+/**
  * Write warning to console and to log
  *
  * @param string $str
@@ -275,7 +289,6 @@ var _outHint
 
 /**
  * Grouphuggable
- * https://github.com/php-fig/fig-standards/blob/master/proposed/psr-8-hug/psr-8-hug.md
  * Breaks after 3 hugs per partner
  * 
  * @param $hug
