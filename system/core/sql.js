@@ -1,9 +1,6 @@
 ﻿'use strict';
 
 var me = module.exports;
-var mp = {
-    self: this
-};
 
 GLOBAL.SHPS_SQL_MYSQL = 0;
 GLOBAL.SHPS_SQL_MSSQL = 10;
@@ -20,8 +17,13 @@ var sffm = require('./SFFM.js');
 var row = require('./sqlRow.js');
 var col = require('./sqlCol.js');
 var table = require('./sqlTable.js');
+var SQLQueryBuilder = require('./sqlQueryBuilder.js');
+var SQLConditionBuilder = require('./sqlConditionBuilder.js');
 
 var _sqlConnectionPool = {};
+var mp = {
+    self: this
+};
 
 
 /**
@@ -77,188 +79,25 @@ var _newTable
 = me.newTable = table.newTable;
 
 /**
- * SQL Query Builder
+ * Grouphuggable
+ * Breaks after 3 hugs per partner
+ * 
+ * @param $hug
+ *  Huggable caller
  */
-var sql_queryBuilder = function ($sql) {
+var _hug 
+= me.hug = function f_sql_hug($h) {
     
-    /**
-     * Contains type of operation
-     * 0 = UNDEFINED
-     * 1 = GET
-     * 2 = INSERT
-     * 3 = ALTER
-     * 4 = DELETE
-     * 
-     * @var int
-     */
-    var operation = 0;
-    
-    /**
-     * Data to work with
-     * GET: cols to get
-     * SET: col=>value to set
-     * 
-     * @var [] of sql_col
-     */
-    var buf = [];
-    
-    /**
-     * Table to use for set or delete operations
-     * 
-     * @var \SHPS\sql_table
-     */
-    var table = null;
-    
-    /**
-     * Column to order by
-     * 
-     * @var \SHPS\sql_col
-     */
-    var orderBy = null;
-    
-    /**
-     * Order by ascending?
-     * 
-     * @var boolean
-     */
-    var obAscending = true;
-    
-    /**
-     * Limit number of result rows
-     * 
-     * @var integer
-     */
-    var limit = 0;
-    
-
-    /**
-     * Reset Query Builder
-     */
-    var _reset = function () {
+    return helper.genericHug($h, mp, function f_sql_hug_hug($hugCount) {
         
-        operation = 0;
-        buf = [];
-    }
-
-    /**
-     * Fetch from the DB
-     * 
-     * @param \SHPS\sql_col
-     * @param ... several colspecs can be given, each as new parameter or as [](s)
-     * @return \SHPS\sql_queryBuilder
-     */
-    var _get 
-    = this.get = function () {
-
-        _reset();
-        operation = 1;
-        arguments.foreach(function ($arg) {
-
-            if (sffm.isArray($arg)) {
-                
-                $arg.foreach(function ($a) {
-                    
-                    buf[buf.length] = $a;
-                });
-            }
-            else {
-
-                buf[buf.length] = $arg;
-            }
-        });
-
-        return this;
-    }
-    
-    /**
-     * Add conditions to query
-     * 
-     * @return sql_conditionBuilder
-     */
-    var _fulfilling
-    = this.fulfilling = function () {
-
-        if (operation === 0) {
-
-            throw 'No operation selected!';
-        }
-
-        return new sql_conditionBuilder(this);
-    }
-
-    var _execute
-    = this.execute = function () {
-
-        if (arguments.length > 0) {
+        if ($hugCount > 3) {
             
-            var conditions = arguments[0];
+            return false;
         }
-        else {
-            
-            var conditions = null;
-        }
-
-        switch (operation) {
-
-            case 1:// SELECT
-                
-                var query = 'SELECT ';
-                var st = $sql.getServerType();
-                if (st == 'MSSQL' && limit > 0) {
-                    
-                    query += 'TOP ' + limit + ' ';
-                }
-                
-                var colCount = buf.length;
-                var tables = [];
-                var i = 0;
-                buf.forEach(function ($buf) {
-                    
-                    i++;
-                    query += $buf.toString();
-                    var tmp = $buf.getTable();
-                    if (tables.indexOf(tmp) == -1) {
-                        
-                        tables[tables.length] = tmp;
-                    }
-                    
-                    if (colCount == i) {
-                        
-                        query += ' ';
-                    }
-                    else {
-                        
-                        query += ',';
-                    }
-                });
-                
-                if (conditions !== null) {
-                    
-                    query += 'WHERE ' + conditions.toString();
-                }
-                
-                if (orderBy !== null) {
-                    
-                    query += 'ORDER BY ' + orderBy.toString() + ' ' + obAscending ? 'ASC ' : 'DESC ';
-                }
-                
-                if ((st == 'MySQL' || st == 'MariaDB') && limit > 0) {
-                    
-                    query += 'LIMIT ' + limit + ' ';
-                }
-                
-                query += ';';
-                $sql.query(query);
-
-                break;
-
-
-            default:
-                
-                throw 'UNKNOWN OPERATION';
-        }
-    }
-}
+        
+        return true;
+    });
+};
 
 /**
  * SQL Class<br>
@@ -663,7 +502,7 @@ var _getConnectionCount
  * 
  * @param string $alias //Default: 'default'
  * @param $requestState requestState Object
- * @return sql
+ * @return _SQL
  */
 var _newSQL 
 = me.newSQL = function f_sql_newSQL($alias, $requestState) {
@@ -770,27 +609,6 @@ var sql_colspec = function f_sql_sql_colspec($table, $col) {
     }
 };
 
-/**
- * Grouphuggable
- * Breaks after 3 hugs per partner
- * 
- * @param $hug
- *  Huggable caller
- */
-var _hug 
-= me.hug = function f_sql_hug($h) {
-    
-    return helper.genericHug($h, mp, function f_sql_hug_hug($hugCount) {
-        
-        if ($hugCount > 3) {
-            
-            return false;
-        }
-        
-        return true;
-    });
-};
-
 
 /**
  * Focus all DB actions on a given requestState
@@ -799,7 +617,7 @@ var _hug
  * @param requestState $requestState
  */
 var _focus 
-= me.focus = function ($requestState) {
+= me.focus = function c_sql_focus($requestState) {
     if (typeof $requestState !== 'undefined') {
 
         log.error('Cannot focus undefined requestState!');
@@ -824,5 +642,11 @@ var _focus
     this.newSQL = function f_sql_focus_newSQL($alias) {
 
         return _newSQL($alias, $requestState);
+    };
+
+    var _newTable =
+    this.newTable = function ($name) {
+        
+        table.newTable(this, $name);
     };
 };

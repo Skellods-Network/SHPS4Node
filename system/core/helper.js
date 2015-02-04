@@ -10,7 +10,9 @@ var u = require('util');
 var log = require('./log.js');
 var request = require('./request.js');
 
-var self = this;
+var mp = {
+    self: this
+};
 
 
 /**
@@ -95,7 +97,7 @@ me.requestState = function () {
     */
 
     var __getData =
- this._getData = function () {
+    this._getData = function () {
         
         return _data;
     }
@@ -458,7 +460,7 @@ var _genericHug
             continue;
         }
         
-        $h[i].hug($self);
+        $h[i].self.hug($self);
         i++;
     }
 
@@ -475,7 +477,7 @@ var _genericHug
 var _hug 
 = me.hug = function f_helper_hug($h) {
     
-    return helper.genericHug($h, self, function f_helper_hug_hug($hugCount) {
+    return helper.genericHug($h, mp, function f_helper_hug_hug($hugCount) {
         
         if ($hugCount > 3) {
             

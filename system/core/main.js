@@ -372,7 +372,8 @@ var _make
                             
                                 log.error('ERROR: Failed to get initial template ' + $p1);
                                 $cb();
-                            });
+                            })
+                            .done();
                     }
                 ]
             }, function () {
