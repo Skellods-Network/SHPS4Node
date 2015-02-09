@@ -7,6 +7,7 @@ var os = require('os');
 var scheduler = require('./schedule.js');
 var log = require('./log.js');
 var herlper = require('./helper.js');
+var main = require('./main.js');
 
 var self = this;
 
@@ -147,7 +148,7 @@ scheduler.addSlot('onConfigLoaded', function ($file, $successful, $config) {
 
             case 'hp': {
 
-                if ($config.generalConfig.eastereggs.value) {
+                if (main.getHPConfig('eastereggs')) {
                     
                     log.writeWarning('Public eastereggs are enabled for ' + $config.generalConfig.URL.value + ' in ' + $file + '!');
                     log.writeHint('Consider setting `generalConfig->eastereggs->value` in ' + $file + ' to `false`.');

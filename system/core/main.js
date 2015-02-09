@@ -107,10 +107,15 @@ var _getHPConfig
 = me.getHPConfig = function ($group, $key, $domain) {
     
     if (typeof domain[$domain] !== 'undefined' &&
-        typeof domain[$domain].$group !== 'undefined' &&
-        typeof domain[$domain].$group.$key !== 'undefined') {
+        typeof domain[$domain][$group] !== 'undefined' &&
+        typeof domain[$domain][$group][$key] !== 'undefined') {
 
-            return domain[$domain].$group.$key.value;
+        return domain[$domain][$group][$key].value;
+    }
+    
+    if (typeof master[$group] !== 'undefined') {
+
+        return master[$group].value;
     }
 
     return;

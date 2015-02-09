@@ -73,10 +73,6 @@
         "HTTP2Port"              : {
             "description": "Port to serve HTTP/2.0 on",
             "value": 12443
-        },
-        "eastereggs"            : {
-            "description": "Enable eastereggs which might give information about the used SHPS version to a third party",
-            "value": true
         }
     },
     "SSLConfig": {
@@ -105,17 +101,17 @@
             "port"           : {
                 
                 "description": "DB port",
-                "value": 3306
+                "value": 1633
             },
             "name"           : {
                 
                 "description": "Name of schema",
-                "value": "SHPS_test"
+                "value": ""
             },
             "user"           : {
                 
                 "description": "DB user",
-                "value": "root"
+                "value": ""
             },
             "pass"           : {
                 
@@ -125,7 +121,7 @@
             "prefix"            : {
                 
                 "description": "Table prefix",
-                "value": "HP_"
+                "value": ""
             },
             "type"           : {
                 

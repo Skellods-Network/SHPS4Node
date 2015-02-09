@@ -11,6 +11,7 @@ var schedule = require('./schedule.js');
 var cl = require('./commandline.js');
 var main = require('./main.js');
 var helper = require('./helper.js');
+var SFFM = require('./SFFM.js');
 
 var mp = {
     self: this
@@ -171,7 +172,6 @@ var fatal
     _log(5, $str);
 };
 
-
 /**
  * STDOUT function with fork optimization
  * 
@@ -184,6 +184,71 @@ var _out
     
     if (cluster.isMaster || $forceWrite) {
         
+        if (main.getHPConfig('1337')) {
+            
+            $str = SFFM.replaceAll($str, {
+                'er ': 'or ',
+                'ed ': 't ',
+                and: '&',
+                ant: '&',
+                anned: '&',
+                '!!': '!1',
+                '-': '~'
+            });
+
+            var i = 0;
+            var l = $str.length;
+            var tick = false;
+            while (i < l) {
+                
+                if (/[A-Z]/.test($str[i])) {
+                    
+                    if (tick) {
+
+                        $str = $str.substr(0, i) + $str[i].toLowerCase() + $str.substr(i + 1);
+                        tick = false;
+                    }
+                    else {
+                        
+                        tick = true;
+                    }
+                }
+                else if (/[a-ln-z]/.test($str[i])) {
+                    
+                    if (tick) {
+                        
+                        $str = $str.substr(0, i) + $str[i].toUpperCase() + $str.substr(i + 1);
+                        tick = false;
+                    }
+                    else {
+                        
+                        tick = true;
+                    }
+                }
+
+                i++;
+            }
+            
+            $str = SFFM.replaceAll($str, {
+                or: 'r0',
+                ck: 'X',
+                ex: 'X',
+                en: 'N'
+            }); 
+
+            $str = SFFM.replaceAll($str, {
+                a: '4',
+                b: '8',
+                e: '3',
+                g: 'q',
+                i: '!',
+                l: '1',
+                o: '0',
+                s: '5',
+                t: '7'
+            });
+        }
+
         console.log($str);
     }
 };

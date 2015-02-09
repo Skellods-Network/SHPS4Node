@@ -55,3 +55,22 @@ var _isIOJS
     
     return f_SFFM_isIOJS.isIOJS;
 };
+
+/**
+ * Replaces all occurances in $str with other strings based on $mapObj
+ * 
+ * @param $str string
+ * @param $mapObj object
+ *   This is a key:value list of things to replace
+ * @return string
+ */
+var _replaceAll
+= me.replaceAll = function f_SFFM_replaceAll($str, $mapObj) {
+
+    var re = new RegExp(Object.keys($mapObj).join("|"), "gi");
+    
+    return $str.replace(re, function ($matched) {
+
+        return $mapObj[$matched.toLowerCase()];
+    });
+}

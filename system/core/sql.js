@@ -6,9 +6,11 @@ GLOBAL.SHPS_SQL_MYSQL = 0;
 GLOBAL.SHPS_SQL_MSSQL = 10;
 
 var mysql = require('mysql');
+var mssql = require('mssql');
 var pooling = require('generic-pool');
 var async = require('vasync');
 var Promise = require('promise');
+var q = require('q');
 
 var main = require('./main.js');
 var log = require('./log.js');
@@ -118,9 +120,10 @@ var _SQL
         log.error('Cannot work with undefined dbConfig!');
     }
     
-    if (typeof $connection === 'undefined') {
+    if (typeof $connection === 'undefined' || $connection === null) {
         
         log.error('Cannot work without connection!');
+        return;
     }
     
     /**
@@ -149,49 +152,7 @@ var _SQL
      * 
      * @var integer
      */
-    var _dbType = eval('return ' + $dbConfig.type.value + ';');
-    
-    /**
-     * Database host
-     * 
-     * @var string
-     */
-    var _host = $host;
-    
-    /**
-     * Database server port
-     * 
-     * @var integer
-     */
-    var _port = $port;
-    
-    /**
-     * Database name
-     * 
-     * @var string
-     */
-    var _db = $database;
-    
-    /**
-     * Table prefix
-     * 
-     * @var string
-     */
-    var _prefix = $prefix;
-    
-    /**
-     * Database user
-     * 
-     * @var string
-     */
-    var _user = $user;
-    
-    /**
-     * Database password
-     * 
-     * @var string
-     */
-    var _passwd = $passwd;
+    var _dbType = $dbConfig.type.value
     
     /**
      * PDO link
@@ -261,22 +222,23 @@ var _SQL
         
         _free = false;
         _fetchIndex = -1;
-        _resultRows = [];
+        var _resultRows = [];
 
-        if (typeof $param !== null) {
+        if (typeof $param !== 'undefined') {
 
             $query = mysql.format($query, $param, true, main.getHPConfig('generalConfig', 'timezone', $requestState.uri));
             mysql.createQuery($query, cb);
         }
         
-        if (typeof $query !== null) {
+        if (typeof $query !== 'undefined') {
             
             _lastQuery = $query;
             _queryCount++;
             var start = process.hrtime();
             
             return new Promise(function ($fulfill, $reject) {
-                _connection.query($query, function ($err, $rows, $fields) {
+
+                $connection.query($query, function ($err, $rows, $fields) {
                     
                     var t = process.hrtime(start);
                     _lastQueryTime = t[0] + (t[1] / 1000000000);
@@ -406,7 +368,7 @@ var _SQL
     var _getServerType
     = this.getServerType = function () {
         
-        return 'MySQL';
+        return _dbType;
     }
     
     /**
@@ -466,6 +428,13 @@ var _SQL
         return _resultRows[_fetchIndex];
     }
     
+    var _free =
+    this.free = function f_sql_SQL_free() {
+        
+        _sqlConnectionPool[_makePoolName($dbConfig)].release($connection);
+        _free = true;
+    };
+    
     /**
      * CONSTRUCTOR
      */
@@ -497,6 +466,15 @@ var _getConnectionCount
     
 }
 
+var _makePoolName = function f_sql_makePoolName($dbConfig) {
+
+    return $dbConfig.host.value +
+        $dbConfig.port.value +
+        $dbConfig.name.value +
+        $dbConfig.user.value +
+        $dbConfig.prefix.value;
+}
+
 /**
  * Create new managed SQL connection from alias (see config file)
  * 
@@ -512,20 +490,17 @@ var _newSQL
         log.error('Cannot connect with undefined requestState!');
     }
     
+    var defer = q.defer();
     var config = $requestState.config;
     var dbConfig = config.databaseConfig[$alias];
-    var poolName = dbConfig.host.value +
-        dbConfig.port.value +
-        dbConfig.name.value +
-        dbConfig.user.value +
-        dbConfig.prefix.value;
+    var poolName = _makePoolName(dbConfig);
 
     var nPool = _sqlConnectionPool[poolName];
     if (typeof nPool === 'undefined') {
         
         switch (dbConfig.type.value) {
 
-            case "SHPS_SQL_MYSQL": {
+            case 'SHPS_SQL_MYSQL': {
                 
                 _sqlConnectionPool[poolName] = nPool = mysql.createPool({
                     
@@ -539,6 +514,53 @@ var _newSQL
                     timezone: config.generalConfig.timezone.value,
                     multipleStatements: true
                 });
+                
+                q.resolve(new _SQL(dbConfig, nPool.getConnection()));
+
+                break;
+            }
+
+            case 'SHPS_SQL_MSSQL': {
+                
+                _sqlConnectionPool[poolName] = nPool = pooling.Pool({
+                        
+                    name: poolName,
+                    create: function f_sql_newSQL_create_MSSQL_pool($cb) {
+                            
+                        $cb(null, new mssql.Connection({
+                                
+                            server: dbConfig.host.value,
+                            port: dbConfig.port.value,
+                            user: dbConfig.user.value,
+                            password: dbConfig.pass.value,
+                            database: dbConfig.name.value
+                        }, function ($err) {
+                                
+                            
+                        }));
+                    },
+                    destroy: function f_sql_newSQL_destroy_MSSQL_pool($res) {
+                            
+                        $res.close();
+                    },
+                    max: dbConfig.connectionLimit.value,
+                    min: 1,
+                    idleTimeoutMillis: 30000,
+                    log: false
+                });
+
+                nPool.acquire(function ($err, $client) {
+                    
+                    if ($err === null) {
+
+                        defer.resolve(new _SQL(dbConfig, $client));
+                    }
+                    else {
+
+                        defer.reject($err);
+                    }
+                    
+                });
 
                 break;
             }
@@ -549,8 +571,15 @@ var _newSQL
             }
         }
     }
+    else {
 
-    return new SQL($requestState, nPool.getConnection());
+        nPool.acquire(function ($err, $client) {
+            
+            defer.resolve(new _SQL(dbConfig, $client));
+        });
+    }
+
+    return defer.promise;
 };
 
 /**

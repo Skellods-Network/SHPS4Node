@@ -46,7 +46,7 @@ var _handleRequest
     }
     else if (typeof $requestState.GET['HTCPCP'] !== 'undefined') {
         
-        if ($requestState.config.generalConfig.eastereggs.value) {
+        if (main.getHPConfig('eastereggs')) {
             
             $requestState.httpStatus = 418;
             $requestState.responseBody = 'ERROR 418: I\'m a teapot!';
