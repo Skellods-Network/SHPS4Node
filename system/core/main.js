@@ -51,9 +51,10 @@ var cmd = require('./commandline.js');
 var sql = require('./sql.js');
 var plugin = require('./plugin.js');
 var cl = require('./commandline.js');
+var dInit = require('./default.js');
 
-var config = [];
-var master = [];
+var config = {};
+var master = {};
 var debug = false;
 var domain = [];
 var self = this;
@@ -171,7 +172,7 @@ var _parallelize = function ($cb) {
     var numWorkers = master.workers.value;
     if (numWorkers == -1) {
         
-        numWorkers = os.cpus().length; // Smart regulation later on
+        numWorkers = 0;//os.cpus().length; // Smart regulation later on
     }
 
     if (cluster.isMaster && numWorkers > 0) {
@@ -446,7 +447,8 @@ var _readConfig
         log.writeError("Could not retrive config directory!");
         return false;
     }
-
+    
+    var masterFound = false;
     fs.readdir(dir, function ($err, $files) {
 
         if ($err) {
@@ -454,67 +456,111 @@ var _readConfig
             log.error($err);
         }
         
-        async.forEachParallel( {
+        async.forEachParallel({
         
             'inputs': $files,
             'func': function ($file, $callback) {
                 
-                if ($file.substring($file.length - 5) != '.json') {
-                    
-                    i++;
-                    schedule.sendSignal('onFilePollution', dir, 'config', $file);
-                    $callback();
-                    return;
-                }
+                var validFile = true;
+                async.pipeline({
+                    funcs: [
+                        function ($_p1, $cb) {
 
-                fs.readFile(dir + $file, 'utf8', function ($err, $data) {
-                    
-                    if ($err) {
-                        
-                        log.error($err);
-                    }
-                    
-                    log.write('Config file found: ' + $file);
-                    
-                    var c = '';
-                    var status = false;
-                    try {
-                        
-                        c = JSON.parse($data);
-                        switch (c.configHeader.type) {
+                            fs.stat(dir + $file, function ($err, $stat) {
 
-                            case 'master': {
+                                if ($stat && $stat.isDirectory()) {
 
-                                log.write('Master file was ' + 'loaded successfully'.green);
-                                master = c.config;
-                                break;
-                            }
+                                    scheduler.sendSignal('onPollution', dir, 'config', $file);
+                                    validFile = false;
+                                }
+                                else {
 
-                            case 'hp': {
+                                    if ($file.substring($file.length - 5) != '.json') {
+
+                                        scheduler.sendSignal('onFilePollution', dir, 'config', $file);
+                                        validFile = false;
+                                    }
+                                }
                                 
-                                config[helper.SHPS_domain(c.generalConfig.URL.value).host] = c;
-                                log.write('Config file `' + $file + '` was ' + 'loaded successfully'.green);
-                                break;
-                            }
-                        }
+                                $cb();
+                            });
+                        },
 
-                        status = true;
-                    }
-                    catch ($e) {
-                        
-                        log.write('Config file `' + $file + '` was ' + 'invalid'.red.bold + '! ' + 'SKIPPED'.red.bold);
-                    }
-                    finally {
-                        
-                        scheduler.sendSignal('onConfigLoaded', $file, status, c);
-                    }
-                    
-                    
-                    $callback();
+                        function ($_p1, $cb) {
+
+                            if (validFile === false) {
+
+                                $cb();
+                                return;
+                            }
+
+                            fs.readFile(dir + $file, 'utf8', function ($err, $data) {
+                                
+                                if ($err) {
+                                    
+                                    log.error($err);
+                                }
+                                
+                                log.write('Config file found: ' + $file);
+                                
+                                var c = '';
+                                var status = false;
+                                try {
+                                    
+                                    c = JSON.parse($data);
+                                    switch (c.configHeader.type) {
+
+                                        case 'master': {
+                                            
+                                            log.write('Master file was ' + 'loaded successfully'.green);
+                                            master = c.config;
+                                            masterFound = true;
+                                            break;
+                                        }
+
+                                        case 'hp': {
+                                            
+                                            config[helper.SHPS_domain(c.generalConfig.URL.value).host] = c;
+                                            log.write('Config file `' + $file + '` was ' + 'loaded successfully'.green);
+                                            break;
+                                        }
+                                    }
+                                    
+                                    status = true;
+                                }
+                                catch ($e) {
+                                    
+                                    log.write('Config file `' + $file + '` was ' + 'invalid'.red.bold + '! ' + 'SKIPPED'.red.bold);
+                                }
+                                finally {
+                                    
+                                    scheduler.sendSignal('onConfigLoaded', $file, status, c);
+                                    $cb();
+                                }
+                            });
+                        },
+
+                        function ($_p1, $cb) {
+                            
+                            //$cb();
+                            $callback();
+                        }
+                    ]
                 });
             }
         }, function ($err) {
             
+            if (!masterFound) {
+                
+                master = dInit.master;
+                scheduler.sendSignal('onFileNotFound', 'master.json', dir, 'Default configuration loaded!');
+            }
+            
+            if (Object.keys(config).length == 0) {
+                
+                scheduler.sendSignal('onFileNotFound', '*.config.json', dir, 'Nothing will be served without configuration files!');
+            }
+
             if (typeof $cb !== 'undefined') {
                 
                 $cb();

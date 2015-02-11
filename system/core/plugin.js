@@ -46,11 +46,12 @@ var _loadPlugins
                 
                 if (loadOK) {
                     
-                    log.write('Plugin `' + pname + '` was ' + 'loaded successfully'.green);
+                    var piname = _plugins[pname].info.name;
+                    log.write('Plugin `' + piname + '` was ' + 'loaded successfully'.green);
                 }
                 else {
                     
-                    log.write('Plugin `' + pname + '` ' + 'encountered problems'.red);
+                    log.write('Plugin ' + pname + ' ' + 'encountered problems'.red);
                 }
                 
                 schedule.sendSignal('onPluginLoaded', pname, loadOK);

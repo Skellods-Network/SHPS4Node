@@ -18,6 +18,8 @@ var _vulnerabilities = {
     eastereggs: null
 };
 
+var _unknownDangersCount = 0;
+
 var _handledMessages = [];
 
 var _dangerCount 
@@ -37,7 +39,7 @@ var _dangerCount
         i++;
     }
 
-    return c;
+    return c + _unknownDangersCount;
 };
 
 var _handleWorkerMessage 
@@ -136,11 +138,19 @@ scheduler.addSlot('onConfigLoaded', function ($file, $successful, $config) {
                 var numCPUs = os.cpus().length;
                 if ($config.config.workers.value != -1 && $config.config.workers.value > numCPUs) {
 
-                    log.writeHint('Consider reducing the number of workers in ' + $file + ' to ' + numCPUs + ' (CPU core count).');
+                    log.writeHint('Consider reducing the number of workers in ' + $file + ' to ' + numCPUs + ' (CPU core count) or setting it to -1 for smart handling.');
                 }
                 else if ($config.config.workers.value != -1 && $config.config.workers.value < numCPUs) {
 
-                    log.writeHint('Consider increasing the number of workers in ' + $file + ' to ' + numCPUs + ' (CPU core count).');
+                    log.writeHint('Consider increasing the number of workers in ' + $file + ' to ' + numCPUs + ' (CPU core count) or setting it to -1 for smart handling.');
+                }
+                
+                if (main.getHPConfig('eastereggs')) {
+                    
+                    log.writeWarning('Public eastereggs are enabled for in ' + $file + '!');
+                    log.writeHint('Consider setting `config->eastereggs->value` in ' + $file + ' to `false`.');
+                    
+                    _vulnerabilities.eastereggs = true;
                 }
 
                 break;
@@ -148,15 +158,13 @@ scheduler.addSlot('onConfigLoaded', function ($file, $successful, $config) {
 
             case 'hp': {
 
-                if (main.getHPConfig('eastereggs')) {
-                    
-                    log.writeWarning('Public eastereggs are enabled for ' + $config.generalConfig.URL.value + ' in ' + $file + '!');
-                    log.writeHint('Consider setting `generalConfig->eastereggs->value` in ' + $file + ' to `false`.');
-                    
-                    _vulnerabilities.eastereggs = true;
-                }
-
                 break;
+            }
+
+            default: {
+
+                log.writeWarning('Configuration ' + $file + ' uses an unknown type (`' + $config.configHeader.type + '`) in its header part!');
+                _unknownDangersCount++;
             }
         }
     }
@@ -166,4 +174,17 @@ scheduler.addSlot('onFilePollution', function ($dir, $dirDescription, $file) {
 
     log.writeWarning('File `' + $file + '` is polluting the ' + $dirDescription + ' directory (' + $dir + ')!');
     log.writeHint('Consider deleting ' + $dir + $file + '.');
+});
+
+scheduler.addSlot('onPollution', function ($dir, $dirDescription, $file) {
+    
+    log.writeWarning('`' + $file + '` is polluting the ' + $dirDescription + ' directory (' + $dir + ')!');
+    log.writeHint('Consider deleting ' + $dir + $file + '.');
+});
+
+scheduler.addSlot('onFileNotFound', function ($file, $dir, $description) {
+    $description = typeof $description === 'undefined' ? '' : ' ' + $description;
+    
+    log.writeWarning('`' + $file + '` could not be found in ' + $dir + '!' + $description);
+    log.writeHint('Consider loading the admin-GUI plugin which is able to repair your installation.');
 });
