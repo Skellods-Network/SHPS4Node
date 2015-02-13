@@ -44,11 +44,16 @@ var _newTable
 };
 
 var _sqlTable = function c_sqlTable($sql, $name) {
+    
+    var mp = {
+        self: this
+    };
 
-    var _col =
+    var _col 
+    = mp.col =
     this.col = function f_sqlTable_col($name) {
 
-        return new col.newCol(this, $name);
+        return col.newCol(this, $name);
     };
 
     var _getSQL =
@@ -71,9 +76,31 @@ var _sqlTable = function c_sqlTable($sql, $name) {
 
     var _getAbsoluteName =
     this.getAbsoluteName = function f_sqlTable_getAbsoluteName() {
+        
+        var tmp = $sql.getServerType();
+        switch ($sql.getServerType()) {
 
-        return $sql.standardizeName($sql.getDB()) + '.' + $sql.standardizeName(_getFullName());
+            case SHPS_SQL_MSSQL: {
+
+                return $sql.standardizeName($sql.getDB()) + '..' + $sql.standardizeName(_getFullName());
+                break;
+            }
+            
+            case SHPS_SQL_MYSQL:
+            default: {
+
+                return $sql.standardizeName($sql.getDB()) + '.' + $sql.standardizeName(_getFullName());
+            }
+        }
+        
     };
+    
+    var _toString 
+    = mp.toString =
+    this.toString = function f_sqlTable_toString() {
+    
+        return _getAbsoluteName();
+    }; 
 
     var _getAllColumns =
     this.getAllColumns = function f_sqlTable_getAllColumns() {

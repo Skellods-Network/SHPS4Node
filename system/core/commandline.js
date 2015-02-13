@@ -46,7 +46,6 @@ var _prompt
 
 /**
  * Grouphuggable
- * https://github.com/php-fig/fig-standards/blob/master/proposed/psr-8-hug/psr-8-hug.md
  * Breaks after 3 hugs per partner
  * 
  * @param $hug
@@ -75,6 +74,7 @@ var _init
     }
 
     rl = readline.createInterface({
+
         input: process.stdin,
         output: process.stdout,
         completer: completer
@@ -106,6 +106,7 @@ var _handleRequest
 
             case 'exit': {
                 
+                _isInitialized = false;
                 rl.close();
                 cluster.disconnect();
                 process.exit(0); //todo: nice shutdown
@@ -114,7 +115,7 @@ var _handleRequest
 
             case 'help': {
                 
-                log.write('We are truely sorry, but user input has not been implemented, yet  :/');
+                log.write('We are truely sorry, but help has not been implemented, yet  :/\n');
                 break;
             }
 
@@ -128,34 +129,42 @@ var _handleRequest
 
             case 'version': {
                 
-                main.printVersion();
                 var v = process.versions;
+                var r = main.getVersionText() + '\n';
                 for (var lib in v) {
                     
-                    log.write('LIB: ' + lib + ' - ' + v[lib]);
+                    r += ' LIB: ' + lib + ' - ' + v[lib] + '\n';
                 }
                 
-                log.write('');
-                
+                log.write(r);
                 break;
             }
 
-            case /^!.+/i.test($line)
+            case /^\s*?!.*/i.test($line)
                 ? $line
-                : false
+                : undefined
                 : {
-                
-                log.write(eval($line.substring(1)));
-                break;
+                    
+                    try {
+
+                        log.write(eval($line.replace(/^\s*?!/, '')) + '\n');
+                    }
+                    catch ($e) {
+
+                        log.writeError('Your last JS command threw an error:\n' + $e + '\n');
+                    }
+                    finally {
+
+                        break;
+                    }
             }
 
             default: {
                 
-                log.write('Command not found!');
+                //call plugins
+                log.write('Command not found!\n');
             }
         }
         
-        log.write('');
-        rl.prompt();
     });
 };

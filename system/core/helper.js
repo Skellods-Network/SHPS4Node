@@ -65,6 +65,7 @@ me.requestState = function () {
         site: '',
         namespace: 'default',
         httpStatus: 500,
+        responseType: 'text/plain',
         responseBody: '',
         request: null,
         result: null,
@@ -357,6 +358,23 @@ me.requestState = function () {
         else {
             
             _data.responseBody = $val;
+        }
+    });
+    
+    this.__defineGetter__("responseType", function () {
+        
+        return _data.responseType;
+    });
+    
+    this.__defineSetter__("responseType", function ($val) {
+        
+        if (_data.locked) {
+            
+            log.error(_lem);
+        }
+        else {
+            
+            _data.responseType = $val;
         }
     });
     

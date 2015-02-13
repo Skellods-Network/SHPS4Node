@@ -30,13 +30,7 @@ var _hug
     });
 };
 
-var _newCol 
-= me.newCol = function f_sqlCol_newCol($table) {
-    
-    return new _sqlCol($table);
-};
-
-var _sqlCol = function c_sqlCol($table) {
+var _sqlCol = function c_sqlCol($table, $name) {
     
     var mp = {
         self: this
@@ -50,7 +44,8 @@ var _sqlCol = function c_sqlCol($table) {
      *  Huggable caller
      */
     var _hug 
-    = me.hug = function f_main_hug($h) {
+    = mp.hug =
+    this.hug = function f_sqlCol_hug($h) {
         
         return helper.genericHug($h, mp, function f_main_hug_hug($hugCount) {
             
@@ -62,4 +57,26 @@ var _sqlCol = function c_sqlCol($table) {
             return true;
         });
     };
+
+    var _toString 
+    = mp.toString =
+    this.toString = function f_sqlCol_toString() {
+
+        return $table.toString() + '.' + $name;
+    };
+    
+    var _getTable 
+    = mp.getTable =
+    this.getTable = function f_sqlCol_getTable() {
+
+        return $table;
+    };
+
+    return this;
+};
+
+var _newCol 
+= me.newCol = function f_sqlCol_newCol($table, $name) {
+    
+    return new _sqlCol($table, $name);
 };

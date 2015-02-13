@@ -61,17 +61,30 @@ var _handleRequest
     
     if (typeof unblock === 'undefined') {
         
-        $requestState.result.writeHead($requestState.httpStatus);
-        $requestState.result.end($requestState.responseBody);
-    }
-    else {
+        unblock = {
         
-        unblock.then(function () {
-            
-            $requestState.result.writeHead($requestState.httpStatus);
-            $requestState.result.end($requestState.responseBody);
-        }).done();
+            then: function ($cb) {
+
+                $cb();
+                return this;
+            },
+
+            done: function () {
+
+                return this;
+            }
+        };
     }
+    
+    unblock.then(function () {
+            
+        $requestState.result.writeHead($requestState.httpStatus, {
+
+            'Content-Type': $requestState.responseType
+        });
+
+        $requestState.result.end($requestState.responseBody);
+    }).done();
 };
 
 

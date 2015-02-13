@@ -20,15 +20,15 @@ var mp = {
 var _newSQLQueryBuilder 
 = me.newSQLQueryBuilder = function f_sql_newSQLQueryBuilder($sql) {
 
-    return new _sqlQueryBuilder($sql);
+    return new _SQLQueryBuilder($sql);
 };
 
 var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
-    if (typeof $sql !== typeof sqlP.SQL) {
+    /*if (typeof $sql !== typeof sqlP.SQL) {
         
         log.error('The queryBuilder needs a valid sql object!');
         return;
-    }
+    }*/
     
     
     /**
@@ -169,7 +169,7 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
             
             query += buf[i].toString();
             tmp = buf[i].getTable();
-            if (tables.indexOf(tmp) >= 0) {
+            if (tables.indexOf(tmp) < 0) {
                 
                 tables.push(tmp);
             }
@@ -191,7 +191,7 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
         var tblCount = tables.length;
         while (i < tblCount) {
             
-            query += tables[i];
+            query += tables[i].toString();
             if (i < tblCount - 1) {
                 
                 query += ',';
@@ -200,7 +200,7 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
             i++;
         }
         
-        if (typeof $conditions === 'undefined') {
+        if (typeof $conditions !== 'undefined') {
             
             query += ' WHERE ' + $conditions.toString();
         }

@@ -33,22 +33,18 @@ var mp = {
  * 
  * @var array
  */
-var _stringdeterminator = {
-
-    SHPS_SQL_MYSQL: '\'',
-    SHPS_SQL_MSSQL: '\'',
-};
+var _stringdeterminator = {};
+_stringdeterminator[SHPS_SQL_MYSQL] = '\'';
+_stringdeterminator[SHPS_SQL_MSSQL] = '\'';
 
 /**
  * SQL variable determinators
  * 
  * @var array
  */
-var _variabledeterminator = {
-
-    SHPS_SQL_MYSQL: ['`','`'],
-    SHPS_SQL_MSSQL: ['[',']'],
-};
+var _variabledeterminator = {};
+_variabledeterminator[SHPS_SQL_MYSQL] = ['`', '`'];
+_variabledeterminator[SHPS_SQL_MSSQL] = ['[', ']'];
 
 /**
  * Alias Connections
@@ -126,6 +122,10 @@ var _SQL
         return;
     }
     
+    var mp = {
+        self: this
+    };
+
     /**
      * Total count of SQL queries
      * 
@@ -257,7 +257,7 @@ var _SQL
             });
         }
 
-        return new _sql_queryBuilder(this);
+        return SQLQueryBuilder.newSQLQueryBuilder(this);
     }
     
     /**
@@ -435,6 +435,20 @@ var _SQL
         _free = true;
     };
     
+    var _getDB 
+    = mp.getDB =
+    this.getDB = function f_sql_getDB() {
+    
+        return $dbConfig.name.value;
+    };
+    
+    var _getPrefix 
+    = mp.getPrefix =
+    this.getPrefix = function f_sql_getPrefix() {
+    
+        return $dbConfig.prefix.value;
+    };
+    
     /**
      * CONSTRUCTOR
      */
@@ -500,7 +514,7 @@ var _newSQL
         
         switch (dbConfig.type.value) {
 
-            case 'SHPS_SQL_MYSQL': {
+            case SHPS_SQL_MYSQL: {
                 
                 _sqlConnectionPool[poolName] = nPool = mysql.createPool({
                     
@@ -520,7 +534,7 @@ var _newSQL
                 break;
             }
 
-            case 'SHPS_SQL_MSSQL': {
+            case SHPS_SQL_MSSQL: {
                 
                 _sqlConnectionPool[poolName] = nPool = pooling.Pool({
                         
@@ -540,8 +554,11 @@ var _newSQL
                         }));
                     },
                     destroy: function f_sql_newSQL_destroy_MSSQL_pool($res) {
-                            
-                        $res.close();
+                        
+                        if (typeof $res.connection !== 'undefined') {
+
+                            $res.connection.close();
+                        }
                     },
                     max: dbConfig.connectionLimit.value,
                     min: 1,
@@ -553,7 +570,7 @@ var _newSQL
                     
                     if ($err === null) {
 
-                        defer.resolve(new _SQL(dbConfig, $client));
+                        defer.resolve(new _SQL(dbConfig, new mssql.Request($client)));
                     }
                     else {
 

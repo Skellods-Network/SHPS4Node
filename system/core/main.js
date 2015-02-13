@@ -28,9 +28,10 @@ GLOBAL.SHPS_BUILD = 'ALPHA';
 GLOBAL.SHPS_INTERNAL_NAME = 'IROKOKOU';
 GLOBAL.SHPS_VERSION = SHPS_MAJOR_VERSION + '.' + SHPS_MINOR_VERSION + '.' + SHPS_PATCH_VERSION;
 
-GLOBAL.SHPS_DIR_PLUGINS = 0;
-GLOBAL.SHPS_DIR_CERTS = 1;
-GLOBAL.SHPS_DIR_CONFIGS = 2;
+GLOBAL.SHPS_DIR_ROOT = 0;
+GLOBAL.SHPS_DIR_PLUGINS = 1;
+GLOBAL.SHPS_DIR_CERTS = 2;
+GLOBAL.SHPS_DIR_CONFIGS = 3;
 
 
 var fs = require('fs');
@@ -71,6 +72,7 @@ var _getDir
     var r = null;
     switch ($key) {
 
+        case SHPS_DIR_ROOT: r = path.dirname(require.main.filename) + '/'; break;
         case SHPS_DIR_PLUGINS: r = path.dirname(require.main.filename) + '/system/plugins/'; break;
         case SHPS_DIR_CERTS: r = path.dirname(require.main.filename) + '/cert/'; break;
         case SHPS_DIR_CONFIGS: r = path.dirname(require.main.filename) + '/config/'; break;
@@ -84,8 +86,8 @@ var _getDir
     return r;
 };
 
-var _printVersion 
-= me.printVersion = function () {
+var _getVersionText 
+= me.getVersionText = function f_main_getVersionText() {
     
     /*let*/var build = SHPS_BUILD;
     if (build != '') {
@@ -93,7 +95,53 @@ var _printVersion
         build = ' ' + build;
     }
 
-    log.write('You are currently running SHPS v' + SHPS_VERSION.cyan.bold + build.yellow + ', but please call her ' + SHPS_INTERNAL_NAME.cyan.bold + '!');
+    return 'You are currently running SHPS v' + SHPS_VERSION.cyan.bold + build.yellow + ', but please call her ' + SHPS_INTERNAL_NAME.cyan.bold + '!';
+};
+
+var _printVersion 
+= me.printVersion = function () {
+
+    log.write(_getVersionText());
+};
+
+/**
+ * Checks filesystem for inconsistencies, missing files or pollution
+ * Only rough analysis
+ * @the moment it only checks the root dir -> has to be improved
+ */
+var _checkFS 
+= me.checkFS = function f_main_checkFS($cb) {
+
+    log.write('Checking filesystem...');
+    
+    var root = _getDir(SHPS_DIR_ROOT);
+    fs.readdir(root, function f_main_checkFS_rd($err, $list) {
+        
+        var i = 0;
+        var l = $list.length;
+        while (i < l) {
+            
+            var entry = $list[i];
+            var $stat = fs.lstatSync(root + entry)
+
+            if ($stat.isDirectory()) {
+                
+                if (Object.keys(dInit.fileTree).indexOf(entry) < 0) {
+
+                    scheduler.sendSignal('onPollution', root, 'SHPS root', entry);
+                }
+            }
+            else if (dInit.fileTree._files.indexOf(entry) < 0) {
+
+                scheduler.sendSignal('onFilePollution', root, 'SHPS root', entry);
+            }
+
+            i++;
+        }
+
+        log.write('');
+        $cb();
+    });
 };
 
 /**
@@ -150,7 +198,8 @@ var _init
         
         'funcs': [
             //update  //log.write('Checking for new versions...');
-            function f_init_readConfig($_p1, $_p2) { _readConfig($_p2); }
+            function f_init_checkFS($_p1, $_p2) { _checkFS($_p2); }
+            , function f_init_readConfig($_p1, $_p2) { _readConfig($_p2); }
             , function f_init_loadPlugins($_p1, $_p2) { plugin.loadPlugins($_p2); }
             , function f_init_parallelize($_p1, $_p2) { _parallelize($_p2); }
             , function f_init_event($_p1, $_p2) {
@@ -172,7 +221,20 @@ var _parallelize = function ($cb) {
     var numWorkers = master.workers.value;
     if (numWorkers == -1) {
         
-        numWorkers = 0;//os.cpus().length; // Smart regulation later on
+        var isPM2Installed = false;
+        try {
+            require.resolve('pm2');
+            isPM2Installed = true;
+        } catch (e) { }
+        
+        if (isPM2Installed) {
+
+            numWorkers = 0; // let PM2 handle the rest
+        }
+        else {
+
+            numWorkers = 0;//os.cpus().length; // Smart regulation later on
+        }
     }
 
     if (cluster.isMaster && numWorkers > 0) {
@@ -192,7 +254,6 @@ var _parallelize = function ($cb) {
             cluster.on('online', function ($worker) {
             
                 log.write('Worker ' + $worker.id + ' is now ' + 'online'.green);
-                cl.prompt();
             });
         }
 

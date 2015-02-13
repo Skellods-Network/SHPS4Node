@@ -250,6 +250,7 @@ var _out
         }
 
         console.log($str);
+        cl.prompt();
     }
 };
 

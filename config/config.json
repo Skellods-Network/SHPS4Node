@@ -101,7 +101,7 @@
             "port"           : {
                 
                 "description": "DB port",
-                "value": 1633
+                "value": 3306
             },
             "name"           : {
                 
@@ -121,16 +121,16 @@
             "prefix"            : {
                 
                 "description": "Table prefix",
-                "value": ""
+                "value": "HP_"
             },
             "type"           : {
                 
                 "description": "Type of DB",
-                "value": "SHPS_SQL_MYSQL",
-                "options": [
-                    "SHPS_SQL_MYSQL",
-                    "SHPS_SQL_MSSQL"
-                ]
+                "value": 0,
+                "options": {
+                    "MySQL": 0,
+                    "MSSQL": 10
+                }
             },
             "connectionLimit": {
 
@@ -173,11 +173,11 @@
             "type"           : {
                 
                 "description": "Type of DB",
-                "value": "SHPS_SQL_MYSQL",
-                "options": [
-                    "SHPS_SQL_MYSQL",
-                    "SHPS_SQL_MSSQL"
-                ]
+                "value": 0,
+                "options": {
+                    "MySQL": 0,
+                    "MSSQL": 10
+                }
             },
             "connectionLimit": {
 
@@ -220,11 +220,11 @@
             "type"           : {
                 
                 "description": "Type of DB",
-                "value": "SHPS_SQL_MYSQL",
-                "options": [
-                    "SHPS_SQL_MYSQL",
-                    "SHPS_SQL_MSSQL"
-                ]
+                "value": 0,
+                "options": {
+                    "MySQL": 0,
+                    "MSSQL": 10
+                }
             },
             "connectionLimit": {
 
