@@ -30,7 +30,7 @@ var _hug
     });
 };
 
-var _sqlCol = function c_sqlCol($table, $name) {
+var _sqlCol = function c_sqlCol($table, $name, $returnAs) {
     
     var mp = {
         self: this
@@ -60,9 +60,15 @@ var _sqlCol = function c_sqlCol($table, $name) {
 
     var _toString 
     = mp.toString =
-    this.toString = function f_sqlCol_toString() {
+    this.toString = function f_sqlCol_toString($alias) {
+        
+        var r = $table.toString() + '.' + $table.getSQL().standardizeName($name);
+        if (typeof $returnAs !== 'undefined' && $alias) {
 
-        return $table.toString() + '.' + $name;
+            r += ' AS ' + $returnAs;
+        }
+
+        return r;
     };
     
     var _getTable 

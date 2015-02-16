@@ -2,8 +2,11 @@
 
 var me = module.exports;
 
-GLOBAL.SHPS_SQL_MYSQL = 0;
-GLOBAL.SHPS_SQL_MSSQL = 10;
+GLOBAL.SHPS_SQL_MYSQL = 2;
+GLOBAL.SHPS_SQL_MSSQL = 16;
+
+GLOBAL.SHPS_SQL_MARIA = SHPS_SQL_MYSQL | 4;
+GLOBAL.SHPS_SQL_PERCONA = SHPS_SQL_MYSQL | 8;
 
 var mysql = require('mysql');
 var mssql = require('mssql');
@@ -33,8 +36,10 @@ var mp = {
  * 
  * @var array
  */
-var _stringdeterminator = {};
+var _stringdeterminator
+= mp.stringdeterminator = {};
 _stringdeterminator[SHPS_SQL_MYSQL] = '\'';
+_stringdeterminator[SHPS_SQL_MARIA] = '\'';
 _stringdeterminator[SHPS_SQL_MSSQL] = '\'';
 
 /**
@@ -42,8 +47,10 @@ _stringdeterminator[SHPS_SQL_MSSQL] = '\'';
  * 
  * @var array
  */
-var _variabledeterminator = {};
+var _variabledeterminator 
+= mp.variabledeterminator = {};
 _variabledeterminator[SHPS_SQL_MYSQL] = ['`', '`'];
+_variabledeterminator[SHPS_SQL_MARIA] = ['`', '`'];
 _variabledeterminator[SHPS_SQL_MSSQL] = ['[', ']'];
 
 /**
@@ -84,6 +91,7 @@ var _newTable
  *  Huggable caller
  */
 var _hug 
+= mp.hug
 = me.hug = function f_sql_hug($h) {
     
     return helper.genericHug($h, mp, function f_sql_hug_hug($hugCount) {
@@ -152,7 +160,7 @@ var _SQL
      * 
      * @var integer
      */
-    var _dbType = $dbConfig.type.value
+    var _dbType = 0;
     
     /**
      * PDO link
@@ -209,6 +217,28 @@ var _SQL
      * @var array of string
      */
     var _includeTable = [];
+    
+    
+    /**
+     * Grouphuggable
+     * Breaks after 3 hugs per partner
+     * 
+     * @param $hug
+     *  Huggable caller
+     */
+    var _hug 
+    = mp.hug = function f_sql_hug($h) {
+        
+        return helper.genericHug($h, mp, function f_sql_hug_hug($hugCount) {
+            
+            if ($hugCount > 3) {
+                
+                return false;
+            }
+            
+            return true;
+        });
+    };
 
     /**
      * Make a new SQL query
@@ -293,9 +323,9 @@ var _SQL
         $str = sffm.cleanStr($str);
         /*let*/var s = _stringdeterminator[_dbType];
         if ($str.substring(0, 1) != s 
-            && $str.substring(r, -1) != s) {
+            && $str.substring(-1) != s) {
 
-            $str = s + $str + $s;
+            $str = s + $str + s;
         }
         
         return $str;
@@ -452,12 +482,26 @@ var _SQL
     /**
      * CONSTRUCTOR
      */
-    switch (_dbType) {
+    switch ($dbConfig.type.value) {
 
-        case 'SHPS_SQL_MYSQL': {
+        case SHPS_SQL_MYSQL: {
 
-            this.query('SET NAMES \'UTF8\';');
+            _query('SET NAMES \'UTF8\';').then().done();
+            _dbType = SHPS_SQL_MYSQL;
+            _query('SELECT VERSION();').then(function ($res) {
+                
+                if ($res['VERSION()'].strpos('MariaDB') !== false) {
+                    
+                    _dbType |= SHPS_SQL_MARIA;
+                }
+            }).done();
+
             break;
+        }
+
+        default: {
+
+            _dbType = $dbConfig.type.value;
         }
     }
 

@@ -30,7 +30,11 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
         return;
     }*/
     
-    
+
+    var mp = {
+        self: this
+    };
+
     /**
      * Contains type of operation
      * 0 = UNDEFINED
@@ -57,6 +61,7 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
      * @var \SHPS\sql_table
      */
     var table = null;
+    
 
     /**
      * Grouphuggable
@@ -167,7 +172,7 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
         var tmp = null;
         while (i < colCount) {
             
-            query += buf[i].toString();
+            query += buf[i].toString(true);
             tmp = buf[i].getTable();
             if (tables.indexOf(tmp) < 0) {
                 

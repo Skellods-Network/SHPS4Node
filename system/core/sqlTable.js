@@ -9,6 +9,7 @@ var helper = require('./helper.js');
 var sql = require('./sql.js');
 var col = require('./sqlCol.js');
 var row = require('./sqlRow.js');
+var sqb = require('./sqlQueryBuilder.js');
 var log = require('./log.js');
 
 var mp = {
@@ -24,7 +25,8 @@ var mp = {
  *  Huggable caller
  */
 var _hug 
-= me.hug = function f_main_hug($h) {
+= me.hug 
+= mp.hug = function f_main_hug($h) {
     
     return helper.genericHug($h, mp, function f_main_hug_hug($hugCount) {
         
@@ -109,6 +111,35 @@ var _sqlTable = function c_sqlTable($sql, $name) {
         return [];
     };
     
+    var _create =
+    this.create = function f_sqlTable_sqlTable_create() {
+        
+        var te = '';
+        var cs = 'utf8mb4';
+        var tc = 'utf8mb4_unicode_ci';
+        switch ($sql.getServerType()) {
+
+            case SHPS_SQL_MYSQL: {
+
+                $sql.query('CREATE TABLE IF NOT EXISTS ' + _getAbsoluteName() + ' ( `ID` INT UNSIGNED NOT NULL AUTO_INCREMENT , PRIMARY KEY (`ID`) ) ENGINE = Aria CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;');
+            }
+        }
+        
+    };
+    
+    var _get =
+    this.get = function f_sqlTable_sqlTable_get($cols) {
+        
+        if ($cols == 'undefined') {
+
+            $cols = _getAllColumns();
+        }
+
+        return sqb.newSQLQueryBuilder($sql)
+            .get($cols)
+            .fulfilling();
+    };
+
     /**
      * Drop table
      * 
