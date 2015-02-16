@@ -1,24 +1,34 @@
-﻿"use strict";
+﻿'use strict';
 
 var me = module.exports;
 
-GLOBAL.SHPS_SQL_MYSQL = 0;
-GLOBAL.SHPS_SQL_MSSQL = 10;
+GLOBAL.SHPS_SQL_MYSQL = 2;
+GLOBAL.SHPS_SQL_MSSQL = 16;
 
+GLOBAL.SHPS_SQL_MARIA = SHPS_SQL_MYSQL | 4;
+GLOBAL.SHPS_SQL_PERCONA = SHPS_SQL_MYSQL | 8;
 
 var mysql = require('mysql');
+var mssql = require('mssql');
 var pooling = require('generic-pool');
 var async = require('vasync');
 var Promise = require('promise');
+var q = require('q');
 
 var main = require('./main.js');
 var log = require('./log.js');
 var helper = require('./helper.js');
 var sffm = require('./SFFM.js');
-
+var row = require('./sqlRow.js');
+var col = require('./sqlCol.js');
+var table = require('./sqlTable.js');
+var SQLQueryBuilder = require('./sqlQueryBuilder.js');
+var SQLConditionBuilder = require('./sqlConditionBuilder.js');
 
 var _sqlConnectionPool = {};
-
+var mp = {
+    self: this
+};
 
 
 /**
@@ -26,22 +36,22 @@ var _sqlConnectionPool = {};
  * 
  * @var array
  */
-var _stringdeterminator = {
-
-    SHPS_SQL_MYSQL: '\'',
-    SHPS_SQL_MSSQL: '\'',
-};
+var _stringdeterminator
+= mp.stringdeterminator = {};
+_stringdeterminator[SHPS_SQL_MYSQL] = '\'';
+_stringdeterminator[SHPS_SQL_MARIA] = '\'';
+_stringdeterminator[SHPS_SQL_MSSQL] = '\'';
 
 /**
  * SQL variable determinators
  * 
  * @var array
  */
-var _variabledeterminator = {
-
-    SHPS_SQL_MYSQL: ['`','`'],
-    SHPS_SQL_MSSQL: ['[',']'],
-};
+var _variabledeterminator 
+= mp.variabledeterminator = {};
+_variabledeterminator[SHPS_SQL_MYSQL] = ['`', '`'];
+_variabledeterminator[SHPS_SQL_MARIA] = ['`', '`'];
+_variabledeterminator[SHPS_SQL_MSSQL] = ['[', ']'];
 
 /**
  * Alias Connections
@@ -64,189 +74,36 @@ var _memcached = null;
  */
 var _conditionbuilder = null;
 
+var _newCol 
+= me.newCol = col.newCol;
+
+var _newRow 
+= me.newRow = row.newRow;
+
+var _newTable 
+= me.newTable = table.newTable;
+
 /**
- * SQL Query Builder
+ * Grouphuggable
+ * Breaks after 3 hugs per partner
+ * 
+ * @param $hug
+ *  Huggable caller
  */
-var sql_queryBuilder = function ($sql) {
+var _hug 
+= mp.hug
+= me.hug = function f_sql_hug($h) {
     
-    /**
-     * Contains type of operation
-     * 0 = UNDEFINED
-     * 1 = GET
-     * 2 = INSERT
-     * 3 = ALTER
-     * 4 = DELETE
-     * 
-     * @var int
-     */
-    var operation = 0;
-    
-    /**
-     * Data to work with
-     * GET: cols to get
-     * SET: col=>value to set
-     * 
-     * @var [] of sql_col
-     */
-    var buf = [];
-    
-    /**
-     * Table to use for set or delete operations
-     * 
-     * @var \SHPS\sql_table
-     */
-    var table = null;
-    
-    /**
-     * Column to order by
-     * 
-     * @var \SHPS\sql_col
-     */
-    var orderBy = null;
-    
-    /**
-     * Order by ascending?
-     * 
-     * @var boolean
-     */
-    var obAscending = true;
-    
-    /**
-     * Limit number of result rows
-     * 
-     * @var integer
-     */
-    var limit = 0;
-    
-
-    /**
-     * Reset Query Builder
-     */
-    var _reset = function () {
+    return helper.genericHug($h, mp, function f_sql_hug_hug($hugCount) {
         
-        operation = 0;
-        buf = [];
-    }
-
-    /**
-     * Fetch from the DB
-     * 
-     * @param \SHPS\sql_col
-     * @param ... several colspecs can be given, each as new parameter or as [](s)
-     * @return \SHPS\sql_queryBuilder
-     */
-    var _get 
-    = this.get = function () {
-
-        _reset();
-        operation = 1;
-        arguments.foreach(function ($arg) {
-
-            if (sffm.isArray($arg)) {
-                
-                $arg.foreach(function ($a) {
-                    
-                    buf[buf.length] = $a;
-                });
-            }
-            else {
-
-                buf[buf.length] = $arg;
-            }
-        });
-
-        return this;
-    }
-    
-    /**
-     * Add conditions to query
-     * 
-     * @return sql_conditionBuilder
-     */
-    var _fulfilling
-    = this.fulfilling = function () {
-
-        if (operation === 0) {
-
-            throw 'No operation selected!';
-        }
-
-        return new sql_conditionBuilder(this);
-    }
-
-    var _execute
-    = this.execute = function () {
-
-        if (arguments.length > 0) {
+        if ($hugCount > 3) {
             
-            var conditions = arguments[0];
+            return false;
         }
-        else {
-            
-            var conditions = null;
-        }
-
-        switch (operation) {
-
-            case 1:// SELECT
-                
-                var query = 'SELECT ';
-                var st = $sql.getServerType();
-                if (st == 'MSSQL' && limit > 0) {
-                    
-                    query += 'TOP ' + limit + ' ';
-                }
-                
-                var colCount = buf.length;
-                var tables = [];
-                var i = 0;
-                buf.forEach(function ($buf) {
-                    
-                    i++;
-                    query += $buf.toString();
-                    var tmp = $buf.getTable();
-                    if (tables.indexOf(tmp) == -1) {
-                        
-                        tables[tables.length] = tmp;
-                    }
-                    
-                    if (colCount == i) {
-                        
-                        query += ' ';
-                    }
-                    else {
-                        
-                        query += ',';
-                    }
-                });
-                
-                if (conditions !== null) {
-                    
-                    query += 'WHERE ' + conditions.toString();
-                }
-                
-                if (orderBy !== null) {
-                    
-                    query += 'ORDER BY ' + orderBy.toString() + ' ' + obAscending ? 'ASC ' : 'DESC ';
-                }
-                
-                if ((st == 'MySQL' || st == 'MariaDB') && limit > 0) {
-                    
-                    query += 'LIMIT ' + limit + ' ';
-                }
-                
-                query += ';';
-                $sql.query(query);
-
-                break;
-
-
-            default:
-                
-                throw 'UNKNOWN OPERATION';
-        }
-    }
-}
+        
+        return true;
+    });
+};
 
 /**
  * SQL Class<br>
@@ -259,18 +116,24 @@ var sql_queryBuilder = function ($sql) {
  * @param string $prefix
  * @param array $mcServers [[(Sting)'Host',(Integer)['Port']],[...]]
  */
-var SQL = function ($dbConfig, $connection) {
+var _SQL 
+= mp.SQL = function ($dbConfig, $connection) {
 
     if (typeof $dbConfig === 'undefined') {
         
         log.error('Cannot work with undefined dbConfig!');
     }
     
-    if (typeof $connection === 'undefined') {
+    if (typeof $connection === 'undefined' || $connection === null) {
         
         log.error('Cannot work without connection!');
+        return;
     }
     
+    var mp = {
+        self: this
+    };
+
     /**
      * Total count of SQL queries
      * 
@@ -297,49 +160,7 @@ var SQL = function ($dbConfig, $connection) {
      * 
      * @var integer
      */
-    var _dbType = eval('return ' + $dbConfig.type.value + ';');
-    
-    /**
-     * Database host
-     * 
-     * @var string
-     */
-    var _host = $host;
-    
-    /**
-     * Database server port
-     * 
-     * @var integer
-     */
-    var _port = $port;
-    
-    /**
-     * Database name
-     * 
-     * @var string
-     */
-    var _db = $database;
-    
-    /**
-     * Table prefix
-     * 
-     * @var string
-     */
-    var _prefix = $prefix;
-    
-    /**
-     * Database user
-     * 
-     * @var string
-     */
-    var _user = $user;
-    
-    /**
-     * Database password
-     * 
-     * @var string
-     */
-    var _passwd = $passwd;
+    var _dbType = 0;
     
     /**
      * PDO link
@@ -396,6 +217,28 @@ var SQL = function ($dbConfig, $connection) {
      * @var array of string
      */
     var _includeTable = [];
+    
+    
+    /**
+     * Grouphuggable
+     * Breaks after 3 hugs per partner
+     * 
+     * @param $hug
+     *  Huggable caller
+     */
+    var _hug 
+    = mp.hug = function f_sql_hug($h) {
+        
+        return helper.genericHug($h, mp, function f_sql_hug_hug($hugCount) {
+            
+            if ($hugCount > 3) {
+                
+                return false;
+            }
+            
+            return true;
+        });
+    };
 
     /**
      * Make a new SQL query
@@ -409,21 +252,23 @@ var SQL = function ($dbConfig, $connection) {
         
         _free = false;
         _fetchIndex = -1;
-        _resultRows = [];
+        var _resultRows = [];
 
-        if (typeof $param !== null) {
+        if (typeof $param !== 'undefined') {
 
             $query = mysql.format($query, $param, true, main.getHPConfig('generalConfig', 'timezone', $requestState.uri));
+            mysql.createQuery($query, cb);
         }
         
-        if (typeof $query !== null) {
+        if (typeof $query !== 'undefined') {
             
             _lastQuery = $query;
             _queryCount++;
             var start = process.hrtime();
             
             return new Promise(function ($fulfill, $reject) {
-                _connection.query($query, function ($err, $rows, $fields) {
+
+                $connection.query($query, function ($err, $rows, $fields) {
                     
                     var t = process.hrtime(start);
                     _lastQueryTime = t[0] + (t[1] / 1000000000);
@@ -442,7 +287,7 @@ var SQL = function ($dbConfig, $connection) {
             });
         }
 
-        return new _sql_queryBuilder(this);
+        return SQLQueryBuilder.newSQLQueryBuilder(this);
     }
     
     /**
@@ -478,9 +323,9 @@ var SQL = function ($dbConfig, $connection) {
         $str = sffm.cleanStr($str);
         /*let*/var s = _stringdeterminator[_dbType];
         if ($str.substring(0, 1) != s 
-            && $str.substring(r, -1) != s) {
+            && $str.substring(-1) != s) {
 
-            $str = s + $str + $s;
+            $str = s + $str + s;
         }
         
         return $str;
@@ -553,7 +398,7 @@ var SQL = function ($dbConfig, $connection) {
     var _getServerType
     = this.getServerType = function () {
         
-        return 'MySQL';
+        return _dbType;
     }
     
     /**
@@ -613,15 +458,50 @@ var SQL = function ($dbConfig, $connection) {
         return _resultRows[_fetchIndex];
     }
     
+    var _free =
+    this.free = function f_sql_SQL_free() {
+        
+        _sqlConnectionPool[_makePoolName($dbConfig)].release($connection);
+        _free = true;
+    };
+    
+    var _getDB 
+    = mp.getDB =
+    this.getDB = function f_sql_getDB() {
+    
+        return $dbConfig.name.value;
+    };
+    
+    var _getPrefix 
+    = mp.getPrefix =
+    this.getPrefix = function f_sql_getPrefix() {
+    
+        return $dbConfig.prefix.value;
+    };
+    
     /**
      * CONSTRUCTOR
      */
-    switch (_dbType) {
+    switch ($dbConfig.type.value) {
 
-        case 'SHPS_SQL_MYSQL': {
+        case SHPS_SQL_MYSQL: {
 
-            this.query('SET NAMES \'UTF8\';');
+            _query('SET NAMES \'UTF8\';').then().done();
+            _dbType = SHPS_SQL_MYSQL;
+            _query('SELECT VERSION();').then(function ($res) {
+                
+                if ($res['VERSION()'].strpos('MariaDB') !== false) {
+                    
+                    _dbType |= SHPS_SQL_MARIA;
+                }
+            }).done();
+
             break;
+        }
+
+        default: {
+
+            _dbType = $dbConfig.type.value;
         }
     }
 
@@ -644,12 +524,21 @@ var _getConnectionCount
     
 }
 
+var _makePoolName = function f_sql_makePoolName($dbConfig) {
+
+    return $dbConfig.host.value +
+        $dbConfig.port.value +
+        $dbConfig.name.value +
+        $dbConfig.user.value +
+        $dbConfig.prefix.value;
+}
+
 /**
  * Create new managed SQL connection from alias (see config file)
  * 
  * @param string $alias //Default: 'default'
  * @param $requestState requestState Object
- * @return sql
+ * @return _SQL
  */
 var _newSQL 
 = me.newSQL = function f_sql_newSQL($alias, $requestState) {
@@ -659,20 +548,17 @@ var _newSQL
         log.error('Cannot connect with undefined requestState!');
     }
     
+    var defer = q.defer();
     var config = $requestState.config;
     var dbConfig = config.databaseConfig[$alias];
-    var poolName = dbConfig.host.value +
-        dbConfig.port.value +
-        dbConfig.name.value +
-        dbConfig.user.value +
-        dbConfig.prefix.value;
+    var poolName = _makePoolName(dbConfig);
 
     var nPool = _sqlConnectionPool[poolName];
     if (typeof nPool === 'undefined') {
         
         switch (dbConfig.type.value) {
 
-            case "SHPS_SQL_MYSQL": {
+            case SHPS_SQL_MYSQL: {
                 
                 _sqlConnectionPool[poolName] = nPool = mysql.createPool({
                     
@@ -686,6 +572,56 @@ var _newSQL
                     timezone: config.generalConfig.timezone.value,
                     multipleStatements: true
                 });
+                
+                q.resolve(new _SQL(dbConfig, nPool.getConnection()));
+
+                break;
+            }
+
+            case SHPS_SQL_MSSQL: {
+                
+                _sqlConnectionPool[poolName] = nPool = pooling.Pool({
+                        
+                    name: poolName,
+                    create: function f_sql_newSQL_create_MSSQL_pool($cb) {
+                            
+                        $cb(null, new mssql.Connection({
+                                
+                            server: dbConfig.host.value,
+                            port: dbConfig.port.value,
+                            user: dbConfig.user.value,
+                            password: dbConfig.pass.value,
+                            database: dbConfig.name.value
+                        }, function ($err) {
+                                
+                            
+                        }));
+                    },
+                    destroy: function f_sql_newSQL_destroy_MSSQL_pool($res) {
+                        
+                        if (typeof $res.connection !== 'undefined') {
+
+                            $res.connection.close();
+                        }
+                    },
+                    max: dbConfig.connectionLimit.value,
+                    min: 1,
+                    idleTimeoutMillis: 30000,
+                    log: false
+                });
+
+                nPool.acquire(function ($err, $client) {
+                    
+                    if ($err === null) {
+
+                        defer.resolve(new _SQL(dbConfig, new mssql.Request($client)));
+                    }
+                    else {
+
+                        defer.reject($err);
+                    }
+                    
+                });
 
                 break;
             }
@@ -696,48 +632,16 @@ var _newSQL
             }
         }
     }
+    else {
 
-    return new SQL($requestState, nPool.getConnection());
-};
-
-var _sql_queryBuilder = function f_sql_sql_queryBuilder($sql) {
-    if (typeof $sql !== typeof SQL) {
-
-        log.error('The queryBuilder needs a valid sql object!');
-        return;
+        nPool.acquire(function ($err, $client) {
+            
+            defer.resolve(new _SQL(dbConfig, $client));
+        });
     }
 
-
-    /**
-     * Contains type of operation
-     * 0 = UNDEFINED
-     * 1 = GET
-     * 2 = INSERT
-     * 3 = ALTER
-     * 4 = DELETE
-     * 
-     * @var int
-     */
-    var $operation = 0;
-    
-    /**
-     * Data to work with
-     * GET: cols to get
-     * SET: col=>value to set
-     * 
-     * @var [] of sql_col
-     */
-    var $buf = [];
-    
-    /**
-     * Table to use for set or delete operations
-     * 
-     * @var \SHPS\sql_table
-     */
-    var $table = null;
-
-
-}
+    return defer.promise;
+};
 
 /**
  * SHPS_sql_colspec
@@ -747,12 +651,12 @@ var _sql_queryBuilder = function f_sql_sql_queryBuilder($sql) {
  */
 var sql_colspec = function f_sql_sql_colspec($table, $col) {
     if (typeof $table !== typeof sql_table || typeof $col !== 'string') {
-
+        
         log.error('Wrong parameters: ' + typeof $table + ' / ' + typeof $col + '!');
         return;
     }
     
-
+    
     /**
      * Columne as SQL string
      * 
@@ -760,12 +664,12 @@ var sql_colspec = function f_sql_sql_colspec($table, $col) {
      */
     var _toString =
     this.toString = function f_sql_sql_colspec_toString() {
-
+        
         return $table.getSQL().standardizeName($table.getSQL().getDB()) +
-                '.' . $table.getSQL().standardizeName($table.getFullName()) +
-                '.' . $table.getSQL().standardizeName($col);
+                '.'.$table.getSQL().standardizeName($table.getFullName()) +
+                '.'.$table.getSQL().standardizeName($col);
     }
-
+    
     /**
      * Get table
      * 
@@ -773,7 +677,7 @@ var sql_colspec = function f_sql_sql_colspec($table, $col) {
      */
     var _getTable = 
     this.getTable = function f_sql_sql_colspec_getTable() {
-
+        
         return $table;
     }
     
@@ -784,16 +688,17 @@ var sql_colspec = function f_sql_sql_colspec($table, $col) {
      */
     var _getColName =
     this.getColName = function f_sql_sql_colspec_getColName() {
-
+        
         return $col;
     }
     
     var _getSQL =
     this.getSQL = function f_sql_sql_colspec_getSQL() {
-
+        
         return $table.getSQL();
     }
-}
+};
+
 
 /**
  * Focus all DB actions on a given requestState
@@ -802,7 +707,7 @@ var sql_colspec = function f_sql_sql_colspec($table, $col) {
  * @param requestState $requestState
  */
 var _focus 
-= me.focus = function ($requestState) {
+= me.focus = function c_sql_focus($requestState) {
     if (typeof $requestState !== 'undefined') {
 
         log.error('Cannot focus undefined requestState!');
@@ -827,5 +732,11 @@ var _focus
     this.newSQL = function f_sql_focus_newSQL($alias) {
 
         return _newSQL($alias, $requestState);
+    };
+
+    var _newTable =
+    this.newTable = function ($name) {
+        
+        table.newTable(this, $name);
     };
 };

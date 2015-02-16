@@ -1,11 +1,16 @@
-{
-    "configHeader": {
-      
-		"description": "This part contains info about the config file. The version noted here indicates the minimum SHPS version the config file is compatibel with",
-        "SHPSVERSION_MA": 4,
-        "SHPSVERSION_MI": 0,
-		"type": "hp"
-    },
+﻿'use strict';
+
+var me = module.exports;
+
+
+me.master = {
+    "workers": {
+        "description": "Spawns {%value} workers to handle work. Workers are working even closer together than clustered SHPSs. Makes use of multiple cores. Even with 0 workers there will always be a master process. Insert -1 for smart worker regulation",
+        "value": -1
+    }
+}
+
+me.config = {
     "generalConfig": {
         
         "URL"			: {
@@ -46,7 +51,7 @@
         "displayStats"          : {
             
             "description": "Display speed and resource stats in the homepage's source",
-            "value": true
+            "value": false
         },        
         "indexContent"          : {
             
@@ -78,11 +83,11 @@
     "SSLConfig": {
         "key"                   : {
             "description": "",
-            "value": "skellods-network.key"
+            "value": "mysite.key"
         },
         "cert"                   : {
             "description": "",
-            "value": "skellods-network.crt"
+            "value": "mysite.crt"
         },
         "ca"                   : {
             "description": "",
@@ -133,7 +138,7 @@
                 }
             },
             "connectionLimit": {
-
+                
                 "description": "Maximum number of simultaneous connections to the DB server",
                 "value": 100
             }
@@ -180,14 +185,14 @@
                 }
             },
             "connectionLimit": {
-
+                
                 "description": "Maximum number of simultaneous connections to the DB server",
                 "value": 100
             }
         },
         "usermanagement": {
             
-           "host"            : {
+            "host"            : {
                 
                 "description": "DB host",
                 "value": "localhost"
@@ -227,7 +232,7 @@
                 }
             },
             "connectionLimit": {
-
+                
                 "description": "Maximum number of simultaneous connections to the DB server",
                 "value": 100
             }
@@ -235,7 +240,7 @@
         "securityConfig": {
             
             "sessionTimeout"       : {
-            
+                
                 "description": "Time after which a session is destroyed",
                 "value": 1800
             },
@@ -252,3 +257,71 @@
         }
     }
 }
+
+me.fileTree = {
+    '.isDir': true,
+    '.canHazFiles': true,
+    '.canHazFolders': true,
+    cache: {
+        '.isDir': true
+    },
+    cert: {
+        '.isDir': true,
+        '.canHazFiles': true
+    },
+    config: {
+        '.isDir': true,
+        '.canHazFiles': true
+    },
+    logs: {
+        '.isDir': true,
+        '.canHazFiles': true
+    },
+    node_modules: {
+        '.isDir': true,
+        '.canHazFiles': true,
+        '.canHazFolders': true
+    },
+    system: {
+        '.isDir': true,
+        '.canHazFolders': true,
+        core: {
+            '.isDir': true,
+            _files: [
+                'commandline.js',
+                'componentLibrary.js',
+                'default.js',
+                'helper.js',
+                'io.js',
+                'log.js',
+                'main.js',
+                'optimize.js',
+                'plugin.js',
+                'request.js',
+                'schedule.js',
+                'SFFM.js',
+                'sql.js',
+                'sqlCol.js',
+                'sqlConditionBuilder.js',
+                'sqlQueryBuilder.js',
+                'sqlRow.js',
+                'sqlTable.js'
+            ]
+        },
+        plugins: {
+            '.isDir': true,
+            '.canHazFiles': true,
+            '.canHazFolders': true
+        },
+        static: {
+            '.isDir': true,
+            '.canHazFiles': true
+        }
+    },
+    _files: [
+        'LICENCE.md',
+        'package.json',
+        'README.md',
+        'SHPS.js'
+    ]
+};

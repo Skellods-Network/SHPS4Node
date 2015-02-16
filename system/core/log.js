@@ -4,8 +4,18 @@ var me = module.exports;
 
 var colors = require('colors');
 var util = require('util');
+var cluster = require('cluster');
+var readline = require('readline');
 
 var schedule = require('./schedule.js');
+var cl = require('./commandline.js');
+var main = require('./main.js');
+var helper = require('./helper.js');
+var SFFM = require('./SFFM.js');
+
+var mp = {
+    self: this
+};
 
 
 /**
@@ -111,7 +121,8 @@ var _cls
  * @param integer $level
  * @param string $str
  */
-var _log = function ($level, $str) {
+var _log
+= me.log = function ($level, $str) {
     $str = typeof $str !== 'undefined' ? $str : '';
     
     if ((level == 1 && $level > 3) || (level != 1 && level <= $level)) {
@@ -161,16 +172,86 @@ var fatal
     _log(5, $str);
 };
 
-
 /**
- * Write string top log without outputting it
- *
- * @param string $str
+ * STDOUT function with fork optimization
+ * 
+ * @param $str string
+ * @param $forceWrite boolean Force output even from worker
  */
-var log 
-= me.log = function ($str) {
+var _out 
+= mp.out = function ($str, $forceWrite) {
+    $forceWrite = typeof $forceWrite !== 'undefined' ? $forceWrite : false;
     
-    _log(2, $str);
+    if (cluster.isMaster || $forceWrite) {
+        
+        if (main.getHPConfig('1337')) {
+            
+            $str = SFFM.replaceAll($str, {
+                'er ': 'or ',
+                'ed ': 't ',
+                and: '&',
+                ant: '&',
+                anned: '&',
+                '!!': '!1',
+                '-': '~'
+            });
+
+            var i = 0;
+            var l = $str.length;
+            var tick = false;
+            while (i < l) {
+                
+                if (/[A-Z]/.test($str[i])) {
+                    
+                    if (tick) {
+
+                        $str = $str.substr(0, i) + $str[i].toLowerCase() + $str.substr(i + 1);
+                        tick = false;
+                    }
+                    else {
+                        
+                        tick = true;
+                    }
+                }
+                else if (/[a-ln-z]/.test($str[i])) {
+                    
+                    if (tick) {
+                        
+                        $str = $str.substr(0, i) + $str[i].toUpperCase() + $str.substr(i + 1);
+                        tick = false;
+                    }
+                    else {
+                        
+                        tick = true;
+                    }
+                }
+
+                i++;
+            }
+            
+            $str = SFFM.replaceAll($str, {
+                or: 'r0',
+                ck: 'X',
+                ex: 'X',
+                en: 'N'
+            }); 
+
+            $str = SFFM.replaceAll($str, {
+                a: '4',
+                b: '8',
+                e: '3',
+                g: 'q',
+                i: '!',
+                l: '1',
+                o: '0',
+                s: '5',
+                t: '7'
+            });
+        }
+
+        console.log($str);
+        cl.prompt();
+    }
 };
 
 /**
@@ -181,21 +262,36 @@ var log
 var write
 = me.write = function ($str) {
     $str = typeof $str !== 'undefined' ? $str : '';
+    
+    _out($str);
+    _log($str);
+};
 
-    console.log($str);
-    log($str);
+/**
+ * Write ntoe to console and to log
+ *
+ * @param string $str
+ * @param $forceWrite boolean Force output even from worker
+ */
+var writeNote
+= me.writeNote = function ($str, $forceWrite) {
+    $str = typeof $str !== 'undefined' ? $str : '';
+    
+    _out($str.bold, $forceWrite);
+    _log(3, $str);
 };
 
 /**
  * Write warning to console and to log
  *
  * @param string $str
+ * @param $forceWrite boolean Force output even from worker
  */
 var writeWarning 
-= me.writeWarning = function ($str) {
+= me.writeWarning = function ($str, $forceWrite) {
     $str = typeof $str !== 'undefined' ? $str : '';
     
-    console.log(('WARNING: ' + $str).yellow.bold);
+    _out(('WARNING: ' + $str).yellow.bold, $forceWrite);
     _log(3, $str);
 };
 
@@ -203,12 +299,13 @@ var writeWarning
  * Write error to console and to log
  *
  * @param string $str
+ * @param $forceWrite boolean Force output even from worker
  */
 var writeError
-= me.writeError = function ($str) {
+= me.writeError = function ($str, $forceWrite) {
     $str = typeof $str !== 'undefined' ? $str : '';
-    
-    console.log(('ERROR: ' + $str).red.bold);
+
+    _out(('ERROR: ' + $str).red.bold, $forceWrite);
     _log(4, $str);
 };
 
@@ -216,12 +313,13 @@ var writeError
  * Write fatal error to console and to log
  *
  * @param string $str
+ * @param $forceWrite boolean Force output even from worker
  */
 var writeFatal
-= me.writeFatal = function ($str) {
+= me.writeFatal = function ($str, $forceWrite) {
     $str = typeof $str !== 'undefined' ? $str : '';
     
-    console.log(('FATAL ERROR: ' + $str).red.bold);
+    _out(('FATAL ERROR: ' + $str).red.bold, $forceWrite);
     _log(5, $str);
 };
 
@@ -238,13 +336,40 @@ var writeWelcome
 
         build = ' ' + build;
     }
-
-    write('You are currently running SHPS v' + SHPS_VERSION.cyan.bold + build.yellow + ', but please call her ' + SHPS_INTERNAL_NAME.cyan.bold + '!');
+    
+    main.printVersion();
 };
 
-var _writeHint
-= me.writeHint = function ($str) {
+/**
+ * Write hint to console
+ * 
+ * @param string $str
+ * @param $forceWrite boolean Force output even from worker
+ */
+var _outHint 
+= me.writeHint = function ($str, $forceWrite) {
     $str = typeof $str !== 'undefined' ? $str : '';
+    
+    _out(('HINT: ' + $str).grey, $forceWrite);
+};
 
-    console.log(('HINT: ' + $str).grey);
-}
+/**
+ * Grouphuggable
+ * Breaks after 3 hugs per partner
+ * 
+ * @param $hug
+ *  Huggable caller
+ */
+var _hug 
+= me.hug = function f_log_hug($h) {
+    
+    return helper.genericHug($h, mp, function f_helper_log_hug($hugCount) {
+        
+        if ($hugCount > 3) {
+            
+            return false;
+        }
+        
+        return true;
+    });
+};

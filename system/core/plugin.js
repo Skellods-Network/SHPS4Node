@@ -2,14 +2,15 @@
 
 var me = module.exports;
 
+var fs = require('fs');
+
 var log = require('./log.js');
 var main = require('./main.js');
 var schedule = require('./schedule.js');
-
-var fs = require('fs');
-
+var helper = require('./helper.js');
 
 var _plugins = {};
+var self = this;
 
 
 var _loadPlugins 
@@ -45,11 +46,12 @@ var _loadPlugins
                 
                 if (loadOK) {
                     
-                    log.write('Plugin `' + pname + '` was ' + 'loaded successfully'.green);
+                    var piname = _plugins[pname].info.name;
+                    log.write('Plugin `' + piname + '` was ' + 'loaded successfully'.green);
                 }
                 else {
                     
-                    log.write('Plugin `' + pname + '` ' + 'encountered problems'.red);
+                    log.write('Plugin ' + pname + ' ' + 'encountered problems'.red);
                 }
                 
                 schedule.sendSignal('onPluginLoaded', pname, loadOK);

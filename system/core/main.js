@@ -21,16 +21,17 @@
 var me = module.exports;
 
 GLOBAL.SHPS_ = 1;
-GLOBAL.SHPS_MAJOR_VERSION = 3;
-GLOBAL.SHPS_MINOR_VERSION = 1;
+GLOBAL.SHPS_MAJOR_VERSION = 4;
+GLOBAL.SHPS_MINOR_VERSION = 0;
 GLOBAL.SHPS_PATCH_VERSION = 0;
 GLOBAL.SHPS_BUILD = 'ALPHA';
 GLOBAL.SHPS_INTERNAL_NAME = 'IROKOKOU';
 GLOBAL.SHPS_VERSION = SHPS_MAJOR_VERSION + '.' + SHPS_MINOR_VERSION + '.' + SHPS_PATCH_VERSION;
 
-GLOBAL.SHPS_DIR_PLUGINS = 0;
-GLOBAL.SHPS_DIR_CERTS = 1;
-GLOBAL.SHPS_DIR_CONFIGS = 2;
+GLOBAL.SHPS_DIR_ROOT = 0;
+GLOBAL.SHPS_DIR_PLUGINS = 1;
+GLOBAL.SHPS_DIR_CERTS = 2;
+GLOBAL.SHPS_DIR_CONFIGS = 3;
 
 
 var fs = require('fs');
@@ -39,6 +40,8 @@ var colors = require('colors');
 var https = require('http2');
 var http = require('http');
 var path = require('path');
+var cluster = require('cluster');
+var os = require('os');
 
 var scheduler = require('./schedule.js');
 var optimize = require('./optimize.js');
@@ -48,10 +51,14 @@ var request = require('./request.js');
 var cmd = require('./commandline.js');
 var sql = require('./sql.js');
 var plugin = require('./plugin.js');
+var cl = require('./commandline.js');
+var dInit = require('./default.js');
 
-var config = [];
+var config = {};
+var master = {};
 var debug = false;
 var domain = [];
+var self = this;
 
 /**
  * Get directory path
@@ -62,14 +69,80 @@ var domain = [];
 var _getDir
 = me.getDir = function ($key) {
     
+    var r = null;
     switch ($key) {
 
-        case SHPS_DIR_PLUGINS: return path.dirname(require.main.filename) + '/system/plugins/';
-        case SHPS_DIR_CERTS: return path.dirname(require.main.filename) + '/cert/';
-        case SHPS_DIR_CONFIGS: return path.dirname(require.main.filename) + '/config/';
-        default: return;
+        case SHPS_DIR_ROOT: r = path.dirname(require.main.filename) + '/'; break;
+        case SHPS_DIR_PLUGINS: r = path.dirname(require.main.filename) + '/system/plugins/'; break;
+        case SHPS_DIR_CERTS: r = path.dirname(require.main.filename) + '/cert/'; break;
+        case SHPS_DIR_CONFIGS: r = path.dirname(require.main.filename) + '/config/'; break;
     }
-}
+
+    if (r !== null) {
+    
+        r = path.normalize(r);    
+    }
+
+    return r;
+};
+
+var _getVersionText 
+= me.getVersionText = function f_main_getVersionText() {
+    
+    /*let*/var build = SHPS_BUILD;
+    if (build != '') {
+        
+        build = ' ' + build;
+    }
+
+    return 'You are currently running SHPS v' + SHPS_VERSION.cyan.bold + build.yellow + ', but please call her ' + SHPS_INTERNAL_NAME.cyan.bold + '!';
+};
+
+var _printVersion 
+= me.printVersion = function () {
+
+    log.write(_getVersionText());
+};
+
+/**
+ * Checks filesystem for inconsistencies, missing files or pollution
+ * Only rough analysis
+ * @the moment it only checks the root dir -> has to be improved
+ */
+var _checkFS 
+= me.checkFS = function f_main_checkFS($cb) {
+
+    log.write('Checking filesystem...');
+    
+    var root = _getDir(SHPS_DIR_ROOT);
+    fs.readdir(root, function f_main_checkFS_rd($err, $list) {
+        
+        var i = 0;
+        var l = $list.length;
+        while (i < l) {
+            
+            var entry = $list[i];
+            var $stat = fs.lstatSync(root + entry)
+
+            if ($stat.isDirectory()) {
+                
+                if (Object.keys(dInit.fileTree).indexOf(entry) < 0) {
+
+                    scheduler.sendSignal('onPollution', root, 'SHPS root', entry);
+                }
+            }
+            else if (dInit.fileTree._files.indexOf(entry) < 0) {
+
+                scheduler.sendSignal('onFilePollution', root, 'SHPS root', entry);
+            }
+
+            i++;
+        }
+
+        log.write('');
+        $cb();
+    });
+};
 
 /**
  * Get setting from config file
@@ -83,14 +156,19 @@ var _getHPConfig
 = me.getHPConfig = function ($group, $key, $domain) {
     
     if (typeof domain[$domain] !== 'undefined' &&
-        typeof domain[$domain].$group !== 'undefined' &&
-        typeof domain[$domain].$group.$key !== 'undefined') {
+        typeof domain[$domain][$group] !== 'undefined' &&
+        typeof domain[$domain][$group][$key] !== 'undefined') {
 
-            return domain[$domain].$group.$key.value;
+        return domain[$domain][$group][$key].value;
+    }
+    
+    if (typeof master[$group] !== 'undefined') {
+
+        return master[$group].value;
     }
 
     return;
-}
+};
 
 /**
  * Return singelton instance
@@ -120,10 +198,11 @@ var _init
         
         'funcs': [
             //update  //log.write('Checking for new versions...');
-            function func_init_readConfig ($_p1, $_p2) { _readConfig($_p2); }
-            , function func_init_loadPlugins ($_p1, $_p2) { plugin.loadPlugins($_p2); }
-            , function func_init_listen($_p1, $_p2) { _listen($_p2); }
-            , function func_init_event($_p1, $_p2) {
+            function f_init_checkFS($_p1, $_p2) { _checkFS($_p2); }
+            , function f_init_readConfig($_p1, $_p2) { _readConfig($_p2); }
+            , function f_init_loadPlugins($_p1, $_p2) { plugin.loadPlugins($_p2); }
+            , function f_init_parallelize($_p1, $_p2) { _parallelize($_p2); }
+            , function f_init_event($_p1, $_p2) {
                 
                 log.write('');
                 scheduler.sendSignal('onMainInit', $_p1);
@@ -136,6 +215,55 @@ var _init
         cmd.handleRequest();
     });
 }
+
+var _parallelize = function ($cb) {
+    
+    var numWorkers = master.workers.value;
+    if (numWorkers == -1) {
+        
+        var isPM2Installed = false;
+        try {
+            require.resolve('pm2');
+            isPM2Installed = true;
+        } catch (e) { }
+        
+        if (isPM2Installed) {
+
+            numWorkers = 0; // let PM2 handle the rest
+        }
+        else {
+
+            numWorkers = 0;//os.cpus().length; // Smart regulation later on
+        }
+    }
+
+    if (cluster.isMaster && numWorkers > 0) {
+        
+        for (var i = 1; i < numWorkers; i++) {
+
+            var worker = cluster.fork();
+
+            worker.on('message', function ($msg) {
+
+                if ($msg.cmd && $msg.cmd == 'workerOptimizeRequest') {
+
+                    optimize.handleWorkerMessage($msg.data.event, $msg.data.params);
+                }
+            });
+
+            cluster.on('online', function ($worker) {
+            
+                log.write('Worker ' + $worker.id + ' is now ' + 'online'.green);
+            });
+        }
+
+        $cb();
+    }
+    else {
+
+        _listen($cb);
+    }
+};
 
 /**
  * Return debug status
@@ -311,7 +439,8 @@ var _make
                             
                                 log.error('ERROR: Failed to get initial template ' + $p1);
                                 $cb();
-                            });
+                            })
+                            .done();
                     }
                 ]
             }, function () {
@@ -379,7 +508,8 @@ var _readConfig
         log.writeError("Could not retrive config directory!");
         return false;
     }
-
+    
+    var masterFound = false;
     fs.readdir(dir, function ($err, $files) {
 
         if ($err) {
@@ -387,52 +517,111 @@ var _readConfig
             log.error($err);
         }
         
-        async.forEachParallel( {
+        async.forEachParallel({
         
             'inputs': $files,
             'func': function ($file, $callback) {
                 
-                if ($file.substring($file.length - 5) != '.json') {
-                    
-                    i++;
-                    schedule.sendSignal('onFilePollution', dir, 'config', $file);
-                    $callback();
-                    return;
-                }
+                var validFile = true;
+                async.pipeline({
+                    funcs: [
+                        function ($_p1, $cb) {
 
-                fs.readFile(dir + $file, 'utf-8', function ($err, $data) {
-                    
-                    if ($err) {
-                        
-                        log.error($err);
-                    }
-                    
-                    log.write('Config file found: ' + $file);
-                    
-                    var c = '';
-                    try {
-                        
-                        c = JSON.parse($data);
-                    }
-                    catch ($e) {
-                        
-                        log.write('Config file `' + $file + '` was ' + 'invalid'.red.bold + '! ' + 'SKIPPED'.red.bold);
-                        scheduler.sendSignal('onConfigLoaded', $file, true, null);
-                    }
-                    
-                    if (c !== '') {
-                        
-                        config[helper.SHPS_domain(c.generalConfig.URL.value).host] = c;
-                        
-                        log.write('Config file `' + $file + '` was ' + 'loaded successfully'.green);
-                        scheduler.sendSignal('onConfigLoaded', $file, true, c);
-                    }
-                    
-                    $callback();
+                            fs.stat(dir + $file, function ($err, $stat) {
+
+                                if ($stat && $stat.isDirectory()) {
+
+                                    scheduler.sendSignal('onPollution', dir, 'config', $file);
+                                    validFile = false;
+                                }
+                                else {
+
+                                    if ($file.substring($file.length - 5) != '.json') {
+
+                                        scheduler.sendSignal('onFilePollution', dir, 'config', $file);
+                                        validFile = false;
+                                    }
+                                }
+                                
+                                $cb();
+                            });
+                        },
+
+                        function ($_p1, $cb) {
+
+                            if (validFile === false) {
+
+                                $cb();
+                                return;
+                            }
+
+                            fs.readFile(dir + $file, 'utf8', function ($err, $data) {
+                                
+                                if ($err) {
+                                    
+                                    log.error($err);
+                                }
+                                
+                                log.write('Config file found: ' + $file);
+                                
+                                var c = '';
+                                var status = false;
+                                try {
+                                    
+                                    c = JSON.parse($data);
+                                    switch (c.configHeader.type) {
+
+                                        case 'master': {
+                                            
+                                            log.write('Master file was ' + 'loaded successfully'.green);
+                                            master = c.config;
+                                            masterFound = true;
+                                            break;
+                                        }
+
+                                        case 'hp': {
+                                            
+                                            config[helper.SHPS_domain(c.generalConfig.URL.value).host] = c;
+                                            log.write('Config file `' + $file + '` was ' + 'loaded successfully'.green);
+                                            break;
+                                        }
+                                    }
+                                    
+                                    status = true;
+                                }
+                                catch ($e) {
+                                    
+                                    log.write('Config file `' + $file + '` was ' + 'invalid'.red.bold + '! ' + 'SKIPPED'.red.bold);
+                                }
+                                finally {
+                                    
+                                    scheduler.sendSignal('onConfigLoaded', $file, status, c);
+                                    $cb();
+                                }
+                            });
+                        },
+
+                        function ($_p1, $cb) {
+                            
+                            //$cb();
+                            $callback();
+                        }
+                    ]
                 });
             }
         }, function ($err) {
             
+            if (!masterFound) {
+                
+                master = dInit.master;
+                scheduler.sendSignal('onFileNotFound', 'master.json', dir, 'Default configuration loaded!');
+            }
+            
+            if (Object.keys(config).length == 0) {
+                
+                scheduler.sendSignal('onFileNotFound', '*.config.json', dir, 'Nothing will be served without configuration files!');
+            }
+
             if (typeof $cb !== 'undefined') {
                 
                 $cb();
@@ -441,7 +630,7 @@ var _readConfig
     });
 
     return true;
-}
+};
 
 /**
  * Get whole configuration of certain homepage
@@ -463,11 +652,34 @@ var _getConfig
  */
 var _setDebug
 = me.setDebug = function ($onOff) {
-    $onOff = typeof $onOff !== 'undefined' ? $onOff : true;
+    $onOff = typeof $onOff !== 'undefined' 
+ $onOff : true;
 
     debug = $onOff;
     scheduler.sendSignal('onDebugChange', $onOff);
 }
+
+/**
+ * Grouphuggable
+ * Breaks after 3 hugs per partner
+ * 
+ * @param $hug
+ *  Huggable caller
+ */
+var _hug 
+= me.hug = function f_main_hug($h) {
+    
+    return helper.genericHug($h, self, function f_main_hug_hug($hugCount) {
+        
+        if ($hugCount > 3) {
+            
+            return false;
+        }
+        
+        return true;
+    });
+};
+
 
 /**
  * Focus all actions on a given requestState
@@ -475,19 +687,19 @@ var _setDebug
  *
  * @param requestState $requestState
  */
-var _focus
+var _focus 
 = me.focus = function f_main_focus($requestState) {
     if (typeof $requestState !== 'undefined') {
         
         log.error('Cannot focus undefined requestState!');
     }
     
-
+    
     this.getDir = function f_main_focus_getDir($key) {
         
         return _getDir($key);
     };
-
+    
     this.getHPConfig = function f_main_focus_getHPConfig($group, $key) {
         
         return _getHPConfig($group, $key, $requestState.config.generalConfig.URL.value);
@@ -497,29 +709,31 @@ var _focus
         
         return this;
     };
-
+    
     this.getNamespace = function f_main_focus_getNamespace() {
         
         return _getNamespace($requestState);
     };
-
+    
     this.isDebug = function f_main_focus_isDebug() {
         
         return _isDebug();
     };
-
+    
     this.make = function f_main_focus_make($template2Start) {
         
         return _make($template2Start, $requestState);
     };
-
+    
     this.readConfig = function f_main_focus_readConfig($cb) {
         
         return _readConfig($cb);
     };
-
+    
     this.setDebug = function f_main_focus_setDebug($onOff) {
         
         return _setDebug($onOff);
     };
-}
+};
+
+
