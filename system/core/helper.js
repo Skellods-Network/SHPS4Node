@@ -1,4 +1,4 @@
-﻿"use strict";
+﻿'use strict';
 
 var me = module.exports;
 
@@ -9,6 +9,7 @@ var u = require('util');
 
 var log = require('./log.js');
 var request = require('./request.js');
+var SFFM = require('./SFFM.js');
 
 var mp = {
     self: this
@@ -52,364 +53,86 @@ me.SHPS_domain = function ($uri) {
  */
 me.requestState = function () {
     
-    var _lem = 'Tried to write to locked state!';
-    var _data = {
-        
-        locked: false,
-        uri: '',
-        path: '/',
-        GET: null,
-        POST: null,
-        SESSION: null,
-        config: null,
-        site: '',
-        namespace: 'default',
-        httpStatus: 500,
-        responseType: 'text/plain',
-        responseBody: '',
-        request: null,
-        result: null,
-    };
+    var self = this;
+    var _GET = null;
+    var _POST = null;
     
-    /* Gotta make this work somehow... sometime
-    var _dKeys = Object.keys(_data);
-    var i = 0;
-    while (i < _dKeys.length) {
+    this._oldCOOKIE = [];
+    this.locked = false;
+    this.uri = '';
+    this.path = '/';
+    this.SESSION = [];
+    this.COOKIE = [];
+    this.config = null;
+    this.site = '';
+    this.namespace = 'default';
+    this.httpStatus = 500;
+    this.responseType = 'text/plain';
+    this.responseBody = '';
+    this.request = null;
+    this.result = null;
 
-        this.__defineGetter__(_dKeys[i], function () {
+    this.__defineGetter__('GET', function () {
+        
+        if (_GET === null) {
             
-            var index = i;
-            return _data[_dKeys[index]];
-        });
+            _GET = SFFM.splitQueryString(self.path);
+        }
 
-        this.__defineSetter__(_dKeys[i], function ($val) {
-            
-            var index = i;
-            if (_data.locked) {
+        return _GET;
+    });
+    
+    this.__defineSetter__('GET', function ($val) {
+        
+        _GET = $val
+    });
 
-                log.error(_lem);
-            }
-            else {
-
-                _data[_dKeys[index]] = $val;
-            }
-        });
-    }
-    */
-
-    var __getData =
-    this._getData = function () {
+    this.__defineGetter__('POST', function () {
         
-        return _data;
-    }
-    
-    this.__defineGetter__("locked", function () {
-        
-        return _data.locked;
-    });
-    
-    this.__defineSetter__("locked", function ($locked) {
-        
-        if (_data.locked || $locked) {
+        if (_POST === null) {
             
-            _data.locked = true;
-        }
-        
-        return _data.locked;
-    });
-    
-    this.__defineGetter__("uri", function () {
-        
-        return _data.uri;
-    });
-    
-    this.__defineSetter__("uri", function ($uri) {
-        
-        if (_data.locked) {
-            
-            log.error(_lem);
-        }
-        else {
-            
-            _data.uri = $uri;
-        }
-    });
-    
-    this.__defineGetter__("path", function () {
-        
-        return _data.path;
-    });
-    
-    this.__defineSetter__("path", function ($path) {
-        
-        if (_data.locked) {
-            
-            log.error(_lem);
-        }
-        else {
-            
-            _data.path = $path;
-        }
-    });
-    
-    this.__defineGetter__("GET", function () {
-        
-        if (_data.GET === null) {
-            
-            _data.GET = [];
-            var request = _data.path.split('?');
-            var reqPath = request[0];
-            if (reqPath[0] == '/') {
+            var prom = new promise(function ($res, $rej) {
                 
-                reqPath = reqPath.substring(1);
-            }
-            
-            var reqParams = reqPath.split('/');
-            var i = 0;
-            
-            while (typeof reqParams[i] !== 'undefined') {
+                var queryData = '';
                 
-                var kvp = reqParams[i].split('=');
-                if (kvp.length == 1) {
+                if (self.request.method == 'POST') {
                     
-                    _data.GET[kvp[0]] = true;
-                }
-                else if (kvp.length == 2) {
+                    self.request.on('data', function func_processPost_onData($data) {
+                        
+                        queryData += $data;
+                        if (queryData.length > 1e6) { // can only handle requests smaller than 1e6 == 1MB
+                            
+                            queryData = "";
+                            self.response.writeHead(413, { 'Content-Type': 'text/plain' }).end();
+                            self.request.connection.destroy();
+                            $rej();
+                        }
+                    });
                     
-                    _data.GET[kvp[0]] = kvp[1];
+                    self.request.on('end', function func_processPost_onEnd() {
+                        
+                        $res(querystring.parse(queryData));
+                    });
                 }
                 else {
                     
-                    var j = 1;
-                    while (typeof kvp[j] !== 'undefined') {
-                        
-                        _data.GET[kvp[0]] += kvp[j];
-                        j++;
-                    }
+                    $rej(null);
                 }
-                
-                i++;
-            }
-        }
-        
-        return _data.GET;
-    });
-    
-    this.__defineSetter__("GET", function ($GET) {
-        
-        if (_data.locked) {
-            
-            log.error(_lem);
-        }
-        else {
-            
-            _data.GET = $GET;
-        }
-    });
-    
-    this.__defineGetter__("POST", function () {
-        
-        var prom = new promise.Promise();
-        if (_data.POST === null) {
-            
-            var queryData = '';
-            
-            if ($requestState.request.method == 'POST') {
-                
-                $requestState.request.on('data', function func_processPost_onData(data) {
-                    
-                    queryData += data;
-                    if (queryData.length > 1e6) { // can only handle requests smaller than 1e6 == 1MB
-                        
-                        queryData = "";
-                        $requestState.response.writeHead(413, { 'Content-Type': 'text/plain' }).end();
-                        $requestState.request.connection.destroy();
-                        prom.reject();
-                    }
-                });
-                
-                $requestState.request.on('end', function func_processPost_onEnd() {
-                    
-                    prom.resolve(querystring.parse(queryData));
-                });
-
-            }
+            });
             
             return prom.then(function ($r) {
                 
-                _data.POST = $r;
+                _POST = $r;
                 return $r;
             });
         }
-        else {
-            
-            return _data.POST;
-        }
+
+        return _POST;
     });
     
-    this.__defineSetter__("POST", function ($POST) {
+    this.__defineSetter__('POST', function ($val) {
         
-        if (_data.locked) {
-            
-            log.error(_lem);
-        }
-        else {
-            
-            _data.POST = $POST;
-        }
-    });
-    
-    this.__defineGetter__("SESSION", function () {
-        
-        return _data.SESSION;
-    });
-    
-    this.__defineSetter__("SESSION", function ($SESSION) {
-        
-        if (_data.locked) {
-            
-            log.error(_lem);
-        }
-        else {
-            
-            _data.SESSION = $SESSION;
-        }
-    });
-    
-    this.__defineGetter__("config", function () {
-        
-        return _data.config;
-    });
-    
-    this.__defineSetter__("config", function ($config) {
-        
-        if (_data.locked) {
-            
-            log.error(_lem);
-        }
-        else {
-            
-            _data.config = $config;
-        }
-    });
-    
-    this.__defineGetter__("site", function () {
-        
-        return _data.site;
-    });
-    
-    this.__defineSetter__("site", function ($site) {
-        
-        if (_data.locked) {
-            
-            log.error(_lem);
-        }
-        else {
-            
-            _data.site = $site;
-        }
-    });
-    
-    this.__defineGetter__("namespace", function () {
-        
-        return _data.namespace;
-    });
-    
-    this.__defineSetter__("namespace", function ($ns) {
-        
-        if (_data.locked) {
-            
-            log.error(_lem);
-        }
-        else {
-            
-            _data.namespace = $ns;
-        }
-    });
-    
-    this.__defineGetter__("httpStatus", function () {
-        
-        return _data.httpStatus;
-    });
-    
-    this.__defineSetter__("httpStatus", function ($val) {
-        
-        if (_data.locked) {
-            
-            log.error(_lem);
-        }
-        else {
-            
-            _data.httpStatus = $val;
-        }
-    });
-    
-    this.__defineGetter__("responseBody", function () {
-        
-        return _data.responseBody;
-    });
-    
-    this.__defineSetter__("responseBody", function ($val) {
-        
-        if (_data.locked) {
-            
-            log.error(_lem);
-        }
-        else {
-            
-            _data.responseBody = $val;
-        }
-    });
-    
-    this.__defineGetter__("responseType", function () {
-        
-        return _data.responseType;
-    });
-    
-    this.__defineSetter__("responseType", function ($val) {
-        
-        if (_data.locked) {
-            
-            log.error(_lem);
-        }
-        else {
-            
-            _data.responseType = $val;
-        }
-    });
-    
-    this.__defineGetter__("request", function () {
-        
-        return _data.request;
-    });
-    
-    this.__defineSetter__("request", function ($val) {
-        
-        if (_data.locked) {
-            
-            log.error(_lem);
-        }
-        else {
-            
-            _data.request = $val;
-        }
-    });
-    
-    this.__defineGetter__("result", function () {
-        
-        return _data.result;
-    });
-    
-    this.__defineSetter__("result", function ($val) {
-        
-        if (_data.locked) {
-            
-            log.error(_lem);
-        }
-        else {
-            
-            _data.result = $val;
-        }
+        _POST = $val
     });
 };
 

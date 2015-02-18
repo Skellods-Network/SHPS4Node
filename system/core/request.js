@@ -6,6 +6,7 @@ var main = require('./main.js');
 var io = require('./io.js');
 var plugin = require('./plugin.js');
 var helper = require('./helper.js');
+var cookie = require('./cookie.js');
 
 var self = this;
 
@@ -14,6 +15,8 @@ var _handleRequest
 = me.handleRequest = function handleRequest($requestState) {
     
     $requestState.httpStatus = 501;
+    $requestState.COOKIE = cookie.getCookies($requestState);
+
     var unblock;
     if (typeof $requestState.GET['favicon.ico'] !== 'undefined') {
 
@@ -49,6 +52,7 @@ var _handleRequest
         if (main.getHPConfig('eastereggs')) {
             
             $requestState.httpStatus = 418;
+            $requestState.responseType = 'text/plain';
             $requestState.responseBody = 'ERROR 418: I\'m a teapot!';
         }
     }
@@ -77,10 +81,28 @@ var _handleRequest
     }
     
     unblock.then(function () {
-            
+        
+        var bodyLengthMatch = encodeURIComponent($requestState.responseBody).match(/%[89ABab]/g);
+        var cl = $requestState.responseBody.length + (bodyLengthMatch ? bodyLengthMatch.length : 0);
+
         $requestState.result.writeHead($requestState.httpStatus, {
 
-            'Content-Type': $requestState.responseType
+            'Content-Type': $requestState.responseType + '; charset=utf-8',
+            'Server': 'SHPS',
+            'Set-Cookie': cookie.getChangedCookies($requestState),
+            'Age': 0, // <-- insert time since caching here
+            'Cache-Control': 3600,  // <-- make this an option in the config file
+            'Content-Encoding': 'identity', // <-- gzip larger content. Cache gzipped version only!
+            'Content-Language': 'en', // <-- use lang.getLanguage()
+            'Content-Length': cl,
+            // 'Content-MD5': <-- use for big files
+            // 'Etag': <-- insert cache token here (change token whenever the cache has to be rebuild)
+            // 'Strict-Transport-Security': 'max-age=16070400; includeSubDomains' <-- only for HTTPS
+
+            'X-XSS-Protection': '1; mode=block',
+            'X-Content-Type-Options': 'nosniff',
+            'X-Powered-By': 'SHPS',
+
         });
 
         $requestState.result.end($requestState.responseBody);

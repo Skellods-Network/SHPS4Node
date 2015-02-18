@@ -126,10 +126,10 @@
             "type"           : {
                 
                 "description": "Type of DB",
-                "value": 0,
+                "value": 2,
                 "options": {
-                    "MySQL": 0,
-                    "MSSQL": 10
+                    "MySQL": 2,
+                    "MSSQL": 16
                 }
             },
             "connectionLimit": {
@@ -173,10 +173,10 @@
             "type"           : {
                 
                 "description": "Type of DB",
-                "value": 0,
+                "value": 2,
                 "options": {
-                    "MySQL": 0,
-                    "MSSQL": 10
+                    "MySQL": 2,
+                    "MSSQL": 16
                 }
             },
             "connectionLimit": {
@@ -220,10 +220,10 @@
             "type"           : {
                 
                 "description": "Type of DB",
-                "value": 0,
+                "value": 2,
                 "options": {
-                    "MySQL": 0,
-                    "MSSQL": 10
+                    "MySQL": 2,
+                    "MSSQL": 16
                 }
             },
             "connectionLimit": {

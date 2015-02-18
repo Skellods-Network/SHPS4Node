@@ -17,7 +17,7 @@ var mp = {
  *  Huggable caller
  */
 var _hug 
-= me.hug = function f_main_hug($h) {
+= me.hug = function f_sqlCol_hug($h) {
     
     return helper.genericHug($h, mp, function f_main_hug_hug($hugCount) {
         

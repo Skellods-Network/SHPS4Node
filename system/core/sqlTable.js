@@ -111,6 +111,9 @@ var _sqlTable = function c_sqlTable($sql, $name) {
         return [];
     };
     
+    /**
+     * TODO
+     */
     var _create =
     this.create = function f_sqlTable_sqlTable_create() {
         
