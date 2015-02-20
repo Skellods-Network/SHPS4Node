@@ -15,7 +15,7 @@ var _handleRequest
 = me.handleRequest = function handleRequest($requestState) {
     
     $requestState.httpStatus = 501;
-    $requestState.COOKIE = cookie.getCookies($requestState);
+    $requestState.COOKIE = cookie.newCookieJar($requestState);
 
     var unblock;
     if (typeof $requestState.GET['favicon.ico'] !== 'undefined') {
@@ -84,12 +84,12 @@ var _handleRequest
         
         var bodyLengthMatch = encodeURIComponent($requestState.responseBody).match(/%[89ABab]/g);
         var cl = $requestState.responseBody.length + (bodyLengthMatch ? bodyLengthMatch.length : 0);
-
+        var cc = $requestState.COOKIE.getChangedCookies();
         $requestState.result.writeHead($requestState.httpStatus, {
 
             'Content-Type': $requestState.responseType + '; charset=utf-8',
             'Server': 'SHPS',
-            'Set-Cookie': cookie.getChangedCookies($requestState),
+            'Set-Cookie': $requestState.COOKIE.getChangedCookies(),
             'Age': 0, // <-- insert time since caching here
             'Cache-Control': 3600,  // <-- make this an option in the config file
             'Content-Encoding': 'identity', // <-- gzip larger content. Cache gzipped version only!

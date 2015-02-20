@@ -46,30 +46,94 @@ var _getCookies
         list[parts.shift().trim()] = decodeURI(parts.join('='));
     });
     
-    $requestState.COOKIE = list;
-    $requestState._oldCOOKIE = util._extend({}, list);
+    $requestState._COOKIE = list;
 
     return list;
 }
 
-var _getChangedCookies 
-= me.getChangedCookies = function f_cookie_getChangedCookies($requestState) {
+var _newCookieJar 
+= me.newCookieJar = function f_cookie_newCookieJar($requestState) {
+    
+    return new CookieJar($requestState);
+};
 
-    var rsoc = $requestState._oldCOOKIE;
-    var rsc = $requestState.COOKIE;
-    var nck = Object.keys(rsc);
-    var diff = [];
-    var i = 0;
-    var l = Object.keys(rsc).length;
-    while (i < l) {
+var CookieJar = function c_CookieJar($requestState) {
+    
+    var _newCookies = {};
 
-        if (!rsoc[nck[i]] || rsoc[nck[i]] != rsc[nck[i]]) {
+    this.getCookies = function f_cookieJar_getCookies() {
 
-            diff.push(nck[i] + '=' + rsc[nck[i]]);
+        _getCookies($requestState);
+    };
+
+    this.getChangedCookies = function f_CookieJar_getChangedCookies() {
+        
+        var i = 0;
+        var keys = Object.keys(_newCookies);
+        var l = keys.length;
+        var r = [];
+
+        while (i < l) {
+            
+            var cookie = _newCookies[keys[i]];
+            var cs = cookie.name + '=' + cookie.value + ';Path=/;' + ';Max-Age=' + cookie.expire + 'Expires=' + (new Date((new Date()).getTime() + 1000 * cookie.expire)).toISOString();
+            if ($requestState.config.generalConfig.URL.value != 'localhost') {
+
+                cs += 'Domain=.' + $requestState.config.generalConfig.URL.value;
+            }
+
+            if (cookie.httponly) {
+
+                cs += ';httpOnly';
+            }
+            
+            if (cookie.secure) {
+
+                cs += ';secure';
+            }
+
+            r.push(cs);
+            i++;
         }
 
-        i++;
-    }
+        return r;
+    };
+    
+    /**
+     * Sets new cookie or updates old one.
+     * If you need to unset a cookie, please call this function with an expire value <= 0
+     * 
+     * @param $name string
+     * @param $value string
+     * @param $expire int
+     *   Default: 0
+     * @param $httponly boolean
+     *   Default: true
+     * @param $secure boolean
+     *   Default: true if https-request
+     */
+    this.setCookie = function f_CookieJar_setCookie($name, $value, $expire, $httponly, $secure) {
+        $expire = $expire || 0;
+        $httponly = $httponly || true;
+        $secure = $secure || /^https.*/i.test($requestState.domain.protocol);
 
-    return diff;
+        $requestState._COOKIE[$name] = $value;
+        _newCookies[$name] = {
+            
+            name: $name,
+            value: $value,
+            expire: $expire,
+            httponly: $httponly,
+            secure: $secure
+        };
+    };
+
+    this.getCookie = function f_cookieJar_getCookie($name) {
+
+        return $requestState._COOKIE[$name];
+    }
+    
+    
+    // CONSTRUCTOR
+    _getCookies($requestState);
 };

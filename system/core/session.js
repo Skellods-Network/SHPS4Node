@@ -38,7 +38,7 @@ var _hug
 var _newSession 
 = me.newSession = function f_session_startSession($requestState) {
     
-    var sid = $requestState.COOKIE['SHPSSID'];
+    var sid = $requestState.COOKIE.getCookie('SHPSSID');
     if (typeof _sessionStorage[sid] === 'undefined') {
         
         var s = new Session($requestState);
@@ -47,25 +47,27 @@ var _newSession
     }
     else {
         
-        var sssid = _sessionStorage[sid];
-        sssid.updateRS($requestState);
-        var oSID = sssid.toString();
-        sid = sssid.genNewSID();
-        delete _sessionStorage[oSID];
-        _sessionStorage[sid] = sssid;
+        if (!$requestState._session_is_renewed) {
+            
+            var sssid = _sessionStorage[sid];
+            delete _sessionStorage[sssid.toString()];
+            sssid.updateRS($requestState);
+            sid = sssid.genNewSID();
+            _sessionStorage[sid] = sssid;
+            $requestState._session_is_renewed = true;
+        }
     }
-    
-    $requestState.COOKIE['SHPSSID'] = sid;
+
+    $requestState.COOKIE.setCookie('SHPSSID', sid, $requestState.config.securityConfig.sessionTimeout.value, true);
     return _sessionStorage[sid];
 };
 
 var Session = function c_Session($requestState) {
     
-    var _sid = $requestState.COOKIE['SHPSSID'];
-    var _data =
+    var _sid = $requestState.COOKIE.getCookie('SHPSSID');
+    
     this.data = {};
 
-    var _genNewSID =
     this.genNewSID = function f_session_session_genNewSID() {
 
         var _sha1 = crypto.createHash('sha1');
@@ -77,13 +79,11 @@ var Session = function c_Session($requestState) {
         return _sid;
     };
 
-    var _updateRS =
     this.updateRS = function f_session_session_updateRS($rs) {
 
         $requestState = $rs;
     };
     
-    var _toString =
     this.toString = function f_session_session_toString() {
 
         return _sid;
@@ -91,5 +91,5 @@ var Session = function c_Session($requestState) {
 
 
     // CONSTRUCTOR
-    $requestState.COOKIE['SHPSSID'] = _genNewSID();
+    $requestState.COOKIE.setCookie('SHPSSID', this.genNewSID(), $requestState.config.securityConfig.sessionTimeout.value, true);
 };

@@ -305,6 +305,7 @@ var _listen
                     rs.path = $req.url;
                     rs.request = $req;
                     rs.result = $res;
+                    rs.domain = domain;
                     request.handleRequest(rs);
                 })
             .listen(p);
@@ -333,7 +334,7 @@ var _listen
                     rs.path = $req.url;
                     rs.request = $req;
                     rs.result = $res;
-                    
+                    rs.domain = domain;
                     request.handleRequest(rs);
                 })
                 .listen(p);

@@ -56,13 +56,12 @@ me.requestState = function () {
     var self = this;
     var _GET = null;
     var _POST = null;
-    
-    this._oldCOOKIE = [];
+
+    this._COOKIE = [];
     this.locked = false;
     this.uri = '';
     this.path = '/';
     this.SESSION = [];
-    this.COOKIE = [];
     this.config = null;
     this.site = '';
     this.namespace = 'default';
