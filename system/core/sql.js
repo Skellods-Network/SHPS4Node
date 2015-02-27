@@ -83,6 +83,9 @@ var _newRow
 var _newTable 
 = me.newTable = table.newTable;
 
+var _newConditionBuilder 
+= me.newConditionBuilder = SQLConditionBuilder.newSQLConditionBuilder;
+
 /**
  * Grouphuggable
  * Breaks after 3 hugs per partner

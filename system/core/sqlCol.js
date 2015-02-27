@@ -62,10 +62,18 @@ var _sqlCol = function c_sqlCol($table, $name, $returnAs) {
     = mp.toString =
     this.toString = function f_sqlCol_toString($alias) {
         
-        var r = $table.toString() + '.' + $table.getSQL().standardizeName($name);
-        if (typeof $returnAs !== 'undefined' && $alias) {
+        var r = '';
+        if ($name === '*') {
 
-            r += ' AS ' + $returnAs;
+            r = '*'
+        }
+        else {
+
+            var r = $table.toString() + '.' + $table.getSQL().standardizeName($name);
+            if (typeof $returnAs !== 'undefined' && $alias) {
+                
+                r += ' AS ' + $returnAs;
+            }
         }
 
         return r;

@@ -243,7 +243,7 @@
         },
         "loginDelay": {
                 
-            "description": "Login result delivery delay to add to the next try when a user login fails",
+            "description": "Login result delivery delay to add to the next try when a user login fails in seconds",
             "value": 1
         },
         "maxLoginDelay": {

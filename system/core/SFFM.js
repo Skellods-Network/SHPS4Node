@@ -149,7 +149,7 @@ var _randomInt
     return (Math.random() * ($high - $low) + $low) |0;
 }
 
-var _randomString
+var _randomString 
 = me.randomString = function f_SFFM_randomString($length, $chars) {
     $chars = $chars || 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890';
     
@@ -159,10 +159,22 @@ var _randomString
     var i = 0;
     var l = $length - 1;
     while (i < l) {
-
+        
         r += $chars[rand[i] % cl];
         i++;
     }
-
+    
     return r;
-}
+};
+
+var _isHTTPS 
+= me.isHTTPS = function f_SFFM_isHTTPS($request) {
+    
+    var s = $request.headers.host.substr(0, 5);
+    if (s === 'https') {
+
+        return true;
+    }
+
+    return false;
+};

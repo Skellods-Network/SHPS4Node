@@ -47,14 +47,11 @@ var _handleRequest
 
         // transmit site
     }
-    else if (typeof $requestState.GET['HTCPCP'] !== 'undefined') {
+    else if (typeof $requestState.GET['HTCPCP'] !== 'undefined' && main.getHPConfig('eastereggs')) {
         
-        if (main.getHPConfig('eastereggs')) {
-            
-            $requestState.httpStatus = 418;
-            $requestState.responseType = 'text/plain';
-            $requestState.responseBody = 'ERROR 418: I\'m a teapot!';
-        }
+        $requestState.httpStatus = 418;
+        $requestState.responseType = 'text/plain';
+        $requestState.responseBody = 'ERROR 418: I\'m a teapot!';
     }
     else {
         

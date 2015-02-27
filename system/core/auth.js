@@ -2,8 +2,12 @@
 
 var me = module.exports;
 
+GLOBAL.SHPS_COOKIE_AUTOLOGINTOKEN = 'SHPSALT';
+
 var q = require('q');
 var promise = require('promise');
+var async = require('vasync');
+var u = require('util');
 
 var helper = require('./helper.js');
 var session = require('./session.js');
@@ -69,7 +73,9 @@ var Auth
                 tbl.update({
 
                     password: _makeSecurePassword($passwd, $rows[0].salt)
-                });
+                }, sql.newConditionBuilder(null)
+                    .eq(tbl.col('ID'), $uid)
+                ).done();
 
                 $sql.free();
             }).done();
@@ -81,9 +87,20 @@ var Auth
         //bcrypt
     };
     
+    /**
+     * Check if supplied password is correct. Either the database is used or a valid password/salt pair can be used
+     * 
+     * @param $uid integer|string
+     *   User ID or name
+     * @param $passwd string
+     * @param $validPasswd string
+     * @param $validSalt string
+     * @result boolean
+     */
     var _checkPassword = 
     this.checkPassword = function f_auth_checkPassword($uid, $passwd, $validPasswd, $validSalt) {
         
+        $uid = _getIDFromUser($uid);
         var defer = q.defer();
         
         if (!$validPasswd || !$validSalt) {
@@ -140,6 +157,423 @@ var Auth
             return $result;
         });
     };
+    
+    /**
+     * Grant an access key to a user or a group
+     * 
+     * @param $uid integer|string
+     *   User or group ID or name
+     * @param $key string
+     * @from integer
+     *   UNIX timestamp
+     * @to integer
+     *   UNIX timestamp
+     * @isGroup boolean
+     *   is the supplied ID a group ID? // Default: false
+     */
+    var _grantAccessKey =
+    this.grantAccessKey = function f_auth_grantAccessKey($uid, $key, $from, $to, $isGroup) {
+        $isGroup = $isGroup || false;
+        
+        var authorizer = 0;
+        if (_isClientLoggedIn()) {
+            
+            authorizer = _session.data['ID'];
+        }
+        
+        sql.newSQL('usermanagement', $requestState).then(function ($sql) {
+            var d = q.defer();
+            if ($isGroup) {
+                
+                $sql.openTable('groupSecurity')
+                    .insert({
+                    
+                    gid: _getIDFromGroup($user),
+                    key: _getIDFromAccessKey($key),
+                    from: $from,
+                    to: $to,
+                    authorizer: authorizer
+                }).done();
+            }
+            else {
+                
+                $sql.openTable('userSecurity')
+                    .insert({
+                    
+                    gid: _getIDFromUser($user),
+                    key: _getIDFromAccessKey($key),
+                    from: $from,
+                    to: $to,
+                    authorizer: authorizer
+                }).done();
+            }
+            
+            $sql.free();
+        }).done();
+    };
+    
+    var _getFieldFromTable = function f_auth_getFieldFromTable($table, $field, $refCol, $refColValue) {
+        
+        var p = new promise(function ($res, $rej) {
+        
+            sql.newSQL('usermanagement', $requestState).then(function ($sql) {
+
+                var tbl = $sql.openTable($table);
+                $sql.query()
+                    .get(tbl.col($field))
+                    .fulfilling()
+                    .equal(tbl.col($refCol), $refColValue)
+                    .execute()
+                    .then(function ($rows) {
+                
+                    if ($rows.length <= 0) {
+
+                        $res(undefined);
+                    }
+                    else {
+
+                        $res($rows[0].ID);
+                    }
+
+                    $sql.free();
+                }).done();
+            }).done();
+        });
+        
+        return p.then(function ($r) {
+
+            return $r;
+        });
+    };
+    
+    var _getIDFromTabel = function f_auth_getIDFromTable($table, $refCol, $refColValue) {
+
+        if (typeof $refColValue == 'number' && $refColValue % 1 == 0) {
+            
+            return $refColValue;
+        }
+
+        return _getFieldFromTable($table, 'ID', $refCol, $refColValue);
+    };
+
+    var _getIDFromAccessKey =
+    this.getIDFromAccessKey = function f_auth_getIDFromAccessKey($name) {
+        
+        return _getIDFromTable('accessKey', 'name', $name);
+    };
+    
+    var _getIDFromUser =
+    this.getIDFromUser = function f_auth_getIDFromUser($name) {
+        
+        return _getIDFromTable('user', 'user', $name);
+    };
+    
+    var _getIDFromGroup =
+    this.getIDFromGroup = function f_auth_getIDFromGroup($name) {
+        
+        return _getIDFromTable('group', 'name', $name);
+    };
+    
+    var _getUserFromID =
+    this.getUserFromID = function f_auth_getUserFromID($id) {
+        
+        if (typeof $refColValue == 'string') {
+            
+            return $refColValue;
+        }
+        else if (typeof $refColValue == 'number' && $refColValue % 1 == 0) {
+            
+            return _getFieldFromTable('user', 'user', 'ID', $id);
+        }
+        
+        return;
+    };
+    
+    /**
+     * Revoke access key from user or group
+     * 
+     * @param $user integer|string
+     *   User or group ID/name
+     * @param key integer|string
+     *   Access key ID or name
+     * @param isGroup boolean
+     *   Is the supplied $user a group? // Default: false
+     */
+    var _revokeAccessKey =
+    this.revokeAccessKey = function f_auth_revokeAccessKey($user, $key, $isGroup) {
+        $isGroup = $isGroup || false;
+        
+        $key = _getIDFromAccessKey($key);
+        sql.newSQL('usermanagement', $requestState).then(function ($sql) {
+            
+            if ($isGroup) {
+                
+                $user = _getIDFromGroup($user);
+                var tblGS = $sql.openTable('groupSecurity');
+                var tblG = $sql.openTable('group');
+                tblGS.delete(sql.newConditionBuilder(null)
+                    .eq(tblGS.col('gid'), $user)
+                    .eq(tblGS.col('key'), $key)
+                ).done();
+            }
+            else {
+                
+                $user = _getIDFromUser($user);
+                var tblGS = $sql.openTable('userSecurity');
+                var tblG = $sql.openTable('user');
+                tblGS.delete(sql.newConditionBuilder(null)
+                    .eq(tblGS.col('uid'), $user)
+                    .eq(tblGS.col('key'), $key)
+                ).done();
+            }
+
+            $sql.free();
+        }).done();
+    };
+    
+    /**
+     * Check if a user has an access key
+     * 
+     * @param $key integer|string
+     *   Access key ID or name
+     * @param $user integer|string
+     *   User ID or name. OPTIONAL. If unset, currently logged in user is used
+     */
+    var _hasAccessKey =
+    this.hasAccessKey = function f_auth_hasAccessKey($key, $user) {
+
+        if ($key == 0 || $key === 'SYS_NULL') {
+
+            return true;
+        }
+
+        if (typeof $user === 'undefined') {
+
+            if (!_isClientLoggedIn()) {
+
+                return false;
+            }
+
+            $user = _session.data['ID'];
+        }
+        else {
+
+            $user = _getIDFromUser($user);
+        }
+        
+        var p = new promise(function ($res, $rej) {
+
+            sql.newSQL('usermanagement', $requestState).then(function ($sql) {
+
+                async.parallel({
+                
+                    funcs: [
+                        function ($_p1, $_p2) {
+                            
+                            var tblUS = $sql.openTable('userSecurity');
+                            $sql.query()
+                                .get(tblUS.col('uid'))
+                                .fulfilling()
+                                .eq(tblUS.col('uid'), $user)
+                                .between(time(), tblUS.col('from'), tblUS.col('to'))
+                                .execute()
+                                .then(function ($rows) {
+                                
+                                $_p1(null, $rows.length > 0);
+                            }).done();
+                        },
+
+                        function ($_p1, $_p2) {
+                            
+                            var tblGS = $sql.openTable('groupSecurity');
+                            var tblGU = $sql.openTable('groupUser');
+                            $sql.query()
+                                .get(tblGS.col('gid'))
+                                .fulfilling()
+                                .eq(tblGU.col('gid'), tblGS.col('gid'))
+                                .eq(tblGU.col('uid'), $user)
+                                .between(time(), tblGS.col('from'), tblGS.col('to'))
+                                .execute()
+                                .then(function ($rows) {
+                                
+                                $_p1(null, $rows.length > 0);
+                            }).done();
+                        }
+                    ]
+                }, function ($err, $results) {
+                
+                    var i = 0;
+                    var l = $results.length;
+                    while (i < l) {
+
+                        if ($results[i]) {
+
+                            $res(true);
+                            return;
+                        }
+
+                        i++;
+                    }
+
+                    $res(false);
+                });
+            }).done();
+        })
+        
+        return p.then(function ($r) {
+        
+            return $r;
+        });
+    };
+    
+    var _delayBruteforce = function f_auth_delayBruteforce($uid) {
+        
+        var defer = q.defer();
+        sql.newSQL('usermanagement', $requestState).then(function ($sql) {
+        
+            var tblLQ = $sql.openTable('loginQuery');
+            $sql.query()
+                .get(tblLQ.col('time'))
+                .fulfilling()
+                .eq(tblLQ.col('uid'), $uid)
+                .execute()
+                .then(function ($rows) {
+                
+                var now = (Date.now() / 1000) | 0;
+                if ($rows.length <= 0) {
+
+                    tblLQ.insert({
+                    
+                        uid: $uid,
+                        time: now + $requestState.config.securityConfig.loginDelay.value
+                    })
+                        .done();
+
+                    defer.resolve();
+                }
+                else {
+                    
+                    var det = $rows[0].time;
+                    if (det <= now) {
+
+                        det = now;
+                    }
+
+                    tblLQ.update({
+                        
+                        time: det + $requestState.config.securityConfig.loginDelay.value
+                    })
+                        .eq(tblLQ.col('uid'), $uid)
+                        .execute()
+                        .done();
+
+                    setTimeout(function () {
+
+                        defer.resolve();
+                    }, (det - now) * 1000);
+                }
+            }).done();
+        }).done();
+
+        return defer.promise;
+    };
+    
+    /**
+     * Login a user with a password
+     * Autologin is supported for HTTPS only
+     * 
+     * @TODO Certificate-Based login
+     * @param $user integer|string
+     *   User ID or name
+     * @param $pw string
+     * @param $autoLogin boolean
+     *   // Default: false
+     * @result boolean
+     */
+    var _login =
+    this.login = function f_auth_login($user, $pw, $autoLogin) {
+        $autoLogin = $autoLogin || false;
+
+        $user = _getIDFromUser($user);
+        var p = new promise(function ($res, $rej) {
+            
+            _delayBruteforce($user).then(function () {
+
+                sql.newSQL('usermanagement', $requestState).then(function ($sql) {
+                    
+                    var alt = '';
+                    if ($autoLogin && SFFM.isHTTPS($requestState.request)) {
+                        
+                        alt = $requestState.COOKIE.getCookie(SHPS_COOKIE_AUTOLOGINTOKEN) || '';
+                    }
+                    
+                    var tblU = $sql.openTable('user');
+                    $sql.query()
+                    .get(tblU.col('*'))
+                    .fulfilling()
+                    .eq(tblU.col('ID'), $user)
+                    .execute()
+                    .then(function ($rows) {
+                        
+                        if ($rows.length <= 0) {
+                            
+                            $res(false);
+                        }
+                        else {
+                            
+                            //check if already logged in. Close other session if available
+                            //check if auto login token is set and OK -> if OK, assign new token
+                            var cpR = _checkPassword($user, $pw, $rows[0].password, $rows[0].salt);
+                            if (cpR) {
+                                
+                                $requestState.SESSION = u._extend($requestState.SESSION, $rows);
+                                //set login cell in DB
+                                //if autologin, assign (new) token
+                                //update DB (last active, IP,...)
+                            }
+                            
+                            $res(cpR);
+                        }
+                    }).done();
+                }).done();
+            }).done();
+        });
+
+        return p.then(function ($r) {
+        
+            return $r;
+        });
+    };
+    
+    /**
+     * Checks if current client is logged in
+     * 
+     * @result boolean
+     */
+    var _isClientLoggedIn =
+    this.isClientLoggedIn = function f_auth_isClientLoggedIn() {
+
+        return typeof $requestState.SESSION['user'] !== 'undefined';
+    };
+    
+    /**
+     * Checks if $user is logged in
+     * 
+     * @param $user integer|string
+     *   User ID or name
+     * @result boolean
+     */
+    var _isLoggedIn =
+    this.isLoggedIn = function f_auth_isLoggedIn($user) {
+        
+        $user = _getIDFromUser($user);
+        if ($user === $requestState.SESSION['ID']) {
+        
+            return _isClientLoggedIn();
+        }
+
+        //check DB
+    };
 
 
     // CONSTRUCTOR
@@ -148,7 +582,7 @@ var Auth
 };
 
 var _newAuth
-= me.newAuth = function f_sqlCol_newAuth($requestState) {
+= me.newAuth = function f_auth_newAuth($requestState) {
     
     return new Auth($requestState);
 };

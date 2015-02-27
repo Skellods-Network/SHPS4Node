@@ -147,14 +147,24 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
     };
 
     var _fulfilling =
-    this.fulfilling = function f_sqlQueryBuilder_fulfilling() {
-    
+    this.fulfilling = function f_sqlQueryBuilder_fulfilling($conditions) {
+        
         if (operation === 0) {
-
+            
             log.error('An action has to be selected before calling `fulfilling` on a queryBuilder!');
         }
+        
+        if (typeof $conditions === 'undefined') {
+            
+            return scb.newSQLConditionBuilder(this);
+        }
+        else {
+            
+            var cb = u._extend({}, $conditions);
+            cb.bindQueryBuilder(this);
 
-        return scb.newSQLConditionBuilder(this);
+            return cb;
+        }
     };
 
     var _getSQL =

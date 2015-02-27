@@ -40,6 +40,12 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
     var _firstCondition = true;
 
     
+    var _bindQueryBuilder =
+    this.bindQueryBuilder = function f_sqlConditionBuilder_bindQueryBuilder($qb) {
+
+        $sqb = $qb;
+    };
+
     var _toString =
     this.toString = function f_sqlConditionBuilder_toString() {
     

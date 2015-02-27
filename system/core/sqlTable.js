@@ -137,10 +137,19 @@ var _sqlTable = function c_sqlTable($sql, $name) {
 
             $cols = _getAllColumns();
         }
+        
+        var i = 0;
+        var l = $cols.length;
+        var cols = [];
+        while (i < l) {
+            
+            cols.push(_col($cols[i]));
+            i++;
+        }
 
         return sqb.newSQLQueryBuilder($sql)
-            .get($cols)
-            .fulfilling();
+            .get(cols)
+            .execute();
     };
 
     /**
