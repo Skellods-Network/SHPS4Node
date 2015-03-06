@@ -429,6 +429,12 @@ var Auth
     var _delayBruteforce = function f_auth_delayBruteforce($uid) {
         
         var defer = q.defer();
+        if (typeof $uid === 'undefined') {
+
+            defer.resolve();
+            return defer.promise;
+        }
+
         sql.newSQL('usermanagement', $requestState).then(function ($sql) {
         
             var tblLQ = $sql.openTable('loginQuery');
@@ -479,6 +485,30 @@ var Auth
     };
     
     /**
+     * Checks if user is logged in from DB record
+     * If user is logged in, the last SID is returned
+     * Else false is returned
+     * 
+     * @param $dbRec Object
+     * @result false|string
+     */
+    var _isLoggedInFromDBRecord = function ($dbRec) {
+
+        $dbRec = $dbRec || {};
+        $dbRec.isLoggedIn = $dbRec.isLoggedIn || false;
+        $dbRec.lastActivity = $dbRec.lastActivity || 0;
+        $dbRec.lastSID = $dbRec.lastSID || 'noSID';
+        
+        // ASVS V2 3.3
+        if ($dbRec.isLoggedIn && ((Date.now() / 1000) - $dbRec.lastActivity <= $requestState.config.securityConfig.sessionTimeout.value)) {
+
+            return $dbRec.lastSID != 'noSID' ? $dbRec.lastSID : false;
+        }
+
+        return false;
+    };
+    
+    /**
      * Login a user with a password
      * Autologin is supported for HTTPS only
      * 
@@ -497,6 +527,7 @@ var Auth
         $user = _getIDFromUser($user);
         var p = new promise(function ($res, $rej) {
             
+            // ASVS V2 2.20 VERTICAL PROTECTION
             _delayBruteforce($user).then(function () {
 
                 sql.newSQL('usermanagement', $requestState).then(function ($sql) {
@@ -504,16 +535,22 @@ var Auth
                     var alt = '';
                     if ($autoLogin && SFFM.isHTTPS($requestState.request)) {
                         
-                        alt = $requestState.COOKIE.getCookie(SHPS_COOKIE_AUTOLOGINTOKEN) || '';
+                        alt = $requestState.COOKIE.getCookie(SHPS_COOKIE_AUTOLOGINTOKEN) || '0';
                     }
                     
                     var tblU = $sql.openTable('user');
                     $sql.query()
-                    .get(tblU.col('*'))
-                    .fulfilling()
-                    .eq(tblU.col('ID'), $user)
-                    .execute()
-                    .then(function ($rows) {
+                        .get(tblU.col('*'))
+                        .fulfilling()
+                        .or(function ($sqb) {
+
+                            return $sqb.eq(tblU.col('ID'), $user);
+                        }, function ($sqb) {
+
+                            return $sqb.eq(tblU.col('autoLoginToken'), alt);
+                        })
+                        .execute()
+                        .then(function ($rows) {
                         
                         if ($rows.length <= 0) {
                             
@@ -521,15 +558,74 @@ var Auth
                         }
                         else {
                             
-                            //check if already logged in. Close other session if available
-                            //check if auto login token is set and OK -> if OK, assign new token
-                            var cpR = _checkPassword($user, $pw, $rows[0].password, $rows[0].salt);
+                            var ur = $rows[0];
+                            if ($rows.length > 1) {
+
+                                var i = 0;
+                                var l = $rows.length;
+                                while (i < l) {
+                                    
+                                    if ($rows[i].autoLoginToken === alt) {
+
+                                        ur = $rows[i];
+                                        break;
+                                    }
+
+                                    i++;
+                                }
+                            }
+
+                            // ASVS V2 3.16
+                            var lastSID = _isLoggedInFromDBRecord(ur);
+                            if (lastSID !== false && lastSID !== _session.toString()) {
+
+                                _session.closeSession(lastSID);
+                            }
+                            
+                            if (alt === ur.autoLoginToken /* && check IP range */) {
+                                
+                                var newToken = _session.genNewSID();
+                                $requestState.COOKIE.setCookie(SHPS_COOKIE_AUTOLOGINTOKEN, newToken, $requestState.config.securityConfig.autoLoginTimeout.value, true);
+                                $sql.query()
+                                    .set({
+                                    
+                                        autoLoginToken: newToken,
+                                        lastIP: SFFM.getIP($requestState),
+                                        lastActive: Date.now() / 1000
+                                    })
+                                    .fulfilling()
+                                    .eq(tblU.col('ID'), ur.ID)
+                                    .execute()
+                                    .then(function () {
+                                                                                        
+                                        $sql.free();
+                                    }).done();
+
+                                $res(true);
+
+                                return;
+                            }
+
+                            var cpR = _checkPassword($user, $pw, ur.password, ur.salt);
                             if (cpR) {
                                 
-                                $requestState.SESSION = u._extend($requestState.SESSION, $rows);
-                                //set login cell in DB
-                                //if autologin, assign (new) token
-                                //update DB (last active, IP,...)
+                                $requestState.SESSION = u._extend($requestState.SESSION, ur);
+                                var newToken = _session.genNewSID();
+                                $requestState.COOKIE.setCookie(SHPS_COOKIE_AUTOLOGINTOKEN, newToken, $requestState.config.securityConfig.autoLoginTimeout.value, true);
+                                $sql.query()
+                                    .set({
+                                    
+                                        autoLoginToken: newToken,
+                                        lastIP: SFFM.getIP($requestState),
+                                        lastActive: Date.now() / 1000
+                                    })
+                                        .fulfilling()
+                                        .eq(tblU.col('ID'), ur.ID)
+                                        .execute()
+                                        .then(function () {
+                                    
+                                        $sql.free();
+                                    }).done();
                             }
                             
                             $res(cpR);
@@ -579,6 +675,28 @@ var Auth
     // CONSTRUCTOR
     _session = session.newSession($requestState);
     $requestState.SESSION = _session.data;
+    if ($requestState.SESSION.user) {
+
+        sql.newSQL('usermanagement', $requestState).then(function ($sql) {
+            
+            var tblU = $sql.openTable('user');
+            $sql.query()
+                .set(tblU, {
+            
+                    lastSID: $requestState.SESSION.toString(),
+                    lastIP: SFFM.getIP($requestState),
+                    lastActivity: Date.now()
+                })
+                .fulfilling()
+                .eq(tblU.col('ID'), $requestState.SESSION.ID)
+                .execute()
+                .then(function () {
+                    
+                    $sql.free();
+                })
+                .done();
+        }).done();
+    }
 };
 
 var _newAuth

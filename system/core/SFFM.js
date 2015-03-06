@@ -77,8 +77,19 @@ var _replaceAll
     });
 }
 
+/**
+ * Get client IP from requestState
+ * 
+ * @param $request object
+ * @result string
+ */
 var _getIP 
 = me.getIP = function f_SFFM_getIP($request) {
+    
+    if ($request.ip) {
+
+        return $request.ip;
+    }
 
     var ip = $request.headers['x-forwarded-for']
         || $request.connection.remoteAddress 
@@ -89,7 +100,8 @@ var _getIP
         
         ip = ip[0];
     }
-
+    
+    $request.ip = ip;
     return ip;
 };
 

@@ -47,6 +47,7 @@ var _newSession
     }
     else {
         
+        // ASVS V2 3.7 & 3.8 constantly rotating SID
         if (!$requestState._session_is_renewed) {
             
             var sssid = _sessionStorage[sid];
@@ -62,12 +63,33 @@ var _newSession
     return _sessionStorage[sid];
 };
 
+var _closeSession 
+= me.closeSession = function f_session_closeSession($sid) {
+
+    if (typeof _sessionStorage[$sid] !== 'undefined') {
+
+        delete _sessionStorage[$sid];
+    }
+};
+
 var Session = function c_Session($requestState) {
     
     var _sid = $requestState.COOKIE.getCookie('SHPSSID');
     
     this.data = {};
-
+    
+    /**
+     * Generate SID using
+     * - IP
+     * - 2048 char. long random string
+     * - Date
+     * hashed via SHA1
+     * output as base64 string (35 char. long)
+     * Inspired by PHP 5.6's SID generator
+     * ASVS V2 3.11
+     * 
+     * @result string
+     */
     this.genNewSID = function f_session_session_genNewSID() {
 
         var _sha1 = crypto.createHash('sha1');
@@ -91,5 +113,6 @@ var Session = function c_Session($requestState) {
 
 
     // CONSTRUCTOR
+    // ASVS V2 3.14
     $requestState.COOKIE.setCookie('SHPSSID', this.genNewSID(), $requestState.config.securityConfig.sessionTimeout.value, true);
 };

@@ -241,6 +241,11 @@
             "description": "Seconds after which a session is destroyed",
             "value": 1800
         },
+		"autoLoginTimeout": {
+            
+            "description": "Seconds after which an auto login token is invalid",
+            "value": 2592000
+        },
         "loginDelay": {
                 
             "description": "Login result delivery delay to add to the next try when a user login fails in seconds",
