@@ -97,7 +97,7 @@ var Auth
      * @param $validSalt string
      * @result boolean
      */
-    var _checkPassword = 
+    var _checkPassword =
     this.checkPassword = function f_auth_checkPassword($uid, $passwd, $validPasswd, $validSalt) {
         
         $uid = _getIDFromUser($uid);

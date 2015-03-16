@@ -46,8 +46,8 @@
         },        
         "displayStats": {
             
-            "description": "Display speed and resource stats in the homepage's source",
-            "value": true
+            "description": "Display speed and resource stats in the homepage's source (not recommended)",
+            "value": false
         },        
         "indexContent": {
             
@@ -60,11 +60,11 @@
             "value": "site"
         },
         "useHTTP1": {
-            "description": "Start HTTP/1.1 server",
+            "description": "Start HTTP/1.1 server (not recommended)",
             "value": true
         },
         "useHTTP2": {
-            "description": "Start HTTP/2.0 server",
+            "description": "Start HTTP/2.0 server. Needs certificates for SSL/TLS (recommended)",
             "value": false
         },
         "HTTP1Port": {
@@ -74,7 +74,11 @@
         "HTTP2Port": {
             "description": "Port to serve HTTP/2.0 on",
             "value": 12443
-        }
+        },
+		"timeToCache": {
+			"description": "Time for how long content should be cached before it gets refreshed in seconds",
+			"value": 3600
+		}
     },
     "SSLConfig": {
         "key": {
@@ -255,6 +259,16 @@
                 
             "description": "Maximum delay for the login result delivery delay",
             "value": 3600
-        }
+        },
+		"STSTimeout": {
+			
+			"description": "Maximum age for the HTTPS strict-transport-security. Will only be available for HTTPS",
+			"value": 60000
+		},
+		"STSIncludeSubDomains": {
+		
+			"description": "Set HTTPS strict-transport-security for subdomains, too (recommended)",
+			"value": true
+		}
     }
 }

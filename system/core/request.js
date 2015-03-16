@@ -7,6 +7,7 @@ var io = require('./io.js');
 var plugin = require('./plugin.js');
 var helper = require('./helper.js');
 var cookie = require('./cookie.js');
+var SFFM = require('./SFFM.js');
 
 var self = this;
 
@@ -81,27 +82,36 @@ var _handleRequest
         
         var bodyLengthMatch = encodeURIComponent($requestState.responseBody).match(/%[89ABab]/g);
         var cl = $requestState.responseBody.length + (bodyLengthMatch ? bodyLengthMatch.length : 0);
-        var cc = $requestState.COOKIE.getChangedCookies();
-        $requestState.result.writeHead($requestState.httpStatus, {
-
+        var headers = {
+            
             'Content-Type': $requestState.responseType + '; charset=utf-8',
             'Server': 'SHPS',
             'Set-Cookie': $requestState.COOKIE.getChangedCookies(),
             'Age': 0, // <-- insert time since caching here
-            'Cache-Control': 3600,  // <-- make this an option in the config file
+            'Cache-Control': $requestState.config.generalConfig.timeToCache.value,
             'Content-Encoding': 'identity', // <-- gzip larger content. Cache gzipped version only!
             'Content-Language': 'en', // <-- use lang.getLanguage()
             'Content-Length': cl,
             // 'Content-MD5': <-- use for big files
             // 'Etag': <-- insert cache token here (change token whenever the cache has to be rebuild)
-            // 'Strict-Transport-Security': 'max-age=16070400; includeSubDomains' <-- only for HTTPS
-
+            
             'X-XSS-Protection': '1; mode=block',
             'X-Content-Type-Options': 'nosniff',
             'X-Powered-By': 'SHPS',
 
-        });
+        };
+        
+        // ASVS V2 3.15
+        if (SFFM.isHTTPS($requestState.request)) {
 
+            headers['Strict-Transport-Security'] = 'max-age=' + $requestState.config.securityConfig.STSTimeout.value;
+            if ($requestState.config.securityConfig.STSIncludeSubDomains.value) {
+
+                headers['Strict-Transport-Security'] += '; includeSubDomains'
+            }
+        }
+
+        $requestState.result.writeHead($requestState.httpStatus, headers);
         $requestState.result.end($requestState.responseBody);
     }).done();
 };

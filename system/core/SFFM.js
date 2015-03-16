@@ -114,17 +114,13 @@ var _splitQueryString
 = me.splitQueryString = function f_SFFM_splitQueryString($path) {
 
     var components = $path.split('?');
-    var reqPath = components[0];
-    if (reqPath[0] == '/') {
-        
-        reqPath = reqPath.substring(1);
-    }
-    else {
+    var reqPath = '';
+    if (components.length > 1) {
 
-        reqPath = components[1]
+        reqPath = components[1];
     }
 
-    var reqParams = reqPath.split('/');
+    var reqParams = reqPath.split('&');
     var i = 0;
     var params = {};
     

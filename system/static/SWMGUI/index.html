@@ -1,0 +1,37 @@
+﻿<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>SHPS System-Wide Management</title>
+        <link type="text/css" rel="stylesheet" href="css/normalize.css">
+        <link type="text/css" rel="stylesheet" href="css/main.css">
+        <style type="text/css">
+            * {
+                border: 0;
+                margin: 0;
+                padding: 0;
+                position: relative;
+            }
+
+            .clearfix {
+                z-index: -1000;
+            }
+        </style>
+        <link type="text/css" rel="stylesheet" href="css/SWMGUI.css">
+    </head>
+    <body>
+        <script type="text/javascript" src="js/jquery.min.js"></script>
+        <script type="text/javascript" src="js/lodash.js"></script>
+        <script type="text/javascript" src="js/backbone-min.js"></script>
+        <script type="text/javascript" src="js/jquery-ui.min.js"></script>
+        <script type="text/javascript" src="js/q.js"></script>
+        <script type="text/javascript" src="js/SWMGUI.js"></script>
+        <script type="text/javascript">
+            SWMGUI.dlTemplate('site').then(function ($template) {
+            
+                var ui = _.template($template, {});
+                $('body').append(ui);
+            }).done();
+        </script>
+    </body>
+</html>
