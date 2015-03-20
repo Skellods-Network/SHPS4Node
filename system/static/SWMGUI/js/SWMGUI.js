@@ -35,7 +35,7 @@
             if (!_dlTemplate.tmpl_cache[$name]) {
                 
                 $.ajax({
-                    url: '?SWMGUI&path=partials/' + $name + '.jtp',
+                    url: 'partials/' + $name + '.jtp?SWMGUI',
                     method: 'GET',
                     async: $async
                 })

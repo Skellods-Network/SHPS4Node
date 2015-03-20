@@ -80,7 +80,7 @@
 			"value": 3600
 		}
     },
-    "SSLConfig": {
+    "TLSConfig": {
         "key": {
             "description": "",
             "value": "skellods-network.key"
@@ -92,7 +92,11 @@
         "ca": {
             "description": "",
             "value": "ca-bundle.pem"
-        }
+        },
+		"keypin": {
+			"description": "This will be used for HPKP (advanced security). If left blank, SHPS will generate the keypin",
+			"value": ""
+		}
     },
     "databaseConfig": {
         

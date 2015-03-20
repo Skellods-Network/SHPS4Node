@@ -8,6 +8,7 @@ var plugin = require('./plugin.js');
 var helper = require('./helper.js');
 var cookie = require('./cookie.js');
 var SFFM = require('./SFFM.js');
+var lang = require('./language.js');
 
 var self = this;
 
@@ -90,24 +91,33 @@ var _handleRequest
             'Age': 0, // <-- insert time since caching here
             'Cache-Control': $requestState.config.generalConfig.timeToCache.value,
             'Content-Encoding': 'identity', // <-- gzip larger content. Cache gzipped version only!
-            'Content-Language': 'en', // <-- use lang.getLanguage()
+            'Content-Language': lang.focus($requestState).getLanguage(),
             'Content-Length': cl,
             // 'Content-MD5': <-- use for big files
-            // 'Etag': <-- insert cache token here (change token whenever the cache has to be rebuild)
+            // 'Etag': <-- insert cache token here (change token whenever the cache was rebuild)
             
             'X-XSS-Protection': '1; mode=block',
             'X-Content-Type-Options': 'nosniff',
             'X-Powered-By': 'SHPS',
 
+            // ASVS V2 3.10
+            'X-Frame-Options': 'SAMEORIGIN',
         };
         
-        // ASVS V2 3.15
         if (SFFM.isHTTPS($requestState.request)) {
 
+            // ASVS V2 3.15
             headers['Strict-Transport-Security'] = 'max-age=' + $requestState.config.securityConfig.STSTimeout.value;
             if ($requestState.config.securityConfig.STSIncludeSubDomains.value) {
 
                 headers['Strict-Transport-Security'] += '; includeSubDomains'
+            }
+            
+            // SSLLabs suggestion
+            headers['Public-Key-Pins'] = 'pin-sha256="' + $requestState.config.TLSConfig.keypin.value + '"; max-age=2592000';
+            if ($requestState.config.securityConfig.HPKPIncludeSubDomains.value) {
+                
+                headers['Public-Key-Pins'] += '; includeSubDomains'
             }
         }
 

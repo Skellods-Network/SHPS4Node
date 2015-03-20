@@ -322,9 +322,9 @@ var _listen
             if (port.indexOf(p) == -1) {
                 
                 https.createServer({
-                    key: fs.readFileSync(_getDir(SHPS_DIR_CERTS) + config[$c].SSLConfig.key.value),
-                    cert: fs.readFileSync(_getDir(SHPS_DIR_CERTS) + config[$c].SSLConfig.cert.value),
-                    ca: fs.readFileSync(_getDir(SHPS_DIR_CERTS) + config[$c].SSLConfig.ca.value)
+                    key: fs.readFileSync(_getDir(SHPS_DIR_CERTS) + config[$c].TLSConfig.key.value),
+                    cert: fs.readFileSync(_getDir(SHPS_DIR_CERTS) + config[$c].TLSConfig.cert.value),
+                    ca: fs.readFileSync(_getDir(SHPS_DIR_CERTS) + config[$c].TLSConfig.ca.value)
                 }, function ($res, $req) {
                     
                     var rs = new helper.requestState();
