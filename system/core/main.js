@@ -42,6 +42,9 @@ var http = require('http');
 var path = require('path');
 var cluster = require('cluster');
 var os = require('os');
+var vm = require('vm');
+
+var q = require('q');
 
 var scheduler = require('./schedule.js');
 var optimize = require('./optimize.js');
@@ -99,7 +102,7 @@ var _getVersionText
 };
 
 var _printVersion 
-= me.printVersion = function () {
+= me.printVersion = function f_main_printVersion() {
 
     log.write(_getVersionText());
 };
@@ -361,15 +364,19 @@ var _make
 = me.make = function ($template2Start, $requestState) {
     $template2Start = (typeof $template2Start !== null ? $template2Start : $requestState.config.generalConfig.rootTemplate.value);
     
+    var defer = q.defer();
     // Read from cache
     
     log.log('Starting to build the homepage');
     
-    plugin.callEvent('onBeforeMake', $template2Start, $requestState);
-
+    //plugin.callEvent('onBeforeMake', $template2Start, $requestState);
+    
+    var template = [];
+    var content = {};
+    var body = '';
     async.waterfall([
         
-        function f_main_make_wf_1 ($cb) {
+        /*function f_main_make_wf_1($cb) {
             
             var _sql = sql.newSQL('default', $requestState)
             if (typeof _sql !== 'undefined') {
@@ -382,7 +389,7 @@ var _make
             }
         },
     
-        function f_main_make_wf_2 ($sql, $cb) {
+        function f_main_make_wf_2($sql, $cb) {
             
             var rowsTemplate = [false];
             var rowsContent = [false];
@@ -390,7 +397,7 @@ var _make
                 
                 'funcs': [
 
-                    function f_main_make_wf_2_1 ($_p1, $cb) {
+                    function f_main_make_wf_2_1($_p1, $cb) {
                         
                         var tblTemplate = $sql.openTable('template');
                         var tblNamespace = $sql.openTable('namespace');
@@ -403,16 +410,16 @@ var _make
                             .execute()
                             .then(function f_main_make_wf_2_1_then($rows) {
                             
-                                rowsTemplate = $rows;
-                                $cb();
-                            }, function f_main_make_wf_2_1_else($p1) {
+                            rowsTemplate = $rows;
+                            $cb();
+                        }, function f_main_make_wf_2_1_else($p1) {
                             
-                                log.error('ERROR: Failed to get initial template ' + $p1);
-                                $cb();
-                            });
+                            log.error('ERROR: Failed to get initial template ' + $p1);
+                            $cb();
+                        });
                     },
 
-                    function f_main_make_wf_2_2 ($cb) {
+                    function f_main_make_wf_2_2($cb) {
                         
                         if ($requestState.GET.site == null) {
                             
@@ -434,13 +441,13 @@ var _make
                             .execute()
                             .then(function f_main_make_wf_2_2_then($rows) {
                             
-                                rowsContent = $rows;
-                                $cb();
-                            }, function f_main_make_wf_2_2_else($p1) {
+                            rowsContent = $rows;
+                            $cb();
+                        }, function f_main_make_wf_2_2_else($p1) {
                             
-                                log.error('ERROR: Failed to get initial template ' + $p1);
-                                $cb();
-                            })
+                            log.error('ERROR: Failed to get initial template ' + $p1);
+                            $cb();
+                        })
                             .done();
                     }
                 ]
@@ -449,32 +456,44 @@ var _make
                 $cb(null, rowsTemplate, rowsContent);
             });//end parallel $template2Starts
         
-        },
+        },*/
+        function ($_p1, $_p2) {
 
-        function ($template, $content, $cb) {
-            
-            if ($template[0] === false) {
-                
-                return;
-            }
-            
-            var body = $template[0].content;
-            body = _parseTemplateVars(body);
-            body = body.replace('{$body}', $content[0].content);
-            body = _parseTemplateVars(body);
-            //body = body.replace('</body>', js.getLink() + '</body>');
-            //body = body.replace('</head>', css.getLink() + '</head>');
-            //body = optimizer.optimize(body);
-            
-            plugin.callEvent('onAfterMake', $template2Start, $requestState);
-            
-            $cb(null, body)
+            template.push({ content: 'Hellow World! - {$body}' });
+            content.content = 'XXX';
+            $_p1();
         },
-    ], function () {
+    ], function ($err) {
+        
+        if (typeof template[0] === 'undefined') {
+            
+            return;
+        }
+        
+        body = template[0].content;
+        body = _parseTemplateVars(body);
+        body = body.replace('{$body}', content.content);
+        body = _parseTemplateVars(body);
+        //body = body.replace('</body>', js.getLink() + '</body>');
+        //body = body.replace('</head>', css.getLink() + '</head>');
+        //body = optimizer.optimize(body);
+        
+        //plugin.callEvent('onAfterMake', $template2Start, $requestState);
 
-        scheduler.sendSignal('onMake', $requestState);
+        scheduler.sendSignal('onMake', body, $requestState);
+        
+        $requestState.responseType = 'text/html';
+        $requestState.responseBody = body;
+        defer.resolve();
     });// end waterfall
-}
+
+    return defer.promise;
+};
+
+var _parseTemplateVars = function f_main_parseTemplateVars($partial) {
+    
+    return $partial;
+};
 
 var _getNamespace 
 = me.getNamespace = function ($requestState) {
@@ -490,7 +509,7 @@ var _getNamespace
     }
     
     return r;
-}
+};
 
 /**
  * Read all config files and store them

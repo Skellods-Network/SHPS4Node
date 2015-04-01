@@ -13,7 +13,7 @@ var self = this;
 var _sendSignal 
 = me.sendSignal = function ($signal) {
     
-    eventEmitter.emit.apply($signal, arguments);
+    eventEmitter.emit.apply(eventEmitter, arguments);
 };
 
 var _addSlot 

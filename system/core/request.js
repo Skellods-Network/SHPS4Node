@@ -8,7 +8,7 @@ var plugin = require('./plugin.js');
 var helper = require('./helper.js');
 var cookie = require('./cookie.js');
 var SFFM = require('./SFFM.js');
-var lang = require('./language.js');
+//var lang = require('./language.js');
 
 var self = this;
 
@@ -48,6 +48,7 @@ var _handleRequest
     else if (typeof $requestState.GET['site'] !== 'undefined') {
 
         // transmit site
+        unblock = main.make('site', $requestState);
     }
     else if (typeof $requestState.GET['HTCPCP'] !== 'undefined' && main.getHPConfig('eastereggs')) {
         
@@ -91,7 +92,7 @@ var _handleRequest
             'Age': 0, // <-- insert time since caching here
             'Cache-Control': $requestState.config.generalConfig.timeToCache.value,
             'Content-Encoding': 'identity', // <-- gzip larger content. Cache gzipped version only!
-            'Content-Language': lang.focus($requestState).getLanguage(),
+            'Content-Language': 'en',//lang.focus($requestState).getLanguage(),
             'Content-Length': cl,
             // 'Content-MD5': <-- use for big files
             // 'Etag': <-- insert cache token here (change token whenever the cache was rebuild)
