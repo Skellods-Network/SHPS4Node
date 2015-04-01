@@ -86,7 +86,7 @@ var _handleRequest
         var cl = $requestState.responseBody.length + (bodyLengthMatch ? bodyLengthMatch.length : 0);
         var headers = {
             
-            'Content-Type': $requestState.responseType + '; charset=utf-8',
+            'Content-Type': $requestState.responseType + ';charset=utf-8',
             'Server': 'SHPS',
             'Set-Cookie': $requestState.COOKIE.getChangedCookies(),
             'Age': 0, // <-- insert time since caching here
@@ -97,7 +97,7 @@ var _handleRequest
             // 'Content-MD5': <-- use for big files
             // 'Etag': <-- insert cache token here (change token whenever the cache was rebuild)
             
-            'X-XSS-Protection': '1; mode=block',
+            'X-XSS-Protection': '1;mode=block',
             'X-Content-Type-Options': 'nosniff',
             'X-Powered-By': 'SHPS',
 
@@ -111,14 +111,14 @@ var _handleRequest
             headers['Strict-Transport-Security'] = 'max-age=' + $requestState.config.securityConfig.STSTimeout.value;
             if ($requestState.config.securityConfig.STSIncludeSubDomains.value) {
 
-                headers['Strict-Transport-Security'] += '; includeSubDomains'
+                headers['Strict-Transport-Security'] += ';includeSubDomains'
             }
             
             // SSLLabs suggestion
-            headers['Public-Key-Pins'] = 'pin-sha256="' + $requestState.config.TLSConfig.keypin.value + '"; max-age=2592000';
+            headers['Public-Key-Pins'] = 'pin-sha256="' + $requestState.config.TLSConfig.keypin.value + '";max-age=2592000';
             if ($requestState.config.securityConfig.HPKPIncludeSubDomains.value) {
                 
-                headers['Public-Key-Pins'] += '; includeSubDomains'
+                headers['Public-Key-Pins'] += ';includeSubDomains'
             }
         }
 

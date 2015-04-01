@@ -76,7 +76,7 @@ var CookieJar = function c_CookieJar($requestState) {
         while (i < l) {
             
             var cookie = _newCookies[keys[i]];
-            var cs = cookie.name + '=' + cookie.value + ';Path=/;' + ';Max-Age=' + cookie.expire + 'Expires=' + (new Date((new Date()).getTime() + 1000 * cookie.expire)).toISOString();
+            var cs = cookie.name + '=' + cookie.value + ';Path=/;Max-Age=' + cookie.expire + ';Expires=' + (new Date((new Date()).getTime() + 1000 * cookie.expire)).toISOString();
             if ($requestState.config.generalConfig.URL.value != 'localhost') {
 
                 cs += 'Domain=.' + $requestState.config.generalConfig.URL.value;
