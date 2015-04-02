@@ -9,6 +9,7 @@ var u = require('util');
 var helper = require('./helper.js');
 var log = require('./log.js');
 var main = require('./main.js');
+var make = require('./make.js');
 
 var rl = {};
 var _isInitialized = false;
@@ -148,6 +149,9 @@ var _handleRequest
                     try {
 
                         log.write(eval($line.replace(/^\s*?!/, '')) + '\n');
+                        //log.write(make.extExecuteJS($line.replace(/^\s*?!/, ''), true, true, true));
+                        //make.extExecuteJS($line.replace(/^\s*?!/, ''), true, true, true);
+                        //log.write('DONE');
                     }
                     catch ($e) {
 
