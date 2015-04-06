@@ -1,61 +1,61 @@
 {
     "configHeader": {
-      
-		"description": "This part contains info about the config file. The version noted here indicates the minimum SHPS version the config file is compatibel with",
+
+        "description": "This part contains info about the config file. The version noted here indicates the minimum SHPS version the config file is compatibel with",
         "SHPSVERSION_MA": 4,
         "SHPSVERSION_MI": 0,
-		"type": "hp"
+        "type": "hp"
     },
     "generalConfig": {
-        
+
         "URL": {
-            
+
             "description": "Your domain. Please use it without protocol. Add all subdirectories until the SHPS root folder. On SHPS-webservers, don't add a subdirectory.",
-			"example": ["www.example.com", "php.example.com/path/to/root", "node.example.com"],
+            "example": [ "www.example.com", "php.example.com/path/to/root", "node.example.com" ],
             "value": "localhost"
         },
         "staticResourcesURL": {
-            
+
             "description": "Your resource URL",
             "value": "localhost"
         },
         "dirUpload": {
-            
+
             "description": "Directory for uploaded data",
             "value": "uploads"
         },
         "mail": {
-            
+
             "description": "Mail used as `FROM` address",
             "value": "support@example.com"
         },
         "logCount": {
-            
+
             "description": "Number of log entries stored in the DB",
             "value": 50
         },
         "timezone": {
-            
+
             "description": "Timezone of the server",
             "value": "Europe/Berlin"
         },
         "uploadQuota": {
-            
+
             "description": "Maximum amount of data which can be uploaded from this website instance (0=infinite)",
             "value": 0
-        },        
+        },
         "displayStats": {
-            
+
             "description": "Display speed and resource stats in the homepage's source (not recommended)",
             "value": false
-        },        
+        },
         "indexContent": {
-            
+
             "description": "Content which will be used when nothing else is specified",
             "value": "index"
         },
         "rootTemplate": {
-            
+
             "description": "Template which will contain the raw structure",
             "value": "site"
         },
@@ -75,10 +75,14 @@
             "description": "Port to serve HTTP/2.0 on",
             "value": 12443
         },
-		"timeToCache": {
-			"description": "Time for how long content should be cached before it gets refreshed in seconds",
-			"value": 3600
-		}
+        "timeToCache": {
+            "description": "Time for how long content should be cached before it gets refreshed in seconds",
+            "value": 3600
+        },
+        "gzipMinSize": {
+            "description":  "Content (in byte) which is larger will be gzipped",
+            "value":  256
+        }
     },
     "TLSConfig": {
         "key": {
@@ -115,22 +119,22 @@
             "name": {
                 
                 "description": "Name of schema",
-                "value": ""
+                "value": "shps_test"
             },
             "user": {
                 
                 "description": "DB user",
-                "value": ""
+                "value": "shps"
             },
             "pass": {
                 
                 "description": "User's password",
-                "value": ""
+                "value": "shps"
             },
             "prefix": {
                 
                 "description": "Table prefix",
-                "value": "HP_"
+                "value": ""
             },
             "type": {
                 
@@ -162,22 +166,22 @@
             "name": {
                 
                 "description": "Name of schema",
-                "value": ""
+                "value": "shps_test"
             },
             "user": {
                 
                 "description": "DB user",
-                "value": ""
+                "value": "shps"
             },
             "pass": {
                 
                 "description": "User's password",
-                "value": ""
+                "value": "shps"
             },
             "prefix": {
                 
                 "description": "Table prefix",
-                "value": "HP_"
+                "value": ""
             },
             "type": {
                 
@@ -209,22 +213,22 @@
             "name": {
                 
                 "description": "Name of schema",
-                "value": ""
+                "value": "shps_test"
             },
             "user": {
                 
                 "description": "DB user",
-                "value": ""
+                "value": "shps"
             },
             "pass": {
                 
                 "description": "User's password",
-                "value": ""
+                "value": "shps"
             },
             "prefix": {
                 
                 "description": "Table prefix",
-                "value": "HP_"
+                "value": ""
             },
             "type": {
                 

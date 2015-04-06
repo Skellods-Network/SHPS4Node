@@ -77,6 +77,7 @@ var _serveFile
                         if ($err) {
                             
                             $requestState.httpStatus = 404;
+                            defer.resolve();
                         }
                         else {
                             
@@ -102,11 +103,10 @@ var _serveFile
                                 
                                 $requestState.responseHeaders = headers;
                             }
-
+                            
                             $requestState.responseBody = $data;
+                            defer.resolve();
                         }
-
-                        defer.resolve();
                     });
                 }
                 else {

@@ -3,6 +3,9 @@
 var me = module.exports;
 
 var util = require('util');
+var zip = require('zlib');
+var q = require('q');
+var crypt = require('crypto');
 
 var main = require('./main.js');
 var io = require('./io.js');
@@ -102,7 +105,22 @@ var _handleRequest
             bodyLengthMatch = encodeURIComponent($requestState.responseBody).match(/%[89ABab]/g);
         }
         
-        var cl = $requestState.responseBody.length + (bodyLengthMatch ? bodyLengthMatch.length : 0);
+        var defer = q.defer();
+        var tmp = Buffer.byteLength($requestState.responseBody, 'utf8');
+        if ($requestState.request.headers['accept-encoding'].match(/\bgzip\b/) && Buffer.byteLength($requestState.responseBody, 'utf8') > $requestState.config.generalConfig.gzipMinSize.value) {
+            
+            zip.gzip($requestState.responseBody, function ($err, $buf) {
+                
+                $requestState.responseBody = $buf;
+                $requestState.responseEncoding = 'gzip';
+                defer.resolve();
+            });
+        }
+        else {
+            
+            defer.resolve();
+        }
+
         var headers = {
             
             'Content-Type': $requestState.responseType + ';charset=utf-8',
@@ -110,11 +128,9 @@ var _handleRequest
             'Set-Cookie': $requestState.COOKIE.getChangedCookies(),
             'Age': 0, // <-- insert time since caching here
             'Cache-Control': $requestState.config.generalConfig.timeToCache.value,
-            'Content-Encoding': 'identity', // <-- gzip larger content. Cache gzipped version only!
             'Content-Language': 'en',//lang.focus($requestState).getLanguage(),
-            'Content-Length': cl,
-            // 'Content-MD5': <-- use for big files
-            // 'Etag': <-- insert cache token here (change token whenever the cache was rebuild)
+            //'Content-MD5': '7E57', // <-- useless. Will not implement it since it only serves the purpose of increasing latency. Will leave here as a reminder.
+            // 'Etag': <-- insert cache token here (change token whenever the cache was rebuilt)
             
             'X-XSS-Protection': '1;mode=block',
             'X-Content-Type-Options': 'nosniff',
@@ -135,7 +151,7 @@ var _handleRequest
             headers['Strict-Transport-Security'] = 'max-age=' + $requestState.config.securityConfig.STSTimeout.value;
             if ($requestState.config.securityConfig.STSIncludeSubDomains.value) {
 
-                headers['Strict-Transport-Security'] += ';includeSubDomains'
+                headers['Strict-Transport-Security'] += ';includeSubDomains';
             }
             
             // SSLLabs suggestion
@@ -146,16 +162,21 @@ var _handleRequest
             }
         }
 
-        $requestState.result.writeHead($requestState.httpStatus, headers);
-        if ($requestState.isResponseBinary) {
+        defer.promise.then(function () {
             
-            $requestState.result.write($requestState.responseBody, 'bindary');
-            $requestState.result.end();
-        }
-        else {
-            
-            $requestState.result.end($requestState.responseBody);
-        }
+            headers['Content-Length'] = $requestState.responseBody.length + (bodyLengthMatch ? bodyLengthMatch.length : 0);
+            headers['Content-Encoding'] = $requestState.responseEncoding;
+            $requestState.result.writeHead($requestState.httpStatus, headers);
+            if ($requestState.isResponseBinary) {
+                
+                $requestState.result.write($requestState.responseBody, 'binary');
+                $requestState.result.end();
+            }
+            else {
+                
+                $requestState.result.end($requestState.responseBody);
+            }
+        }).done();
     }).done();
 };
 
