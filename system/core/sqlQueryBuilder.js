@@ -58,9 +58,16 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
     /**
      * Table to use for set or delete operations
      * 
-     * @var \SHPS\sql_table
+     * @var sqlTable
      */
     var table = null;
+    
+    /**
+     * Additional tables which need to be listed in the SQL query
+     * 
+     * @var []
+     */
+    var additionalTables = [];
     
 
     /**
@@ -177,7 +184,7 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
     
         var query = 'SELECT ';
         var colCount = buf.length;
-        var tables = [];
+        var tables = additionalTables;
         var i = 0;
         var tmp = null;
         while (i < colCount) {
@@ -222,6 +229,30 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
         
         query += ';';
         return $sql.query(query);
+    };
+    
+    /**
+     * Add table to list of tables in SQL query
+     * @todo Make faster
+     * 
+     * @param sqlTable $table
+     */
+    var _addTable =
+    this.addTable = function f_sqlQueryBuilder_addTable($table) {
+        
+        var i = 0;
+        var c = additionalTables.length;
+        while (i < c) {
+            
+            if (additionalTables[i].getAbsoluteName() == $table.getAbsoluteName()) {
+
+                return;
+            }
+
+            i++;
+        }
+
+        additionalTables.push($table);
     };
 
     var _execute =

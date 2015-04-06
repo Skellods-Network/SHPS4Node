@@ -413,7 +413,7 @@ var _SQL
     var _openTable
     = this.openTable = function ($name) {
         
-        return new sql_table(this, $name);
+        return table.newTable(this, $name);
     }
     
     /**
@@ -493,7 +493,7 @@ var _SQL
             _dbType = SHPS_SQL_MYSQL;
             _query('SELECT VERSION();').then(function ($res) {
                 
-                if ($res['VERSION()'].strpos('MariaDB') !== false) {
+                if ($res[0]['VERSION()'].indexOf('MariaDB') > 0) {
                     
                     _dbType |= SHPS_SQL_MARIA;
                 }
@@ -576,7 +576,10 @@ var _newSQL
                     multipleStatements: true
                 });
                 
-                q.resolve(new _SQL(dbConfig, nPool.getConnection()));
+                nPool.getConnection(function ($err, $con) {
+                        
+                    defer.resolve(new _SQL(dbConfig, $con));
+                });
 
                 break;
             }
@@ -636,11 +639,31 @@ var _newSQL
         }
     }
     else {
+        
+        switch (dbConfig.type.value) {
 
-        nPool.acquire(function ($err, $client) {
-            
-            defer.resolve(new _SQL(dbConfig, $client));
-        });
+            case SHPS_SQL_MYSQL:
+            case SHPS_SQL_MARIA: {
+
+                nPool.getConnection(function ($err, $con) {
+                    
+                    defer.resolve(new _SQL(dbConfig, $con));
+                });
+
+                break;
+            }
+
+            case SHPS_SQL_MSSQL: {
+
+                nPool.acquire(function ($err, $client) {
+                    
+                    defer.resolve(new _SQL(dbConfig, $client));
+                });
+
+                break;
+            }
+        }
+        
     }
 
     return defer.promise;

@@ -2,6 +2,8 @@
 
 var me = module.exports;
 
+var util = require('util');
+
 var main = require('./main.js');
 var io = require('./io.js');
 var plugin = require('./plugin.js');
@@ -31,11 +33,19 @@ var _handleRequest
     else if (typeof $requestState.GET['plugin'] !== 'undefined') {
         
         // call plugin
-        unblock = plugin.callPluginEvent('onDirectCall', $requestState.GET['plugin'], $requestState);
+        if (plugin.pluginExists($requestState.GET['plugin'])) {
+            
+            unblock = plugin.callPluginEvent('onDirectCall', $requestState.GET['plugin'], $requestState);
+        }
+        else {
+
+            $requestState.httpStatus = 404;
+        }
     }
     else if (typeof $requestState.GET['file'] !== 'undefined') {
 
         // serve file
+        unblock = io.serveFile($requestState, $requestState.GET['file']);
     }
     else if (typeof $requestState.GET['js'] !== 'undefined') {
 
@@ -82,7 +92,16 @@ var _handleRequest
     
     unblock.then(function () {
         
-        var bodyLengthMatch = encodeURIComponent($requestState.responseBody).match(/%[89ABab]/g);
+        var bodyLengthMatch;
+        if ($requestState.isResponseBinary) {
+            
+            bodyLengthMatch = 0;
+        }
+        else {
+            
+            bodyLengthMatch = encodeURIComponent($requestState.responseBody).match(/%[89ABab]/g);
+        }
+        
         var cl = $requestState.responseBody.length + (bodyLengthMatch ? bodyLengthMatch.length : 0);
         var headers = {
             
@@ -105,6 +124,11 @@ var _handleRequest
             'X-Frame-Options': 'SAMEORIGIN',
         };
         
+        if (typeof $requestState.responseHeaders !== 'undefined') {
+         
+            headers = util._extend(headers, $requestState.responseHeaders);
+        }
+        
         if (SFFM.isHTTPS($requestState.request)) {
 
             // ASVS V2 3.15
@@ -123,7 +147,15 @@ var _handleRequest
         }
 
         $requestState.result.writeHead($requestState.httpStatus, headers);
-        $requestState.result.end($requestState.responseBody);
+        if ($requestState.isResponseBinary) {
+            
+            $requestState.result.write($requestState.responseBody, 'bindary');
+            $requestState.result.end();
+        }
+        else {
+            
+            $requestState.result.end($requestState.responseBody);
+        }
     }).done();
 };
 

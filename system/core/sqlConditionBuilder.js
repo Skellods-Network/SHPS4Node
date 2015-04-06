@@ -137,6 +137,16 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
             _conditions += 'AND ';
         }
         
+        if (typeof $left === 'object') {
+            
+            $sqb.addTable($left.getTable());
+        }
+        
+        if (typeof $right === 'object') {
+            
+            $sqb.addTable($right.getTable());
+        }
+
         _conditions += _prepare($left) + $operator + _prepare($right);
     };
     
@@ -161,7 +171,7 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
     this.equal =
     this.eq =
     this.same = function f_sqlConditionBuilder_sqlConditionBuilder_equal($left, $right) {
-        
+
         _comparison($left, '=', $right);
         return this;
     };
