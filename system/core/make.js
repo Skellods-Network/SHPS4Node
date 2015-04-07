@@ -20,7 +20,7 @@ var mp = {
  *  Huggable caller
  */
 var _hug 
-= me.hug = function f_log_hug($h) {
+= me.hug = function f_make_hug($h) {
     
     return helper.genericHug($h, mp, function f_helper_log_hug($hugCount) {
         
@@ -32,6 +32,12 @@ var _hug
         return true;
     });
 };
+
+var _addFeature
+= me.addFeature = function f_make_addFeature() {
+
+
+}
 
 var _executeScript 
 = mp.executeScript = function f_make_executeScript($language, $script) {

@@ -8,6 +8,7 @@ var scheduler = require('./schedule.js');
 var log = require('./log.js');
 var herlper = require('./helper.js');
 var main = require('./main.js');
+var SFFM = require('./SFFM.js');
 
 var self = this;
 
@@ -31,7 +32,7 @@ var _dangerCount
     var c = 0;
     while (i < l) {
 
-        if (_vulnerabilities[k[i]] !== null) {
+        if (_vulnerabilities[k[i]] !== null && _vulnerabilities[k[i]] !== false) {
 
             c++;
         }
@@ -112,6 +113,13 @@ var _checkConfigForRisks
                 log.writeHint('Consider setting `config->eastereggs->value` in ' + $file + ' to `false`.');
                 
                 _vulnerabilities.eastereggs = true;
+            }
+            
+            if ($config.SWMGUI.active.value) {
+                
+                // This is very important, but I guess there might always be that one person...
+                // TODO: Check if the SWMGUI is reachable from the internet and disable it until that port is blocked or changed for a blocked one.
+                log.writeHint('SWMGUI is active. Make sure it is unreachable from the internet!');
             }
             
             break;
@@ -202,6 +210,15 @@ scheduler.addSlot('onListenStart', function ($protocol, $port) {
 });
 
 scheduler.addSlot('onMainInit', function () {
+    
+    if (SFFM.isIOJS()) {
+
+        log.write('SHPS detected IOJS and will make use of Harmony features!'.green);
+    }
+    else if (SFFM.isHarmonyActivated()) {
+
+        log.write('SHPS detected that Harmony features are activated and will make use of them!'.green);
+    }
 
     if (global.gc) {
 

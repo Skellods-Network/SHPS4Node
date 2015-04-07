@@ -59,6 +59,17 @@ var _isIOJS
 };
 
 /**
+ * Check if Harmony features can be used
+ * 
+ * @return boolean
+ */
+var _isHarmonyActivated 
+= me.isHarmonyActivated = function f_SFFM_isHarmonyActivated() {
+
+    return (_isIOJS() || ~process.execArgv.indexOf('--harmony'));
+};
+
+/**
  * Replaces all occurances in $str with other strings based on $mapObj
  * 
  * @param $str string
