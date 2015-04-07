@@ -58,9 +58,23 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
     /**
      * Table to use for set or delete operations
      * 
-     * @var \SHPS\sql_table
+     * @var sqlTable
      */
     var table = null;
+    
+    /**
+     * Col by which the result is sorted
+     * 
+     * @var sqlCol
+     */
+    var orderCol = null;
+    
+    /**
+     * Order ascending (descending if false)
+     * 
+     * @var boolean
+     */
+    var orderASC = true;
     
 
     /**
@@ -166,6 +180,20 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
             return cb;
         }
     };
+    
+    /**
+     * Order result by a col
+     * 
+     * @param sqlCol $col
+     * @param boolean $descending //Default: false
+     */
+    var _orderBy =
+    this.orderBy = function f_sqlQueryBuilder_orderBy($col, $descending) {
+        $descending = typeof $descending !== 'undefined' ? $descending : false;
+
+        orderCol = $col;
+        orderASC = !$descending;
+    };
 
     var _getSQL =
     this.getSQL = function f_sqlQueryBuilder_getSQL() {
@@ -218,6 +246,12 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
         if (typeof $conditions !== 'undefined') {
             
             query += ' WHERE ' + $conditions.toString();
+        }
+        
+        if (orderCol !== null) {
+
+            query += ' ORDER BY ' + orderCol.toString();
+            query += orderASC ? ' ASC' : ' DESC';
         }
         
         query += ';';

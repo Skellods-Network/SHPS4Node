@@ -58,6 +58,7 @@ me.requestState = function () {
     var _POST = null;
 
     this._COOKIE = [];
+    this.cache = {};
     this.locked = false;
     this.uri = '';
     this.path = '/';

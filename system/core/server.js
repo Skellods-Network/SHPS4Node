@@ -97,7 +97,7 @@ var _HTTP2Server = function c_HTTP2Server() {
         
         server = net.createServer(function ($socket) {
             
-            // generate Certs if not supplied. At least we can grant automatic security to a website.
+            // generate Certs if not supplied. At least we can grant automatic encryption to a website.
             // I really hope for a "Let's Encrypt API" which will allow for automatic signing
             if (!privateKey || !certificate || !ca || privateKey == '' || certificate == '' || ca == '') {
                 

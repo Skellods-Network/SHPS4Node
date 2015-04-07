@@ -240,6 +240,18 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
         _comparison($left, ' IS NOT DISTINCT FROM ', $right);
         return this;
     };
+    
+    /**
+     * Order result by a col
+     * 
+     * @param sqlCol $col
+     * @param boolean $descending //Default: false
+     */
+    var _orderBy =
+    this.orderBy = function f_sqlQueryBuilder_orderBy($col, $descending) {
+        
+        return $sqb.orderBy($col, $descending);
+    };
 
     /**
      * Grouphuggable
