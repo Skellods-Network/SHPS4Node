@@ -1,4 +1,4 @@
-﻿"use strict";
+﻿'use strict';
 
 var me = module.exports;
 
@@ -148,8 +148,8 @@ var _handleRequest
                     
                     try {
 
-                        log.write(eval($line.replace(/^\s*?!/, '')) + '\n');
-                        //log.write(make.extExecuteJS($line.replace(/^\s*?!/, ''), true, true, true));
+                        //log.write(eval($line.replace(/^\s*?!/, '')) + '\n');
+                        log.write(make.extExecuteJS($line.replace(/^\s*?!/, ''), true, true, true));
                         //make.extExecuteJS($line.replace(/^\s*?!/, ''), true, true, true);
                         //log.write('DONE');
                     }

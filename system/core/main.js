@@ -32,6 +32,7 @@ GLOBAL.SHPS_DIR_ROOT = 0;
 GLOBAL.SHPS_DIR_PLUGINS = 1;
 GLOBAL.SHPS_DIR_CERTS = 2;
 GLOBAL.SHPS_DIR_CONFIGS = 3;
+GLOBAL.SHPS_DIR_UPLOAD = 4;
 
 
 var fs = require('fs');
@@ -79,6 +80,7 @@ var _getDir
         case SHPS_DIR_PLUGINS: r = path.dirname(require.main.filename) + '/system/plugins/'; break;
         case SHPS_DIR_CERTS: r = path.dirname(require.main.filename) + '/cert/'; break;
         case SHPS_DIR_CONFIGS: r = path.dirname(require.main.filename) + '/config/'; break;
+        case SHPS_DIR_UPLOAD: r = path.dirname(require.main.filename) + '/upload/'; break;
     }
 
     if (r !== null) {

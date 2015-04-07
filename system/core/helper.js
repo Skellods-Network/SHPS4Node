@@ -68,7 +68,10 @@ me.requestState = function () {
     this.namespace = 'default';
     this.httpStatus = 500;
     this.responseType = 'text/plain';
+    this.responseHeaders = undefined;
+    this.isResponseBinary = false;
     this.responseBody = '';
+    this.responseEncoding = 'identity';
     this.request = null;
     this.result = null;
 

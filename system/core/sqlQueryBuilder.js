@@ -76,6 +76,13 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
      */
     var orderASC = true;
     
+    /**
+     * Additional tables which need to be listed in the SQL query
+     * 
+     * @var []
+     */
+    var additionalTables = [];
+
 
     /**
      * Grouphuggable
@@ -180,7 +187,7 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
             return cb;
         }
     };
-    
+
     /**
      * Order result by a col
      * 
@@ -205,7 +212,7 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
     
         var query = 'SELECT ';
         var colCount = buf.length;
-        var tables = [];
+        var tables = additionalTables;
         var i = 0;
         var tmp = null;
         while (i < colCount) {
@@ -256,6 +263,30 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
         
         query += ';';
         return $sql.query(query);
+    };
+
+    /**
+     * Add table to list of tables in SQL query
+     * @todo Make faster
+     * 
+     * @param sqlTable $table
+     */
+    var _addTable =
+    this.addTable = function f_sqlQueryBuilder_addTable($table) {
+        
+        var i = 0;
+        var c = additionalTables.length;
+        while (i < c) {
+            
+            if (additionalTables[i].getAbsoluteName() == $table.getAbsoluteName()) {
+
+                return;
+            }
+
+            i++;
+        }
+
+        additionalTables.push($table);
     };
 
     var _execute =

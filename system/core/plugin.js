@@ -3,6 +3,7 @@
 var me = module.exports;
 
 var fs = require('fs');
+var q = require('q');
 
 var log = require('./log.js');
 var main = require('./main.js');
@@ -67,22 +68,36 @@ var _loadPlugins
     });
 };
 
-var _callPluginEvent
-= me.callPluginEvent = function ($event, $plugin /*, ...*/) {
-
+var _pluginExists 
+= me.pluginExists = function f_plugin_pluginExists($plugin) {
+    
     // only if active!
+    return typeof _plugins[$plugin] !== 'undefined';
+};
+
+var _callPluginEvent 
+= me.callPluginEvent = function ($event, $plugin /*, ...*/) {
+    
+    // only if active!
+    if (typeof _plugins[$plugin] === 'undefined') {
+        
+        var defer = q.defer();
+        defer.resolve();
+        return defer.promise;
+    }
+    
     var params = [];
     var i = 2;
     while (i < arguments.length) {
-
+        
         params.push(arguments[i]);
         i++;
     }
-
+    
     return _plugins[$plugin][$event].apply(_plugins[$plugin], params);
-}
+};
 
-var _callEvent
+var _callEvent 
 = me.callEvent = function ($event /*, ...*/) {
     
     var params = [];
@@ -92,7 +107,7 @@ var _callEvent
         params.push(arguments[i]);
         i++;
     }
-
+    
     i = 0;
     var keys = Object.keys(_plugins);
     while (i < keys.length) {
@@ -101,4 +116,4 @@ var _callEvent
         _plugins[keys[i]][$event].apply(_plugins[keys[i]], params);
         i++;
     }
-}
+};

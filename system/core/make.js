@@ -2,7 +2,7 @@
 
 var me = module.exports;
 
-var vm = require('vm2');
+var vm = require('vm');
 
 var helper = require('./helper.js');
 var log = require('./log.js');
@@ -97,14 +97,9 @@ var _extExecuteScript
     return sb.run($script);
 };
 
-var _executeJS 
-= me.executeJS = function f_make_xecuteJS($script) {
+var _execute
+= me.execute = function f_make_execute($script) {
     
-    return _executeScript('javascript', $script);
-};
-
-var _extExecuteJS 
-= me.extExecuteJS = function f_make_extExecuteJS($script, $allowConsole, $enRequire, $enExtRequire, $allowedNativeModules) {
-    
-    return _extExecuteScript('javascript', $script, $allowConsole, $enRequire, $enExtRequire, $allowedNativeModules);
+    var context = vm.createContext({ });
+    return vm.runInContext($line, context);
 };
