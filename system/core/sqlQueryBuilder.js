@@ -200,6 +200,8 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
 
         orderCol = $col;
         orderASC = !$descending;
+
+        return this;
     };
 
     var _getSQL =

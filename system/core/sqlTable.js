@@ -236,6 +236,7 @@ var _sqlTable = function c_sqlTable($sql, $name) {
             }
         }
         
+        // TODO: clean this and confirm that SQL-Injection is not possible!
         var qmark = '';
         var i = 0;
         var l = keys.length;
@@ -253,9 +254,9 @@ var _sqlTable = function c_sqlTable($sql, $name) {
             }
         }
 
-        sql.query('INSERT INTO ? (' + qmark + ') VALUES (' + qmark + ');', _getAbsoluteName(), keys, vals, function f_sqlTable_insert_2($r) {
+        sql.query('INSERT INTO ' + _getAbsoluteName() + ' (' + keys + ') VALUES (' + vals + ');').then(function f_sqlTable_insert_2($e, $r) {
             
-            defer.resolve($r);
+            defer.resolve($e, $r);
             sql.free();
         });
 

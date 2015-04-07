@@ -7,6 +7,7 @@ var promise = require('promise');
 var qs = require('querystring');
 var u = require('util');
 
+var cookie = require('./cookie.js');
 var log = require('./log.js');
 var request = require('./request.js');
 var SFFM = require('./SFFM.js');

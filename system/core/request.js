@@ -12,6 +12,7 @@ var io = require('./io.js');
 var plugin = require('./plugin.js');
 var helper = require('./helper.js');
 var cookie = require('./cookie.js');
+var make = require('./make.js');
 var SFFM = require('./SFFM.js');
 var lang = require('./language.js');
 
@@ -22,7 +23,6 @@ var _handleRequest
 = me.handleRequest = function handleRequest($requestState) {
     
     $requestState.httpStatus = 501;
-    $requestState.COOKIE = cookie.newCookieJar($requestState);
 
     var unblock;
     if (typeof $requestState.GET['favicon.ico'] !== 'undefined') {
@@ -32,6 +32,7 @@ var _handleRequest
     else if (typeof $requestState.GET['request'] !== 'undefined') {
 
         // handle request
+        unblock = make.requestResponse($requestState, $requestState.GET['request'], typeof $requestState.GET['ns'] !== 'undefined' ? $requestState.GET['ns'] : 'default');
     }
     else if (typeof $requestState.GET['plugin'] !== 'undefined') {
         
@@ -120,7 +121,7 @@ var _handleRequest
             
             defer.resolve();
         }
-
+        
         var headers = {
             
             'Content-Type': $requestState.responseType + ';charset=utf-8',
@@ -128,7 +129,6 @@ var _handleRequest
             'Set-Cookie': $requestState.COOKIE.getChangedCookies(),
             'Age': 0, // <-- insert time since caching here
             'Cache-Control': $requestState.config.generalConfig.timeToCache.value,
-            'Content-Language': lang.getLanguage($requestState),
             //'Content-MD5': '7E57', // <-- useless. Will not implement it since it only serves the purpose of increasing latency. Will leave here as a reminder.
             // 'Etag': <-- insert cache token here (change token whenever the cache was rebuilt)
             
@@ -164,18 +164,22 @@ var _handleRequest
 
         defer.promise.then(function () {
             
-            headers['Content-Length'] = $requestState.responseBody.length + (bodyLengthMatch ? bodyLengthMatch.length : 0);
-            headers['Content-Encoding'] = $requestState.responseEncoding;
-        $requestState.result.writeHead($requestState.httpStatus, headers);
-            if ($requestState.isResponseBinary) {
+            lang.getLanguage($requestState).then(function ($lang) {
                 
-                $requestState.result.write($requestState.responseBody, 'binary');
-                $requestState.result.end();
-            }
-            else {
+                headers['Content-Length'] = $requestState.responseBody.length + (bodyLengthMatch ? bodyLengthMatch.length : 0);
+                headers['Content-Encoding'] = $requestState.responseEncoding;
+                headers['Content-Language'] = $lang;
+                $requestState.result.writeHead($requestState.httpStatus, headers);
+                if ($requestState.isResponseBinary) {
                 
-        $requestState.result.end($requestState.responseBody);
-            }
+                    $requestState.result.write($requestState.responseBody, 'binary');
+                    $requestState.result.end();
+                }
+                else {
+                
+                    $requestState.result.end($requestState.responseBody);
+                }
+            }).done();
         }).done();
     }).done();
 };

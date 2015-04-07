@@ -121,7 +121,7 @@ var _hug
  */
 var _SQL 
 = mp.SQL = function ($dbConfig, $connection) {
-
+    
     if (typeof $dbConfig === 'undefined') {
         
         log.error('Cannot work with undefined dbConfig!');
@@ -136,7 +136,7 @@ var _SQL
     var mp = {
         self: this
     };
-
+    
     /**
      * Total count of SQL queries
      * 
@@ -242,24 +242,25 @@ var _SQL
             return true;
         });
     };
-
+    
     /**
      * Make a new SQL query
      * 
      * @param string $query OPTIONAL
+     * @param string $domain Needed for $param
      * @param mixed $param several parameters for SQL statement
      * @return mixed Promise if a query was given, else a queryBuilder object is returned
      */
-    var _query
-    = this.query = function ($query, $param) {
+    var _query 
+    = this.query = function ($query, $domain, $param) {
         
         _free = false;
         _fetchIndex = -1;
         var _resultRows = [];
-
+        
         if (typeof $param !== 'undefined') {
-
-            $query = mysql.format($query, $param, true, main.getHPConfig('generalConfig', 'timezone', $requestState.uri));
+            
+            $query = mysql.format($query, $param, true, main.getHPConfig('generalConfig', 'timezone', $domain));
             mysql.createQuery($query, cb);
         }
         
@@ -270,7 +271,7 @@ var _SQL
             var start = process.hrtime();
             
             return new Promise(function ($fulfill, $reject) {
-
+                
                 $connection.query($query, function ($err, $rows, $fields) {
                     
                     var t = process.hrtime(start);
@@ -289,7 +290,7 @@ var _SQL
                 });
             });
         }
-
+        
         return SQLQueryBuilder.newSQLQueryBuilder(this);
     }
     
@@ -299,18 +300,18 @@ var _SQL
      * @param string $var
      * @return string
      */
-    var _standardizeName
+    var _standardizeName 
     = this.standardizeName = function ($var) {
         
         /*let*/var s = _variabledeterminator[_dbType][0];
         /*let*/var e = _variabledeterminator[_dbType][1];
-        if ($var !== '*'
-            && $var.substring(0, 1) !== s
+        if ($var !== '*' 
+            && $var.substring(0, 1) !== s 
             && $var.substring(-1) !== e) {
-
+            
             $var = s + sffm.cleanStr($var) + e;
         }
-
+        
         return $var;
     }
     
@@ -320,14 +321,14 @@ var _SQL
      * @param string $str
      * @return string
      */
-    var _standardizeString
+    var _standardizeString 
     = this.standardizeString = function ($str) {
-
+        
         $str = sffm.cleanStr($str);
         /*let*/var s = _stringdeterminator[_dbType];
         if ($str.substring(0, 1) != s 
             && $str.substring(-1) != s) {
-
+            
             $str = s + $str + s;
         }
         
@@ -339,18 +340,18 @@ var _SQL
      * 
      * @return integer
      */
-    var _getQueryCount
+    var _getQueryCount 
     = this.getQueryCount = function () {
         
         return 0;
     }
-
+    
     /**
      * Get overall query time
      * 
      * @return integer
      */
-    var _getQueryTime
+    var _getQueryTime 
     = this.getQueryTime = function () {
         
         return 0;
@@ -372,7 +373,7 @@ var _SQL
      * 
      * @return integer
      */
-    var _getConnectionCount
+    var _getConnectionCount 
     = this.getConnectionCount = function () {
         
         return 0;
@@ -387,7 +388,7 @@ var _SQL
      * @param boolean $temp If true table is only temporary (in memory) //Default: false
      * @return sql_table
      */
-    var _createTable
+    var _createTable 
     = this.createTable = function ($name, $cols, $ifNotExists/* = true*/, $temp/* = false*/) {
         
         log.error('Not implemented yet');
@@ -398,7 +399,7 @@ var _SQL
      * 
      * @return string
      */
-    var _getServerType
+    var _getServerType 
     = this.getServerType = function () {
         
         return _dbType;
@@ -410,7 +411,7 @@ var _SQL
      * @param string $name
      * @return sql_table
      */
-    var _openTable
+    var _openTable 
     = this.openTable = function ($name) {
         
         return table.newTable(this, $name);
@@ -421,7 +422,7 @@ var _SQL
      * 
      * @return string
      */
-    var _getLastQuery
+    var _getLastQuery 
     = this.getLastQuery = function () {
         
         return _lastQuery;
@@ -432,7 +433,7 @@ var _SQL
      * 
      * @return string
      */
-    var _getLastError
+    var _getLastError 
     = this.getLastError = function () {
         
         return '';
@@ -454,31 +455,41 @@ var _SQL
      * 
      * @return sql_resultrow
      */
-    var _fetchRow
+    var _fetchRow 
     = this.fetchRow = function () {
         
         _fetchIndex++;
         return _resultRows[_fetchIndex];
-    }
+    };
     
     var _free =
     this.free = function f_sql_SQL_free() {
         
-        _sqlConnectionPool[_makePoolName($dbConfig)].release($connection);
+        if ($dbConfig.type.value == SHPS_SQL_MSSQL) {
+            
+            _sqlConnectionPool[_makePoolName($dbConfig)].release($connection);
+        }
+        
         _free = true;
+    };
+    
+    var _isFree =
+    this.isFree = function f_sql_isFree() {
+        
+        return _free;
     };
     
     var _getDB 
     = mp.getDB =
     this.getDB = function f_sql_getDB() {
-    
+        
         return $dbConfig.name.value;
     };
     
     var _getPrefix 
     = mp.getPrefix =
     this.getPrefix = function f_sql_getPrefix() {
-    
+        
         return $dbConfig.prefix.value;
     };
     
@@ -488,7 +499,7 @@ var _SQL
     switch ($dbConfig.type.value) {
 
         case SHPS_SQL_MYSQL: {
-
+            
             _query('SET NAMES \'UTF8\';').then().done();
             _dbType = SHPS_SQL_MYSQL;
             _query('SELECT VERSION();').then(function ($res) {
@@ -498,18 +509,18 @@ var _SQL
                     _dbType |= SHPS_SQL_MARIA;
                 }
             }).done();
-
+            
             break;
         }
 
         default: {
-
+            
             _dbType = $dbConfig.type.value;
         }
     }
-
+    
     _free = true;
-}
+};
 
 
 /**
@@ -525,16 +536,16 @@ var _getConnectionCount
     }
     
     
-}
+};
 
 var _makePoolName = function f_sql_makePoolName($dbConfig) {
-
+    
     return $dbConfig.host.value +
         $dbConfig.port.value +
         $dbConfig.name.value +
         $dbConfig.user.value +
         $dbConfig.prefix.value;
-}
+};
 
 /**
  * Create new managed SQL connection from alias (see config file)
@@ -755,9 +766,10 @@ var _focus
      * @param string $alias //Default: 'default'
      * @return sql
      */
+    var _newSQL =
     this.newSQL = function f_sql_focus_newSQL($alias) {
 
-        return _newSQL($alias, $requestState);
+        return me.newSQL($alias, $requestState);
     };
 
     var _newTable =

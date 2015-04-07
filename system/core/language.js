@@ -48,78 +48,73 @@ var _getLanguage
         return $requestState.cache.language;
     }
     else {
-
-        var p = new Promise(function ($fulfill, $reject) {
-
-            sql.newSQL('default', $requestState).then(function ($sql) {
-                
-                var tblLang = $sql.openTable('language');
-                $sql.query()
+        
+        var defer = q.defer();
+        
+        sql.newSQL('default', $requestState).then(function ($sql) {
+            
+            var tblLang = $sql.openTable('language');
+            $sql.query()
                     .get([
                         tblLang.col('name'),
                     ])
                     .orderBy(tblLang.col('ID'))
                     .execute()
                     .then(function ($rows) {
-                    
+                
                     $sql.free();
-                    var ll = _getAcceptLanguageList();
+                    var ll = _getAcceptLanguageList($requestState);
                     if ($rows.length <= 0) {
-
+                    
                         if (ll.length <= 0) {
-
+                        
                             $fulfill('en');
                         }
                         else {
-
-                            $fulfill(ll[0][0]);
+                        
+                            defer.resolve(ll[0][0]);
                         }
                     }
                     else {
-                        
+                    
                         if (ll.length <= 0) {
-                            
-                            $fulfill($rows[0].name);
+                        
+                            defer.resolve($rows[0].name);
                         }
                         else {
-                            
+                        
                             var i = 0;
                             var l = $rows.length;
                             var lll = ll.length;
                             var done = false;
                             while (i < lll && !done) {
-                                
+                            
                                 var j = 0;
                                 while (j < l) {
-                                    
+                                
                                     if ($rows[j].name === ll[i][0]) {
-
-                                        $fulfill(ll[i][0]);
+                                    
+                                        defer.resolve(ll[i][0]);
                                         done = true;
                                         break;
                                     }
-
+                                
                                     j++;
                                 }
-
+                            
                                 i++;
                             }
-
+                        
                             if (!done) {
-
-                                $fulfill('en');
+                            
+                                defer.resolve('en');
                             }
                         }
                     }
-                }).done();
             }).done();
-        });
-
-        return p.then(function ($result) {
-            
-            $requestState.cache.language = $result;
-            return $result;
-        });
+        }).done();
+        
+        return defer.promise;
     }
 };
 

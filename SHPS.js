@@ -3,9 +3,10 @@
 /**
  * Will start SHPS with exposed garbage collector
  */
-var app = function f_app() {// I'm so childish for laughing about this  :D
-    
-    if (global.gc) {
+var app = function f_app($debug) {// I'm so childish for laughing about this  :D
+    $debug = typeof $debug !== 'undefined' ? $debug : false;
+
+    if (global.gc || $debug) {// Running the script in a child process destroys the possibility to debug
         
         var main = require('./system/core/main');
         var log = require('./system/core/log.js');
@@ -44,7 +45,10 @@ if (process.argv.length > 1) {
 
         // Timeout needed because VS2013 is too slow.
         // It won 't connect to the debugger in time for all of the startup-action otherwise :/
-        setTimeout(app, 1000);
+        setTimeout(function () {
+            
+            app(true);
+        }, 1000);
     }
     else {
 

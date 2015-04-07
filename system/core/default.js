@@ -80,7 +80,7 @@ me.config = {
             "value": 12443
         }
     },
-    "SSLConfig": {
+    "TLSConfig": {
         "key"                   : {
             "description": "",
             "value": "mysite.key"
@@ -92,6 +92,10 @@ me.config = {
         "ca"                   : {
             "description": "",
             "value": "ca-bundle.pem"
+        },
+        "keypin": {
+            "description": "This will be used for HPKP (advanced security). If left blank, SHPS will generate the keypin",
+            "value": ""
         }
     },
     "databaseConfig": {
@@ -236,27 +240,42 @@ me.config = {
                 "description": "Maximum number of simultaneous connections to the DB server",
                 "value": 100
             }
-        },
-        "securityConfig": {
+        }
+    },
+    "securityConfig": {
+        
+        "sessionTimeout": {
             
-            "sessionTimeout"       : {
-                
-                "description": "Time after which a session is destroyed",
-                "value": 1800
-            },
-            "loginDelay"           : {
-                
-                "description": "Login result delivery delay to add to the next try when a user login fails",
-                "value": 1
-            },
-            "maxLoginDelay"        : {
-                
-                "description": "Maximum delay for the login result delivery delay",
-                "value": 3600
-            }
+            "description": "Seconds after which a session is destroyed",
+            "value": 1800
+        },
+        "autoLoginTimeout": {
+            
+            "description": "Seconds after which an auto login token is invalid",
+            "value": 2592000
+        },
+        "loginDelay": {
+            
+            "description": "Login result delivery delay to add to the next try when a user login fails in seconds",
+            "value": 1
+        },
+        "maxLoginDelay": {
+            
+            "description": "Maximum delay for the login result delivery delay",
+            "value": 3600
+        },
+        "STSTimeout": {
+            
+            "description": "Maximum age for the HTTPS strict-transport-security. Will only be available for HTTPS",
+            "value": 60000
+        },
+        "STSIncludeSubDomains": {
+            
+            "description": "Set HTTPS strict-transport-security for subdomains, too (recommended)",
+            "value": true
         }
     }
-}
+};
 
 me.fileTree = {
     '.isDir': true,

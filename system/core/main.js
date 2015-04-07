@@ -47,6 +47,7 @@ var vm = require('vm');
 
 var q = require('q');
 
+var cookie = require('./cookie.js');
 var scheduler = require('./schedule.js');
 var optimize = require('./optimize.js');
 var helper = require('./helper.js');
@@ -311,6 +312,7 @@ var _listen
                     rs.request = $req;
                     rs.result = $res;
                     rs.domain = domain;
+                    rs.COOKIE = cookie.newCookieJar(rs);
                     request.handleRequest(rs);
                 })
             .listen(p);
@@ -340,6 +342,7 @@ var _listen
                     rs.request = $req;
                     rs.result = $res;
                     rs.domain = domain;
+                    rs.COOKIE = cookie.newCookieJar(rs);
                     request.handleRequest(rs);
                 })
                 .listen(p);

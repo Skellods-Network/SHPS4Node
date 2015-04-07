@@ -2,14 +2,21 @@
 
 var me = module.exports;
 
-var vm = require('vm');
+var q = require('q');
 
+var auth = require('./auth.js');
 var helper = require('./helper.js');
 var log = require('./log.js');
+var sandbox = require('./sandbox.js');
+var SFFM = require('./SFFM.js');
+var sql = require('./sql.js');
 
 var mp = {
     self: this
 };
+
+var sb = sandbox.newSandbox();
+var extSb = sandbox.newSandbox();
 
 
 /**
@@ -33,79 +40,108 @@ var _hug
     });
 };
 
-var _addFeature
-= me.addFeature = function f_make_addFeature() {
+var _requestResponse 
+= me.requestResponse = function f_make_requestResponse($requestState, $scriptName, $namespace) {
+    $namespace = $namespace || 'default';
 
-
-}
-
-var _executeScript 
-= mp.executeScript = function f_make_executeScript($language, $script) {
-    
-    // convert other languages to JS
-    //switch ($language) {
-    
-        //case 'php':
-        //case 'python':
-        //case 'go':
-    //}
-    
-    var options = {
+    var defer = q.defer();
+    sql.newSQL('default', $requestState).then(function ($sql) {
         
-        sandbox: {
+        var tblReq = $sql.openTable('request');
+        var tblNS = $sql.openTable('namespace');
+        $sql.query()
+                .get([
+                tblReq.col('script'),
+                tblReq.col('accessKey'),
+                tblReq.col('tls'),
+                tblReq.col('extSB'),
+            ])
+            .fulfilling()
+            .eq(tblNS.col('ID'), tblReq.col('namespace'))
+            .eq(tblNS.col('name'), $namespace)
+            .eq(tblReq.col('name'), $scriptName)
+            .execute()
+            .then(function ($rows) {
             
-            log: log,
-        },
-        language: $language,
-    };
-    
-    if (typeof $allowedNativeModules !== 'undefined') {
+            if ($rows.length <= 0) {
+                
+                $requestState.httpStatus = 404;
+                $requestState.responseBody = JSON.stringify({
+                    
+                    status: 'error',
+                    message: 'Script not found!',
+                });
 
-        options.requireNative = $allowedNativeModules;
-    }
+                defer.resolve();
 
-    var sb = new vm.VM(options);
-    return sb.run($script);
-};
+                return;
+            }
 
-var _extExecuteScript 
-= mp.extExecuteScript = function f_make_extExecuteScript($language, $script, $allowConsole, $enRequire, $enExtRequire, $allowedNativeModules) {
-    $allowConsole = typeof $allowConsole !== 'undefined' ? $allowConsole : false;
-    $enRequire = typeof $enRequire !== 'undefined' ? $enRequire : false;
-    $enExtRequire = typeof $enExtRequire !== 'undefined' ? $enExtRequire : false;
-    
-    // convert other languages to JS
-    //switch ($language) {
-    
-    //case 'php':
-    //case 'python':
-    //case 'go':
-    //}
-    
-    var options = {
-        
-        sandbox: {
-            
-            log: log,
-        },
-        console: $allowConsole ? 'inherit' : 'off',
-        language: $language,
-        require: $enRequire,
-        requireExternal: $enExtRequire,
-    };
+            var row = $rows[0];
+            if (row.tls > 0 && !SFFM.isHTTPS($requestState.request)) {
+                
+                $requestState.httpStatus = 403;
+                $requestState.responseBody = JSON.stringify({
+                    
+                    status: 'error',
+                    message: 'Script can only be invoked over a TLS encrypted connection!',
+                });
 
-    if (typeof $allowedNativeModules !== 'undefined') {
-        
-        options.requireNative = $allowedNativeModules;
-    }
-    
-    var sb = new vm.NodeVM(options);
-    return sb.run($script);
-};
+                defer.resolve();
 
-var _execute
-= me.execute = function f_make_execute($script) {
-    
-    var context = vm.createContext({ });
-    return vm.runInContext($line, context);
+                return;
+            }
+
+            var a = auth.newAuth($requestState);
+            if (!a.hasAccessKey(row.accessKey)) {
+                
+                if (a.isClientLoggedIn()) {
+                    
+                    $requestState.httpStatus = 403; // FORBIDDEN
+                }
+                else {
+                    
+                    $requestState.httpStatus = 401; // UNAUTHORIZED
+                }
+                
+                $requestState.responseBody = JSON.stringify({
+                    
+                    status: 'error',
+                    message: 'Missing access key mandatory!',
+                    accessKey: row.accessKey,
+                });
+
+                defer.resolve();
+            }
+            else {
+                
+                $requestState.httpStatus = 200;
+                if (row.extSB > 0) {
+                    
+                    extSb.reset();
+                    extSb.addFeature.all($requestState);
+                    $requestState.responseBody = JSON.stringify({
+                        
+                        status: 'ok',
+                        result: extSb.run(sandbox.newScript(row.script)),
+                    });
+                }
+                else {
+                    
+                    sb.reset();
+                    sb.addFeature.allSHPS($requestState);
+                    $requestState.responseBody = JSON.stringify({
+                        
+                        status: 'ok',
+                        result: sb.run(sandbox.newScript(row.script)),
+                    });
+                }
+
+                defer.resolve();
+            }
+            })
+            .done();
+    }).done();
+
+    return defer.promise;
 };

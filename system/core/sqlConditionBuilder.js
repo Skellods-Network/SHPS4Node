@@ -260,7 +260,9 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
     var _orderBy =
     this.orderBy = function f_sqlQueryBuilder_orderBy($col, $descending) {
         
-        return $sqb.orderBy($col, $descending);
+        $sqb.orderBy($col, $descending);
+
+        return this;
     };
 
     /**
