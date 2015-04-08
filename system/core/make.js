@@ -5,6 +5,7 @@ var me = module.exports;
 var q = require('q');
 
 var auth = require('./auth.js');
+var cache = require('./cache.js');
 var helper = require('./helper.js');
 var log = require('./log.js');
 var sandbox = require('./sandbox.js');
@@ -40,10 +41,37 @@ var _hug
     });
 };
 
+var _siteResponse 
+= me.siteResponse = function f_make_siteResponse($requestState, $siteName, $namespace) {
+    $namespace = $namespace || 'default';
+
+    var defer = q.defer();
+    sql.newSQL('default', $requestState).then(function ($sql) {
+       
+        var tblNS = $sql.openTable('namespace');
+        var tblCon = $sql.openTable('content');
+        var tblPar = $sql.openTable('partial');
+        var tblSL = $sql.openTable('scriptLanguage');
+        $sql.query()
+            .get([
+                tblCon.col('content'),
+                tblCon.col('eval'),
+                tblCon.col('accessKey'),
+                tblCon.col('tls'),
+            tblCon.col('extSB'),
+            tblNS.col('name'),
+            tblSL.col('name'),
+
+            ])
+    });
+
+    return defer.promise;
+};
+
 var _requestResponse 
 = me.requestResponse = function f_make_requestResponse($requestState, $scriptName, $namespace) {
     $namespace = $namespace || 'default';
-
+    
     var defer = q.defer();
     sql.newSQL('default', $requestState).then(function ($sql) {
         
