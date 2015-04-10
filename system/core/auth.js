@@ -8,6 +8,7 @@ var q = require('q');
 var promise = require('promise');
 var async = require('vasync');
 var u = require('util');
+var crypt = require('crypto');
 
 var helper = require('./helper.js');
 var session = require('./session.js');
@@ -82,9 +83,34 @@ var Auth
         }).done();
     }
     
+    /**
+     * Generates a secure password hash from a password and a salt.
+     * 
+     * @param string $passwd
+     * @param string salt
+     * @result string
+     */
     var _makeSecurePassword = function f_auth_makeSecurePassword($passwd, $salt) {
 
-        //bcrypt
+        /**
+         * If you want to be on the safe side with password hashing, you can diversify your choice:
+         * Let p be your password and SaltI be 128 bit random values.
+                 * Derive p_1 = HMAC(Salt1+"PBKDF2") with key sha256(p), p_2 = HMAC(Salt2+"bcrypt") with key sha1(p) and p_3 = HMAC(Salt3+ "scrypt") with key sha1(p).
+                 * Derive key k1, k2 and k3 by using the key derivation function PBKDF2, bcrypt and scrypt respectively, each of them using 1/30 seconds CPU time with input p_1, p_2 and p_3 respectively.
+                 * Compute the key (or database reference entry) as sha256(k1+k2+k3). Here "+" designates the concatenation of byte arrays.
+         * This way you get the best of all worlds: A proven bcrypt, an experimental but very promising scrypt and a traditional PBKDF2.
+         * The important aspect, is that you tweak the parameters of each KDF such that they take long to compute (that's why I proposed 1/30s CPU time).
+         * Then your KDF is as strong as the strongest of the three.
+         * http://www.unlimitednovelty.com/2012/03/dont-use-bcrypt.html?showComment=1348616864964#c4080624422073552026
+         */
+        var sha256 = crypt.createHash('SHA256');
+        sha256.update($passwd + 'PBKDF2', 'ascii');
+
+        var k1 = crypt.createCipher('pbkdf2', $salt);
+        k1.update(sha256.digest('base64'), 'ascii', 'ascii');
+
+        var p_1 = k1.final('base64');
+
     };
     
     /**

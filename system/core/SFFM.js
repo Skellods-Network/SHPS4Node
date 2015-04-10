@@ -197,3 +197,26 @@ var _isHTTPS
 
     return false;
 };
+
+/**
+ * Check if a module is available
+ * 
+ * @todo Try..catch is a little dirty. For now it works, but maybe it can be improved?
+ * @param string $module
+ * @result boolean
+ */
+var _isModuleAvailable 
+= me.isModuleAvailable = function f_SFFM_isModuleAvailable($module) {
+    
+    var r = true;
+    try {
+
+        require.resolve($module);
+    }
+    catch ($e) {
+
+        r = false;
+    }
+
+    return r;
+};

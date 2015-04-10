@@ -59,11 +59,14 @@ var plugin = require('./plugin.js');
 var cl = require('./commandline.js');
 var dInit = require('./default.js');
 
+var dep;
+
 var config = {};
 var master = {};
 var debug = false;
 var domain = [];
 var self = this;
+
 
 /**
  * Get directory path
@@ -211,6 +214,7 @@ var _init
             , function f_init_event($_p1, $_p2) {
                 
                 log.write('');
+                dep = require('./dependency.js');
                 scheduler.sendSignal('onMainInit', $_p1);
                 $_p2();
             }
@@ -760,5 +764,3 @@ var _focus
         return _setDebug($onOff);
     };
 };
-
-

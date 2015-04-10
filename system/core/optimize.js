@@ -264,3 +264,23 @@ scheduler.addSlot('onFileNotFound', function ($file, $dir, $description) {
     
     log.writeHint('`' + $file + '` could not be found in ' + $dir + '!' + $description + ' Consider loading the admin-GUI plugin which is able to repair your installation.');
 });
+
+scheduler.addSlot('onPreferredModuleMissing', function ($preferredModule, $alternative, $text) {
+    $text = typeof $text !== 'undefined' ? '\n' + $text : '';
+
+    log.writeHint('The module `' + $preferredModule + '` could not be loaded. `' + $alternative + '` will be used instead.' + $text + '\nConsider installing `' + $preferredModule + '`.');
+});
+
+scheduler.addSlot('onDependencyMissing', function ($module) {
+    
+    var msg = 'The module `' + $module + '` could not be loaded. It is a hard-dependency, though. SHPS cannot start without it. Please follow the installation guide!';
+    log.writeFatal(msg);
+    throw msg;
+});
+
+scheduler.addSlot('onOptionalModuleMissing', function ($module, $text) {
+    $text = typeof $text !== 'undefined' ? '\n' + $text : '';
+
+    var msg = 'The module `' + $module + '` could not be loaded. It is an optional dependency, though. SHPS can start without it.' + $text + '\nConsider installing `' + $module + '`.';
+    log.writeHint(msg);
+});
