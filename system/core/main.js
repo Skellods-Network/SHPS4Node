@@ -68,6 +68,12 @@ var domain = [];
 var self = this;
 
 
+scheduler.addSlot('fatalError', function () {
+
+    process.abort();
+});
+
+
 /**
  * Get directory path
  * 

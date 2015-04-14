@@ -3,6 +3,8 @@
  */
 'use strict';
 
+var cp = require('child_process');
+
 var schedule = require('./schedule.js');
 var SFFM = require('./SFFM.js');
 
@@ -39,18 +41,59 @@ var description = undefined;
 
 
 /**
+ * Handlers
+ */
+schedule.addSlot('onDependencyError', function ($depName, $depVer, $error) {
+
+    var log = require('./log.js');
+    log.writeFatal('The dependency `' + $depName + '` (ver.' + $depVer + ') is missing or does not work as expected.\n' + $error);
+
+    schedule.sendSignal('fatalError');
+});
+
+schedule.addSlot('onDependencyWarning', function ($depName, $warning) {
+    
+    var log = require('./log.js');
+    log.writeWarning('The dependency `' + $depName + '` has thrown a warning:\n' + $warning);
+});
+
+
+/**
  * Check for openssl
  * 
  * Requirements:
  *   openssl:
- *   - binaries version 1.0.1
+ *   - binaries version 1.0.2
  *   
  * It should not be too difficult to just download openssl via HTTP.
  * I only need internet access to do so. This might be the biggest problem for automatization.
  * Then I will need to get the correct OS. I see potential wrong detections here.
- * If openssl is not installed, 
  */
+cp.exec('openssl version', function ($error, $stdout, $stderr) {
+    
+    if ($error !== null) {
+        
+        schedule.sendSignal('onDependencyError', 'openssl', '>=1.0.2', $error);
+    }
 
+    if ($stderr !== "") {
+        
+        if (/^WARNING/.test($stderr)) {
+
+            schedule.sendSignal('onDependencyWarning', 'openssl', $stderr);
+        }
+        else {
+
+            schedule.sendSignal('onDependencyError', 'openssl', '>=1.0.2', $stderr);
+        }
+    }
+
+    //ex. OpenSSL 1.0.2a 19 Mar 2015
+    if (!/1\.0\.2/.test($stdout)) {
+        
+        schedule.sendSignal('onDependencyError', 'openssl', '>=1.0.2', 'Wrong version: ' + $stdout);
+    }
+});
 
 /**
  * Check for bcrypt
