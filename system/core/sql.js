@@ -539,7 +539,7 @@ var _getConnectionCount
 };
 
 var _makePoolName = function f_sql_makePoolName($dbConfig) {
-    
+
     return $dbConfig.host.value +
         $dbConfig.port.value +
         $dbConfig.name.value +
@@ -770,11 +770,5 @@ var _focus
     this.newSQL = function f_sql_focus_newSQL($alias) {
 
         return me.newSQL($alias, $requestState);
-    };
-
-    var _newTable =
-    this.newTable = function ($name) {
-        
-        table.newTable(this, $name);
     };
 };

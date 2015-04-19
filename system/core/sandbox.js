@@ -146,13 +146,19 @@ var _newSandbox
                 rebuildContext = true;
             },
             
+            shpsLog: function f_sandbox_newSandbox_addFeature_shpsLog() {
+                
+                sb.log = log;
+                rebuildContext = true;
+            },
+            
             shpsSFFM: function f_sandbox_newSandbox_addFeature_shpsSFFM() {
                 
                 sb.SFFM = SFFM;
                 rebuildContext = true;
             },
 
-            shpsSQL: function f_sandbox_newSandbox_addFeature_($requestState) {
+            shpsSQL: function f_sandbox_newSandbox_addFeature_shpsSQL($requestState) {
                 
                 sb.sql = new sql.focus($requestState);
                 rebuildContext = true;

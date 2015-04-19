@@ -148,11 +148,43 @@ var _requestResponse
                     
                     extSb.reset();
                     extSb.addFeature.all($requestState);
-                    $requestState.responseBody = JSON.stringify({
+                    try {
+                        var r = extSb.run(sandbox.newScript(row.script));
                         
-                        status: 'ok',
-                        result: extSb.run(sandbox.newScript(row.script)),
-                    });
+                        if (typeof r === 'object' && r.then !== undefined) {
+                            
+                            r.then(function ($result) {
+                                
+                                $requestState.responseBody = JSON.stringify({
+                                    
+                                    status: 'ok',
+                                    result: $result,
+                                });
+                                
+                                if (r.done !== undefined) {
+                                    
+                                    r.done();
+                                }
+                                
+                                defer.resolve();
+                            });
+                        }
+                        else {
+                            
+                            $requestState.responseBody = JSON.stringify({
+                                
+                                status: 'ok',
+                                result: r,
+                            });
+                            
+                            defer.resolve();
+                        }
+                    }
+                    catch ($e) {
+
+                        log.writeError($e);
+                    }
+                    
                 }
                 else {
                     
@@ -163,9 +195,9 @@ var _requestResponse
                         status: 'ok',
                         result: sb.run(sandbox.newScript(row.script)),
                     });
-                }
 
-                defer.resolve();
+                    defer.resolve();
+                }
             }
             })
             .done();
