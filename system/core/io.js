@@ -4,6 +4,7 @@ var me = module.exports;
 
 var q = require('q');
 var fs = require('fs')
+var oa = require('object-assign');
 var util = require('util');
 
 var auth = require('./auth.js');
@@ -97,7 +98,7 @@ var _serveFile
                             
                             if (typeof $requestState.responseHeaders !== 'undefined') {
                                 
-                                $requestState.responseHeaders = util._extend($requestState.responseHeaders, headers);
+                                $requestState.responseHeaders = oa($requestState.responseHeaders, headers);
                             }
                             else {
                                 

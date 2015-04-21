@@ -3,6 +3,7 @@
 var me = module.exports;
 
 var mysql = require('mysql');
+var oa = require('object-assign');
 var u = require('util');
 
 var log = require('./log.js');
@@ -181,7 +182,7 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
         }
         else {
             
-            var cb = u._extend({}, $conditions);
+            var cb = oa({}, $conditions);
             cb.bindQueryBuilder(this);
 
             return cb;

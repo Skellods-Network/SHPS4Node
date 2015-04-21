@@ -588,8 +588,15 @@ var _newSQL
                 });
                 
                 nPool.getConnection(function ($err, $con) {
-                        
-                    defer.resolve(new _SQL(dbConfig, $con));
+                    
+                    if (!$err) {
+
+                        defer.resolve(new _SQL(dbConfig, $con));
+                    }
+                    else {
+
+                        defer.reject($err);
+                    }
                 });
 
                 break;

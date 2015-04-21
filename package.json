@@ -44,6 +44,7 @@
         "lodash": ">=3.0.0",
         "q": ">=1.2.0",
 		"less": ">=2.5.0",
-		"bcrypt-nodejs": ">=0.0.3"
+        "bcrypt-nodejs": ">=0.0.3",
+        "object-assign":  ">=2.0.0"
     }
 }

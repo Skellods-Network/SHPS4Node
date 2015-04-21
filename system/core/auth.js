@@ -4,7 +4,9 @@ var me = module.exports;
 
 GLOBAL.SHPS_COOKIE_AUTOLOGINTOKEN = 'SHPSALT';
 
+var dep = require('./dependency.js');
 var q = require('q');
+var oa = require('object-assign');
 var promise = require('promise');
 var async = require('vasync');
 var u = require('util');
@@ -78,39 +80,29 @@ var Auth
                     .eq(tbl.col('ID'), $uid)
                 ).done();
 
-                $sql.free();
+              $sql.free();
             }).done();
         }).done();
     }
     
     /**
-     * Generates a secure password hash from a password and a salt.
+     * Generates a secure password hash from a password
      * 
      * @param string $passwd
-     * @param string salt
      * @result string
      */
-    var _makeSecurePassword = function f_auth_makeSecurePassword($passwd, $salt) {
+    var _makeSecurePassword = function f_auth_makeSecurePassword($passwd) {
+        
+        var crypt;
+        if (crypt = dep.getSCrypt()) {
 
-        /**
-         * If you want to be on the safe side with password hashing, you can diversify your choice:
-         * Let p be your password and SaltI be 128 bit random values.
-                 * Derive p_1 = HMAC(Salt1+"PBKDF2") with key sha256(p), p_2 = HMAC(Salt2+"bcrypt") with key sha1(p) and p_3 = HMAC(Salt3+ "scrypt") with key sha1(p).
-                 * Derive key k1, k2 and k3 by using the key derivation function PBKDF2, bcrypt and scrypt respectively, each of them using 1/30 seconds CPU time with input p_1, p_2 and p_3 respectively.
-                 * Compute the key (or database reference entry) as sha256(k1+k2+k3). Here "+" designates the concatenation of byte arrays.
-         * This way you get the best of all worlds: A proven bcrypt, an experimental but very promising scrypt and a traditional PBKDF2.
-         * The important aspect, is that you tweak the parameters of each KDF such that they take long to compute (that's why I proposed 1/30s CPU time).
-         * Then your KDF is as strong as the strongest of the three.
-         * http://www.unlimitednovelty.com/2012/03/dont-use-bcrypt.html?showComment=1348616864964#c4080624422073552026
-         */
-        var sha256 = crypt.createHash('SHA256');
-        sha256.update($passwd + 'PBKDF2', 'ascii');
+            // Do the crypt
+        }
+        else {
 
-        var k1 = crypt.createCipher('pbkdf2', $salt);
-        k1.update(sha256.digest('base64'), 'ascii', 'ascii');
-
-        var p_1 = k1.final('base64');
-
+            crypt = dep.getBCrypt();
+            // Do the crypt
+        }
     };
     
     /**
@@ -555,66 +547,69 @@ var Auth
             
             // ASVS V2 2.20 VERTICAL PROTECTION
             _delayBruteforce($user).then(function () {
-
-                sql.newSQL('usermanagement', $requestState).then(function ($sql) {
+                
+                // ASVS V2 2.20 HORIZONTAL PROTECTION
+                _delayBruteforce($pw).then(function () {
                     
-                    var alt = '';
-                    if ($autoLogin && SFFM.isHTTPS($requestState.request)) {
+                    sql.newSQL('usermanagement', $requestState).then(function ($sql) {
                         
-                        alt = $requestState.COOKIE.getCookie(SHPS_COOKIE_AUTOLOGINTOKEN) || '0';
-                    }
-                    
-                    var tblU = $sql.openTable('user');
-                    $sql.query()
+                        var alt = '';
+                        if ($autoLogin && SFFM.isHTTPS($requestState.request)) {
+                            
+                            alt = $requestState.COOKIE.getCookie(SHPS_COOKIE_AUTOLOGINTOKEN) || '0';
+                        }
+                        
+                        var tblU = $sql.openTable('user');
+                        $sql.query()
                         .get(tblU.col('*'))
                         .fulfilling()
                         .or(function ($sqb) {
-
+                            
                             return $sqb.eq(tblU.col('ID'), $user);
                         }, function ($sqb) {
-
+                            
                             return $sqb.eq(tblU.col('autoLoginToken'), alt);
                         })
                         .execute()
                         .then(function ($rows) {
-                        
-                        if ($rows.length <= 0) {
                             
-                            $res(false);
-                        }
-                        else {
-                            
-                            var ur = $rows[0];
-                            if ($rows.length > 1) {
-
-                                var i = 0;
-                                var l = $rows.length;
-                                while (i < l) {
-                                    
-                                    if ($rows[i].autoLoginToken === alt) {
-
-                                        ur = $rows[i];
-                                        break;
-                                    }
-
-                                    i++;
-                                }
-                            }
-
-                            // ASVS V2 3.16
-                            var lastSID = _isLoggedInFromDBRecord(ur);
-                            if (lastSID !== false && lastSID !== _session.toString()) {
-
-                                _session.closeSession(lastSID);
-                            }
-                            
-                            if (alt === ur.autoLoginToken /* && check IP range */) {
+                            if ($rows.length <= 0) {
                                 
-                                var newToken = _session.genNewSID();
-                                $requestState.COOKIE.setCookie(SHPS_COOKIE_AUTOLOGINTOKEN, newToken, $requestState.config.securityConfig.autoLoginTimeout.value, true);
-                                $sql.query()
-                                    .set({
+                                $res(false);
+                            }
+                            else {
+                                
+                                var ur = $rows[0];
+                                if ($rows.length > 1) {
                                     
+                                    var i = 0;
+                                    var l = $rows.length;
+                                    while (i < l) {
+                                        
+                                        if ($rows[i].autoLoginToken === alt) {
+                                            
+                                            ur = $rows[i];
+                                            break;
+                                        }
+                                        
+                                        i++;
+                                    }
+                                }
+                                
+                                // ASVS V2 3.16
+                                var lastSID = _isLoggedInFromDBRecord(ur);
+                                if (lastSID !== false && lastSID !== _session.toString()) {
+                                    
+                                    _session.closeSession(lastSID);
+                                }
+                                
+                                if (alt === ur.autoLoginToken/* && check IP range */) {
+                                    
+                                    var newToken = _session.genNewSID();
+                                    $requestState.COOKIE.setCookie(SHPS_COOKIE_AUTOLOGINTOKEN, newToken, $requestState.config.securityConfig.autoLoginTimeout.value, true);
+                                    $sql.query()
+                                    .set({
+                                        
                                         autoLoginToken: newToken,
                                         lastIP: SFFM.getIP($requestState),
                                         lastActive: Date.now() / 1000
@@ -623,24 +618,25 @@ var Auth
                                     .eq(tblU.col('ID'), ur.ID)
                                     .execute()
                                     .then(function () {
-                                                                                        
+                                        
                                         $sql.free();
                                     }).done();
-
-                                $res(true);
-
-                                return;
-                            }
-
-                            var cpR = _checkPassword($user, $pw, ur.password, ur.salt);
-                            if (cpR) {
-                                
-                                $requestState.SESSION = u._extend($requestState.SESSION, ur);
-                                var newToken = _session.genNewSID();
-                                $requestState.COOKIE.setCookie(SHPS_COOKIE_AUTOLOGINTOKEN, newToken, $requestState.config.securityConfig.autoLoginTimeout.value, true);
-                                $sql.query()
-                                    .set({
                                     
+                                    $res(true);
+                                    
+                                    return;
+                                }
+                                
+                                var cpR = _checkPassword($user, $pw, ur.password, ur.salt);
+                                if (cpR) {
+                                    
+                                    $requestState.SESSION = oa($requestState.SESSION, ur);
+
+                                    var newToken = _session.genNewSID();
+                                    $requestState.COOKIE.setCookie(SHPS_COOKIE_AUTOLOGINTOKEN, newToken, $requestState.config.securityConfig.autoLoginTimeout.value, true);
+                                    $sql.query()
+                                    .set({
+                                        
                                         autoLoginToken: newToken,
                                         lastIP: SFFM.getIP($requestState),
                                         lastActive: Date.now() / 1000
@@ -649,13 +645,14 @@ var Auth
                                         .eq(tblU.col('ID'), ur.ID)
                                         .execute()
                                         .then(function () {
-                                    
+                                        
                                         $sql.free();
                                     }).done();
+                                }
+                                
+                                $res(cpR);
                             }
-                            
-                            $res(cpR);
-                        }
+                        }).done();
                     }).done();
                 }).done();
             }).done();

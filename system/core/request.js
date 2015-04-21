@@ -2,6 +2,7 @@
 
 var me = module.exports;
 
+var oa = require('object-assign');
 var util = require('util');
 var zip = require('zlib');
 var q = require('q');
@@ -142,7 +143,7 @@ var _handleRequest
         
         if (typeof $requestState.responseHeaders !== 'undefined') {
          
-            headers = util._extend(headers, $requestState.responseHeaders);
+            headers = oa(headers, $requestState.responseHeaders);
         }
         
         if (SFFM.isHTTPS($requestState.request)) {
