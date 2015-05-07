@@ -55,14 +55,57 @@ var _siteResponse
         $sql.query()
             .get([
                 tblCon.col('content'),
-                tblCon.col('eval'),
+                tblCon.col('evaluate'),
                 tblCon.col('accessKey'),
                 tblCon.col('tls'),
-            tblCon.col('extSB'),
-            tblNS.col('name'),
-            tblSL.col('name'),
-
+                tblCon.col('extSB'),
+                tblNS.col('name'),
+                tblSL.col('name'),
             ])
+            .fulfilling()
+            .eq(tblNS.col('name'), $namespace)
+            .eq(tblNS.col('ID'), tblCon.col('namespace'))
+            .eq(tblCon.col('name'), $siteName)
+            .execute()
+            .then(function ($rows) {
+            
+            if ($rows.length <= 0) {
+
+                defer.resolve('<strong>ERROR: Site could not be found</strong>');
+                return;
+            }
+            
+            var row = $rows[0];
+            var a = auth.newAuth($requestState);
+            var hak = a.hasAccessKeyExt(row.accessKey)
+            if (!hak.hasAccessKey) {
+
+                $requestState.httpStatus = hak.httpStatus;
+                
+                defer.resolve('<strong>' + hak.message + '</strong>');
+                return;
+            }
+            
+            if (row.evaluate > 0) {
+
+                var code = sandbox.newScript(row.content);
+                var sb = sandbox.newSandbox();
+                if (row.extSB > 0) {
+
+                    sb.addFeature.all($requestState);
+                }
+                else {
+
+                    sb.addFeature.allSHPS($requestState);
+                }
+
+                sb.run(code, $requestState.config.generalConfig.templateTimeout)
+            }
+            
+            // parse partial-inclusion
+
+            $sql.free();
+        }).done();
     });
 
     return defer.promise;
@@ -121,22 +164,16 @@ var _requestResponse
             }
 
             var a = auth.newAuth($requestState);
-            if (!a.hasAccessKey(row.accessKey)) {
-                
-                if (a.isClientLoggedIn()) {
-                    
-                    $requestState.httpStatus = 403; // FORBIDDEN
-                }
-                else {
-                    
-                    $requestState.httpStatus = 401; // UNAUTHORIZED
-                }
+            var hak = a.hasAccessKeyExt(row.accessKey)
+            if (!hak.hasAccessKey) {
+
+                $requestState.httpStatus = hak.httpStatus;
                 
                 $requestState.responseBody = JSON.stringify({
                     
                     status: 'error',
-                    message: 'Missing access key mandatory!',
-                    accessKey: row.accessKey,
+                    message: hak.message,
+                    accessKey: hak.key,
                 });
 
                 defer.resolve();

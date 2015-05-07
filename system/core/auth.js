@@ -89,20 +89,26 @@ var Auth
      * Generates a secure password hash from a password
      * 
      * @param string $passwd
-     * @result string
+     * @result string Hash
      */
     var _makeSecurePassword = function f_auth_makeSecurePassword($passwd) {
         
         var crypt;
-        if (crypt = dep.getSCrypt()) {
-
-            // Do the crypt
-        }
-        else {
-
+        if (!(crypt = dep.getSCrypt())) {
+            
             crypt = dep.getBCrypt();
-            // Do the crypt
         }
+        
+        var defer = q.defer();
+        crypt.genSalt($requestState.config.securityConfig.saltRounds.value, function ($err, $salt) {
+
+            crypt.hash($passwd, $salt, function ($err, $hash) {
+                
+                defer.resolve($hash);
+            });
+        });
+
+        return defer.promise;
     };
     
     /**
@@ -112,23 +118,23 @@ var Auth
      *   User ID or name
      * @param $passwd string
      * @param $validPasswd string
+     *   Optional valid password
      * @param $validSalt string
      * @result boolean
      */
     var _checkPassword =
-    this.checkPassword = function f_auth_checkPassword($uid, $passwd, $validPasswd, $validSalt) {
+    this.checkPassword = function f_auth_checkPassword($uid, $passwd, $validPasswd) {
         
         $uid = _getIDFromUser($uid);
         var defer = q.defer();
         
-        if (!$validPasswd || !$validSalt) {
+        if (!$validPasswd) {
             
             sql.newSQL('usermanagement', $requestState).then(function f_auth_updatePassword_newSQL($sql) {
                 
                 var tbl = $sql.openTable('user');
                 $sql.query()
                 .get(
-                    tbl.col('salt'),
                     tbl.col('password')
                 )
                 .fulfilling()
@@ -151,29 +157,25 @@ var Auth
             defer.resolve({
             
                 password: $validPasswd,
-                salt: $validSalt
             });
         }
         
-        var p = new Promise(function ($fulfill, $reject) {
-
-            defer.promise.then(function ($pw) {
+        var defer2 = q.defer();
+        defer.promise.then(function ($pw) {
+            
+            if (!(crypt = dep.getSCrypt())) {
                 
-                var r = false;
-                if ($pw.password == _makeSecurePassword($passwd, $pw.salt)) {
+                crypt = dep.getBCrypt();
+            }
+            
+            crypt.compare($passwd, $pw.password, function ($err, $res) {
+                
+                //_updatePassword($uid, $passwd); <-- Only needed with multiple pw crypting/hashing algos
+                defer2.fulfill($res);
+            });
+        }).done();
 
-                    r = true;
-                    //_updatePassword($uid, $passwd); <-- Only needed with multiple pw crypting/hashing algos
-                }
-
-                $fulfill(r);
-            }).done();
-        });
-
-        return p.then(function ($result) {
-        
-            return $result;
-        });
+        return defer2.promise;
     };
     
     /**
@@ -273,6 +275,12 @@ var Auth
 
         return _getFieldFromTable($table, 'ID', $refCol, $refColValue);
     };
+    
+    var _getAccessKeyFromID =
+    this.getAccessKeyFromID = function f_auth_getAccessKeyFromID($id) {
+        
+        return _getFieldFromTable('accessKey', 'name', 'ID', $id);
+    };
 
     var _getIDFromAccessKey =
     this.getIDFromAccessKey = function f_auth_getIDFromAccessKey($name) {
@@ -348,7 +356,7 @@ var Auth
             $sql.free();
         }).done();
     };
-    
+
     /**
      * Check if a user has an access key
      * 
@@ -356,6 +364,52 @@ var Auth
      *   Access key ID or name
      * @param $user integer|string
      *   User ID or name. OPTIONAL. If unset, currently logged in user is used
+     * @return
+     *   { [boolean]hasAccessKey, [string]message, [string]key, [integer]httpStatus }
+     */
+    var _hasAccessKeyExt =
+    this.hasAccessKeyExt = function f_auth_hasAccessKeyExt($key, $user) {
+
+        var r = {
+
+            hasAccessKey: _hasAccessKey($key, $user),
+            message: 'ERROR: Unknown Problem in `f_auth_hasAccessKeyExt`',
+            key: '',
+            httpStatus: 500,
+        };
+
+        if (r.hasAccessKey) {
+
+            r.message = 'OK';
+            r.httpStatus = 200;
+        }
+        else {
+
+            if (_isClientLoggedIn()) {
+
+                r.httpStatus = 403; // FORBIDDEN
+            }
+            else {
+
+                r.httpStatus = 401; // UNAUTHORIZED
+            }
+            
+            r.key = a.getAccessKeyFromID($key);
+            r.message = 'ERROR: Missing Authorization Key: ' + r.key;
+        }
+
+        return r;
+    };
+
+    /**
+     * Check if a user has an access key
+     * 
+     * @param $key integer|string
+     *   Access key ID or name
+     * @param $user integer|string
+     *   User ID or name. OPTIONAL. If unset, currently logged in user is used
+     * @return
+     *   boolean
      */
     var _hasAccessKey =
     this.hasAccessKey = function f_auth_hasAccessKey($key, $user) {

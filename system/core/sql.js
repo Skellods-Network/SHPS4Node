@@ -526,6 +526,7 @@ var _SQL
 /**
  * Get connection count
  * 
+ * @todo implement
  * @return integer
  */
 var _getConnectionCount 
@@ -535,7 +536,7 @@ var _getConnectionCount
         log.error('Cannot connect with undefined requestState!');
     }
     
-    
+    return -1;
 };
 
 var _makePoolName = function f_sql_makePoolName($dbConfig) {

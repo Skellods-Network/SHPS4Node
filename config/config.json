@@ -44,6 +44,10 @@
             "description": "Maximum amount of data which can be uploaded from this website instance (0=infinite)",
             "value": 0
         },
+        "templateTimeout": { 
+            "description": "Maximum amount of time in seconds a template (partial or content) can take before excution is stopped",
+            "value": 60
+        },
         "displayStats": {
 
             "description": "Display speed and resource stats in the homepage's source (not recommended)",
@@ -80,8 +84,8 @@
             "value": 3600
         },
         "gzipMinSize": {
-            "description":  "Content (in byte) which is larger will be gzipped",
-            "value":  256
+            "description": "Content (in byte) which is larger will be gzipped",
+            "value": 256
         }
     },
     "TLSConfig": {
@@ -97,47 +101,47 @@
             "description": "",
             "value": "ca-bundle.pem"
         },
-		"keypin": {
-			"description": "This will be used for HPKP (advanced security). If left blank, SHPS will generate the keypin",
-			"value": ""
-		}
+        "keypin": {
+            "description": "This will be used for HPKP (advanced security). If left blank, SHPS will generate the keypin",
+            "value": ""
+        }
     },
     "databaseConfig": {
-        
+
         "default": {
-            
+
             "host": {
-                
+
                 "description": "DB host",
                 "value": "localhost"
             },
             "port": {
-                
+
                 "description": "DB port",
                 "value": 3306
             },
             "name": {
-                
+
                 "description": "Name of schema",
                 "value": "shps_test"
             },
             "user": {
-                
+
                 "description": "DB user",
                 "value": "shps"
             },
             "pass": {
-                
+
                 "description": "User's password",
                 "value": "shps"
             },
             "prefix": {
-                
+
                 "description": "Table prefix",
                 "value": ""
             },
             "type": {
-                
+
                 "description": "Type of DB",
                 "value": 2,
                 "options": {
@@ -152,39 +156,39 @@
             }
         },
         "logging": {
-            
+
             "host": {
-                
+
                 "description": "DB host",
                 "value": "localhost"
             },
             "port": {
-                
+
                 "description": "DB port",
                 "value": 3306
             },
             "name": {
-                
+
                 "description": "Name of schema",
                 "value": "shps_test"
             },
             "user": {
-                
+
                 "description": "DB user",
                 "value": "shps"
             },
             "pass": {
-                
+
                 "description": "User's password",
                 "value": "shps"
             },
             "prefix": {
-                
+
                 "description": "Table prefix",
                 "value": ""
             },
             "type": {
-                
+
                 "description": "Type of DB",
                 "value": 2,
                 "options": {
@@ -199,39 +203,39 @@
             }
         },
         "usermanagement": {
-            
-           "host": {
-                
+
+            "host": {
+
                 "description": "DB host",
                 "value": "localhost"
             },
             "port": {
-                
+
                 "description": "DB port",
                 "value": 3306
             },
             "name": {
-                
+
                 "description": "Name of schema",
                 "value": "shps_test"
             },
             "user": {
-                
+
                 "description": "DB user",
                 "value": "shps"
             },
             "pass": {
-                
+
                 "description": "User's password",
                 "value": "shps"
             },
             "prefix": {
-                
+
                 "description": "Table prefix",
                 "value": ""
             },
             "type": {
-                
+
                 "description": "Type of DB",
                 "value": 2,
                 "options": {
@@ -245,38 +249,43 @@
                 "value": 100
             }
         }
-	},
+    },
     "securityConfig": {
-            
+
         "sessionTimeout": {
-            
+
             "description": "Seconds after which a session is destroyed",
             "value": 1800
         },
-		"autoLoginTimeout": {
-            
+        "autoLoginTimeout": {
+
             "description": "Seconds after which an auto login token is invalid",
             "value": 2592000
         },
         "loginDelay": {
-                
+
             "description": "Login result delivery delay to add to the next try when a user login fails in seconds",
             "value": 1
         },
         "maxLoginDelay": {
-                
+
             "description": "Maximum delay for the login result delivery delay",
             "value": 3600
         },
-		"STSTimeout": {
-			
-			"description": "Maximum age for the HTTPS strict-transport-security. Will only be available for HTTPS",
-			"value": 60000
-		},
-		"STSIncludeSubDomains": {
-		
-			"description": "Set HTTPS strict-transport-security for subdomains, too (recommended)",
-			"value": true
-		}
+        "STSTimeout": {
+
+            "description": "Maximum age for the HTTPS strict-transport-security. Will only be available for HTTPS",
+            "value": 60000
+        },
+        "STSIncludeSubDomains": {
+
+            "description": "Set HTTPS strict-transport-security for subdomains, too (recommended)",
+            "value": true
+        },
+        "saltRounds": { 
+
+            "description": "How many rounds should be used to generate a salt? The more rounds, the more secure and the longer login takes",
+            "value": 11
+        }
     }
 }
