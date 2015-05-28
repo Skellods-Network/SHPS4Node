@@ -44,6 +44,7 @@ var _hug
 var _siteResponse 
 = me.siteResponse = function f_make_siteResponse($requestState, $siteName, $namespace) {
     $namespace = $namespace || 'default';
+    $siteName = typeof $siteName === 'string' && $siteName !== '' ? $siteName : 'index';
 
     var defer = q.defer();
     sql.newSQL('default', $requestState).then(function ($sql) {
@@ -54,24 +55,23 @@ var _siteResponse
         var tblSL = $sql.openTable('scriptLanguage');
         $sql.query()
             .get([
-                tblCon.col('content'),
-                tblCon.col('evaluate'),
-                tblCon.col('accessKey'),
-                tblCon.col('tls'),
-                tblCon.col('extSB'),
+                tblPar.col('content'),
+                tblPar.col('eval'),
+                tblPar.col('accessKey'),
+                tblPar.col('extSB'),
                 tblNS.col('name'),
                 tblSL.col('name'),
             ])
             .fulfilling()
             .eq(tblNS.col('name'), $namespace)
-            .eq(tblNS.col('ID'), tblCon.col('namespace'))
-            .eq(tblCon.col('name'), $siteName)
+            .eq(tblNS.col('ID'), tblPar.col('namespace'))
+            .eq(tblPar.col('name'), $requestState.config.generalConfig.rootTemplate.value)
             .execute()
             .then(function ($rows) {
             
             if ($rows.length <= 0) {
 
-                defer.resolve('<strong>ERROR: Site could not be found</strong>');
+                defer.resolve('<strong>ERROR: Root template could not be found</strong>');
                 return;
             }
             
@@ -81,14 +81,18 @@ var _siteResponse
             if (!hak.hasAccessKey) {
 
                 $requestState.httpStatus = hak.httpStatus;
-                
                 defer.resolve('<strong>' + hak.message + '</strong>');
+
                 return;
             }
             
+            // Maybe add a feature to add parameters to the initial partial?
+            // I cannot see any use case for now, so I will just set them all to undefined for more stability... 
+            var body = row.content.replace(/\$[0-9]+/g ,'undefined');
+
             if (row.evaluate > 0) {
 
-                var code = sandbox.newScript(row.content);
+                var code = sandbox.newScript(body);
                 var sb = sandbox.newSandbox();
                 if (row.extSB > 0) {
 
@@ -99,12 +103,66 @@ var _siteResponse
                     sb.addFeature.allSHPS($requestState);
                 }
 
-                sb.run(code, $requestState.config.generalConfig.templateTimeout)
+                body = sb.run(code, $requestState.config.generalConfig.templateTimeout)
             }
             
             // parse partial-inclusion
+            var incPattern = /\{\s*?\$\s*?([\w\-\_\/\:]*?)\:?([\w\-\_\/]+?)?\s*?(\(.+?\))?\s*?\}/g; // precompile regex
+            var foundPattern = false;
+            do {
+
+                foundPattern = false;
+                body = body.replace(incPattern, function ($match, $namespace, $name, $params, $offset, $string) {
+                        
+                    foundPattern = true;
+                    if (!$namespace || $namespace === '') {
+
+                        $namespace = 'default';
+                    }
+                    
+                    if ($params) {
+
+                        $params = $params
+                            .substring(0, $params.length - 1)
+                            .split(',');
+                    }
+
+                    switch ($name) {
+
+                        case 'body': {
+                            
+                            // PLACEHOLDER
+                            return '### BODY GOES HERE ###';
+                            // /PLACEHOLDER
+
+                            // get content from cache, on miss from DB
+                            // execute content
+                            
+                            break;
+                        }
+
+                        // reserved for more tags in the future :)
+
+                        default: {
+
+                            // PLACEHOLDER
+                            return '[[[' + $namespace + '::' + $name + ']]]';
+                            // /PLACEHOLDER
+
+                            // query cache, then DB for partial
+                            // execute partial
+                        }
+                    }
+                });
+            } 
+            while (foundPattern);
 
             $sql.free();
+            $requestState.httpStatus = 200;
+            $requestState.responseType = 'text/html';
+            $requestState.responseBody = body;
+
+            defer.resolve(body);
         }).done();
     });
 

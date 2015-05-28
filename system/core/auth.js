@@ -400,6 +400,34 @@ var Auth
 
         return r;
     };
+    
+    /**
+     * Checks if current client is logged in
+     * 
+     * @result
+     *   { [boolean]isLoggedIn, [string]message, [integer]httpStatus }
+     */
+    var _isClientLoggedInExt =
+    this.isClientLoggedInExt = function f_auth_isClientLoggedInExt() {
+        
+        var r = {
+            
+            isLoggedIn: _isClientLoggedIn(),
+            message: 'ERROR: Unknown Problem in `f_auth_isClientLoggedInExt`',
+            httpStatus: 500,
+        };
+
+        if (r.isLoggedIn) {
+
+            r.message = 'OK';
+            r.httpStatus = 200;
+        }
+        else {
+
+            r.message = 'ERROR: Please log in!';
+            r.httpStatus = 401;
+        }
+    };
 
     /**
      * Check if a user has an access key

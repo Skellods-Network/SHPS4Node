@@ -1,7 +1,8 @@
 ﻿{
     "name": "SHPS",
     "version": "4.0.0",
-    "description":  "SHPS",
+    "description": "SHPS",
+    "main": "system/core/main.js",
     "homepage": "https://shps.io",
     "author": {
         "name": "Marco Alka",

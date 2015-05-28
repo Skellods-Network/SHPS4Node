@@ -63,7 +63,7 @@ var _handleRequest
     else if (typeof $requestState.GET['site'] !== 'undefined') {
 
         // transmit site
-        unblock = main.make('site', $requestState);
+        unblock = make.siteResponse($requestState, $requestState.GET['site'], $requestState.GET['ns']); //main.make('site', $requestState);
     }
     else if (typeof $requestState.GET['HTCPCP'] !== 'undefined' && main.getHPConfig('eastereggs')) {
         
@@ -75,7 +75,7 @@ var _handleRequest
         
         // if they don't know what they want, they should just get the index site...
         $requestState.GET['site'] = $requestState.config.generalConfig.indexContent.value;
-        // transmit site
+        unblock = make.siteResponse($requestState, $requestState.GET['site'], $requestState.GET['ns']);
     }
     
     if (typeof unblock === 'undefined') {
@@ -130,7 +130,7 @@ var _handleRequest
             'Set-Cookie': $requestState.COOKIE.getChangedCookies(),
             'Age': 0, // <-- insert time since caching here
             'Cache-Control': $requestState.config.generalConfig.timeToCache.value,
-            //'Content-MD5': '7E57', // <-- useless. Will not implement it since it only serves the purpose of increasing latency. Will leave here as a reminder.
+            //'Content-MD5': '', // <-- useless. Will not implement it since it only serves the purpose of increasing latency. Will leave here as a reminder.
             // 'Etag': <-- insert cache token here (change token whenever the cache was rebuilt)
             
             'X-XSS-Protection': '1;mode=block',
@@ -188,11 +188,11 @@ var _handleRequest
 
 var _focus 
 = me.focus = function f_request_focus($requestState) {
+
     if (typeof $requestState !== 'undefined') {
         
         log.error('Cannot focus undefined requestState!');
     }
-    
     
     this.handleRequest = function f_request_focus_handleRequest() {
         
