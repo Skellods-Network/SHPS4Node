@@ -162,12 +162,28 @@ var _splitQueryString
     return params;
 };
 
+/**
+ * Generates a random number i a given range
+ * 
+ * @param $low integer
+ * @param $high integer
+ * @result integer
+ */
 var _randomInt
 = me.randomInt = function f_SFFM_randomInt($low, $high) {
 
     return (Math.random() * ($high - $low) + $low) |0;
 }
 
+/**
+ * Generate random string
+ * 
+ * @param $length integer
+ * @param $chars string
+ *   Pool of characters to use.
+ *   If you have one character more often than another, the probability of it occuring will increase in the same amount
+ * @result string
+ */
 var _randomString 
 = me.randomString = function f_SFFM_randomString($length, $chars) {
     $chars = $chars || 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890';
@@ -186,6 +202,12 @@ var _randomString
     return r;
 };
 
+/**
+ * Find out if the client is connected via HTTP over TLS
+ * 
+ * @param $request object
+ * @result boolean
+ */
 var _isHTTPS 
 = me.isHTTPS = function f_SFFM_isHTTPS($request) {
     

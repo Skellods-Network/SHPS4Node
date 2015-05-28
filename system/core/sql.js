@@ -462,6 +462,9 @@ var _SQL
         return _resultRows[_fetchIndex];
     };
     
+    /**
+     * Free the SQL connection so it can be reused
+     */
     var _free =
     this.free = function f_sql_SQL_free() {
         
@@ -473,12 +476,23 @@ var _SQL
         _free = true;
     };
     
+    /**
+     * Check if the current connection has already been freed.
+     * Do never use freed connections, get a new one
+     * 
+     * @result boolean
+     */
     var _isFree =
     this.isFree = function f_sql_isFree() {
         
         return _free;
     };
     
+    /**
+     * Get DB name
+     * 
+     * @result string
+     */
     var _getDB 
     = mp.getDB =
     this.getDB = function f_sql_getDB() {
@@ -486,6 +500,11 @@ var _SQL
         return $dbConfig.name.value;
     };
     
+    /**
+     * Get prefix which is currently used for the tables
+     * 
+     * @result string
+     */
     var _getPrefix 
     = mp.getPrefix =
     this.getPrefix = function f_sql_getPrefix() {
