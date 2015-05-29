@@ -24,7 +24,7 @@ GLOBAL.SHPS_ = 1;
 GLOBAL.SHPS_MAJOR_VERSION = 4;
 GLOBAL.SHPS_MINOR_VERSION = 0;
 GLOBAL.SHPS_PATCH_VERSION = 0;
-GLOBAL.SHPS_BUILD = 'ALPHA';
+GLOBAL.SHPS_BUILD = 'BETA';
 GLOBAL.SHPS_INTERNAL_NAME = 'IROKOKOU';
 GLOBAL.SHPS_VERSION = SHPS_MAJOR_VERSION + '.' + SHPS_MINOR_VERSION + '.' + SHPS_PATCH_VERSION;
 
@@ -308,12 +308,12 @@ var _listen
     for (var $c in config) {
         
         if (config[$c].generalConfig.useHTTP1.value) {
-        
+            
             var p = config[$c].generalConfig.HTTP1Port.value;
             if (port.indexOf(p) == -1) {
-                    
+                
                 http.createServer(function ($req, $res) {
-                        
+                    
                     var rs = new helper.requestState();
                     var domain = new helper.SHPS_domain($req.headers.host);
                     rs.uri = domain.host;
@@ -326,7 +326,7 @@ var _listen
                     request.handleRequest(rs);
                 })
             .listen(p);
-                    
+                
                 log.write('HTTP/1.1 port opened on ' + (p + '').green);
                 port += p;
                 scheduler.sendSignal('onListenStart', 'HTTP/1.1', p);
@@ -334,7 +334,7 @@ var _listen
         }
         
         if (config[$c].generalConfig.useHTTP2.value) {
-
+            
             var p = config[$c].generalConfig.HTTP2Port.value;
             if (port.indexOf(p) == -1) {
                 
@@ -365,144 +365,8 @@ var _listen
     }
     
     scheduler.sendSignal('onServerStart', port);
-
+    
     $cb();
-}
-
-/**
- * Make homepage from templates
- *
- * @param {RequestState} $requestState
- * @param string $firstTemplate //Default: site
- */
-var _make 
-= me.make = function ($template2Start, $requestState) {
-    $template2Start = (typeof $template2Start !== null ? $template2Start : $requestState.config.generalConfig.rootTemplate.value);
-    
-    var defer = q.defer();
-    // Read from cache
-    
-    log.log('Starting to build the homepage');
-    
-    //plugin.callEvent('onBeforeMake', $template2Start, $requestState);
-    
-    var template = [];
-    var content = {};
-    var body = '';
-    async.waterfall([
-        
-        /*function f_main_make_wf_1($cb) {
-            
-            var _sql = sql.newSQL('default', $requestState)
-            if (typeof _sql !== 'undefined') {
-                
-                $cb(null, _sql);
-            }
-            else {
-                
-                $cb('ERROR: Failed to connect to the DB server');
-            }
-        },
-    
-        function f_main_make_wf_2($sql, $cb) {
-            
-            var rowsTemplate = [false];
-            var rowsContent = [false];
-            async.pipeline({
-                
-                'funcs': [
-
-                    function f_main_make_wf_2_1($_p1, $cb) {
-                        
-                        var tblTemplate = $sql.openTable('template');
-                        var tblNamespace = $sql.openTable('namespace');
-                        $sql.query()
-                            .get(tblTemplate.col('content'))
-                            .fulfilling()
-                            .equal(tblTemplate.col('name'), $template2Start)
-                            .equal(tblTemplate.col('namespace'), tblNamespace.col('ID'))
-                            .equal(tblNamespace.col('name'), _getNamespace($requestState))
-                            .execute()
-                            .then(function f_main_make_wf_2_1_then($rows) {
-                            
-                            rowsTemplate = $rows;
-                            $cb();
-                        }, function f_main_make_wf_2_1_else($p1) {
-                            
-                            log.error('ERROR: Failed to get initial template ' + $p1);
-                            $cb();
-                        });
-                    },
-
-                    function f_main_make_wf_2_2($cb) {
-                        
-                        if ($requestState.GET.site == null) {
-                            
-                            var site = $requestState.config.generalConfig.indexContent.value;
-                        }
-                        else {
-                            
-                            var site = $requestState.GET.site;
-                        }
-                        
-                        var tblContent = $sql.openTable('content');
-                        var tblNamespace = $sql.openTable('namespace');
-                        $sql.query()
-                            .get(tblContent.col('content'))
-                            .fulfilling()
-                            .equal(tblContent.col('name'), site)
-                            .equal(tblContent.col('namespace'), tblNamespace.col('ID'))
-                            .equal(tblContent.col('name'), _getNamespace($requestState))
-                            .execute()
-                            .then(function f_main_make_wf_2_2_then($rows) {
-                            
-                            rowsContent = $rows;
-                            $cb();
-                        }, function f_main_make_wf_2_2_else($p1) {
-                            
-                            log.error('ERROR: Failed to get initial template ' + $p1);
-                            $cb();
-                        })
-                            .done();
-                    }
-                ]
-            }, function () {
-                
-                $cb(null, rowsTemplate, rowsContent);
-            });//end parallel $template2Starts
-        
-        },*/
-        function ($_p1, $_p2) {
-
-            template.push({ content: 'Hellow World! - {$body}' });
-            content.content = 'XXX';
-            $_p1();
-        },
-    ], function ($err) {
-        
-        if (typeof template[0] === 'undefined') {
-            
-            return;
-        }
-        
-        body = template[0].content;
-        body = _parseTemplateVars(body);
-        body = body.replace('{$body}', content.content);
-        body = _parseTemplateVars(body);
-        //body = body.replace('</body>', js.getLink() + '</body>');
-        //body = body.replace('</head>', css.getLink() + '</head>');
-        //body = optimizer.optimize(body);
-        
-        //plugin.callEvent('onAfterMake', $template2Start, $requestState);
-
-        scheduler.sendSignal('onMake', body, $requestState);
-        
-        $requestState.responseType = 'text/html';
-        $requestState.responseBody = body;
-        defer.resolve();
-    });// end waterfall
-
-    return defer.promise;
 };
 
 var _parseTemplateVars = function f_main_parseTemplateVars($partial) {

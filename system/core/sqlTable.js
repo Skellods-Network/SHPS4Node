@@ -53,9 +53,9 @@ var _sqlTable = function c_sqlTable($sql, $name) {
 
     var _col 
     = mp.col =
-    this.col = function f_sqlTable_col($name) {
+    this.col = function f_sqlTable_col($name, $asName) {
 
-        return col.newCol(this, $name);
+        return col.newCol(this, $name, $asName);
     };
 
     var _getSQL =

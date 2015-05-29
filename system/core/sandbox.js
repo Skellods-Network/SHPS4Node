@@ -45,6 +45,12 @@ var _newSandbox
         var context;
         var rebuildContext = true;
         
+        var _getGlobals =
+        this.getGlobals = function f_sandbox_getGlobals() {
+
+            return sb;
+        };
+
         var _addFeature =
         this.addFeature = {
             

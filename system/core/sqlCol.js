@@ -90,7 +90,7 @@ var _sqlCol = function c_sqlCol($table, $name, $returnAs) {
 };
 
 var _newCol 
-= me.newCol = function f_sqlCol_newCol($table, $name) {
+= me.newCol = function f_sqlCol_newCol($table, $name, $asName) {
     
-    return new _sqlCol($table, $name);
+    return new _sqlCol($table, $name, $asName);
 };

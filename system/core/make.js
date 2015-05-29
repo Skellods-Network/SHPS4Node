@@ -2,7 +2,10 @@
 
 var me = module.exports;
 
+var async = require('vasync');
+var promise = require('promise');
 var q = require('q');
+var _ = require('lodash');
 
 var auth = require('./auth.js');
 var cache = require('./cache.js');
@@ -15,9 +18,6 @@ var sql = require('./sql.js');
 var mp = {
     self: this
 };
-
-var sb = sandbox.newSandbox();
-var extSb = sandbox.newSandbox();
 
 
 /**
@@ -41,130 +41,350 @@ var _hug
     });
 };
 
-var _siteResponse 
-= me.siteResponse = function f_make_siteResponse($requestState, $siteName, $namespace) {
-    $namespace = $namespace || 'default';
-    $siteName = typeof $siteName === 'string' && $siteName !== '' ? $siteName : 'index';
+var _preparePartialSB = function ($requestState, $ext) {
+    $ext = typeof $ext !== 'undefined' ? $ext : false;
+
+    if ($ext) {
+        
+        if (!$requestState.cache.makePartialSBExt) {
+            
+            $requestState.cache.makePartialSBExt = sandbox.newSandbox();
+            $requestState.cache.makePartialSBExt.addFeature.all($requestState);
+        }
+        
+        return $requestState.cache.makePartialSBExt;
+    }
+    else {
+        
+        if (!$requestState.cache.makePartialSB) {
+            
+            $requestState.cache.makePartialSB = sandbox.newSandbox();
+            $requestState.cache.makePartialSB.addFeature.allSHPS($requestState);
+        }
+        
+        return $requestState.cache.makePartialSB;
+    }
+};
+
+var _getContent = function f_make_getContent($requestState, $contentName, $namespace) {
 
     var defer = q.defer();
     sql.newSQL('default', $requestState).then(function ($sql) {
-       
+
         var tblNS = $sql.openTable('namespace');
         var tblCon = $sql.openTable('content');
-        var tblPar = $sql.openTable('partial');
-        var tblSL = $sql.openTable('scriptLanguage');
         $sql.query()
-            .get([
-                tblPar.col('content'),
-                tblPar.col('eval'),
-                tblPar.col('accessKey'),
-                tblPar.col('extSB'),
-                tblNS.col('name'),
-                tblSL.col('name'),
-            ])
-            .fulfilling()
-            .eq(tblNS.col('name'), $namespace)
-            .eq(tblNS.col('ID'), tblPar.col('namespace'))
-            .eq(tblPar.col('name'), $requestState.config.generalConfig.rootTemplate.value)
-            .execute()
-            .then(function ($rows) {
+        .get([
+            tblCon.col('content'),
+            tblCon.col('accessKey'),
+            tblCon.col('extSB'),
+            tblCon.col('language'),
+            tblCon.col('tls'), // todo: assert HTTPS if this flag is set
+        ])
+        .fulfilling()
+        .eq(tblCon.col('name'), $contentName)
+        .execute()
+        .then(function ($rows) {
             
+            $sql.free();
             if ($rows.length <= 0) {
 
-                defer.resolve('<strong>ERROR: Root template could not be found</strong>');
+                defer.resolve('<error>ERROR: Site not found!</error>', 404);
                 return;
             }
             
             var row = $rows[0];
             var a = auth.newAuth($requestState);
-            var hak = a.hasAccessKeyExt(row.accessKey)
+            var hak = a.hasAccessKeyExt(row.accessKey);
             if (!hak.hasAccessKey) {
-
-                $requestState.httpStatus = hak.httpStatus;
-                defer.resolve('<strong>' + hak.message + '</strong>');
-
+                
+                defer.resolve('<error>' + hak.message + '</error>', hak.httpStatus);
                 return;
             }
-            
-            // Maybe add a feature to add parameters to the initial partial?
-            // I cannot see any use case for now, so I will just set them all to undefined for more stability... 
-            var body = row.content.replace(/\$[0-9]+/g ,'undefined');
 
-            if (row.evaluate > 0) {
+            var sb = _preparePartialSB($requestState, row.extSB);
+            var status = 200;
+            var body = row.content;
+            switch (row.language) {
 
-                var code = sandbox.newScript(body);
-                var sb = sandbox.newSandbox();
-                if (row.extSB > 0) {
-
-                    sb.addFeature.all($requestState);
-                }
-                else {
-
-                    sb.addFeature.allSHPS($requestState);
-                }
-
-                body = sb.run(code, $requestState.config.generalConfig.templateTimeout)
-            }
-            
-            // parse partial-inclusion
-            var incPattern = /\{\s*?\$\s*?([\w\-\_\/\:]*?)\:?([\w\-\_\/]+?)?\s*?(\(.+?\))?\s*?\}/g; // precompile regex
-            var foundPattern = false;
-            do {
-
-                foundPattern = false;
-                body = body.replace(incPattern, function ($match, $namespace, $name, $params, $offset, $string) {
+                case 1: {// JS
+                    
+                    try {
+                        var code = sandbox.newScript(body);
+                    }
+                    catch ($e) {
                         
-                    foundPattern = true;
-                    if (!$namespace || $namespace === '') {
-
-                        $namespace = 'default';
+                        status = 500;
                     }
                     
-                    if ($params) {
+                    body = sb.run(code, $requestState.config.generalConfig.templateTimeout);
+                    
+                    break;
+                }
 
-                        $params = $params
-                            .substring(0, $params.length - 1)
-                            .split(',');
+                case 2: {// Embedded JS
+                    
+                    var tmp = _.template(body, {
+                        
+                        imports: sb.getGlobals()
+                    });
+                    
+                    if (typeof tmp === 'function') {
+                        
+                        body = tmp();
                     }
+                    
+                    break;
+                }
 
-                    switch ($name) {
+                case 3: {// CoffeeScript
+                    
+                    //Not implemented yet
+                    
+                    break;
+                }
+            }
 
-                        case 'body': {
+            defer.resolve(body, status);
+
+        }).done();
+    }).done();
+
+    return defer.promise;
+};
+
+var _getPartial = function f_make_getPartial($requestState, $partialName, $namespace, $void) {
+    $namespace = $namespace || 'default';
+    
+    var defer = q.defer();
+    if ($requestState.cache.partials && $requestState.cache.partials[$namespace]) {
+        
+        if ($requestState.cache.partials[$namespace][$partialName]) {
+
+            defer.resolve($requestState.cache.partials[$namespace][$partialName], 200, $void);
+        }
+        else {
+
+            defer.resolve('<error>ERROR: Partial could not be found!</error>', 404, $void);
+        }
+    }
+    else {
+        sql.newSQL('default', $requestState).then(function ($sql) {
+            
+            var tblNS = $sql.openTable('namespace');
+            var tblPar = $sql.openTable('partial');
+            $sql.query()
+            .get([
+                tblPar.col('name', 'partialName'),
+                tblPar.col('content', 'partialContent'),
+                tblPar.col('accessKey', 'partialAK'),
+                tblPar.col('extSB', 'partialExtSB'),
+                tblPar.col('language', 'partialSLang'),
+                tblPar.col('namespace', 'partialNS'),
+            ])
+            .fulfilling()
+            .eq(tblNS.col('name'), $namespace)
+            .eq(tblNS.col('ID'), tblPar.col('namespace'))
+            .execute()
+            .then(function ($rows) {
+                
+                if ($rows.length <= 0) {
+                    
+                    $sql.free();
+                    defer.resolve('<error>ERROR: Partial could not be found!</error>', 404, $void);
+                    return;
+                }
+                
+                var i = 0;
+                var l = $rows.length;
+                var row = undefined;
+                var code = undefined;
+                var sb = undefined;
+                var hak = undefined;
+                var httpStatus = 200;
+                var a = auth.newAuth($requestState);
+                while (i < l) {
+                    
+                    row = $rows[i];
+                    
+                    hak = a.hasAccessKeyExt(row.partialAK)
+                    if (!hak.hasAccessKey) {
+                        
+                        if (row.partialName === $partialName) {
                             
-                            // PLACEHOLDER
-                            return '### BODY GOES HERE ###';
-                            // /PLACEHOLDER
+                            httpStatus = hak.httpStatus;
+                            body = '<error>' + hak.message + '</error>';
+                            break;
+                        }
+                        
+                        continue;
+                    }
+                    
+                    // params are not implemented yet...
+                    var body = row.partialContent.replace(/\$[0-9]+/g , 'undefined');
+                    
+                    sb = _preparePartialSB($requestState, row.extSB);
+                    switch (row.partialSLang) {
 
-                            // get content from cache, on miss from DB
-                            // execute content
+                        case 1: {// JS
+                            
+                            try {
+                                code = sandbox.newScript(body);
+                            }
+                            catch ($e) {
+                                
+                                var str = $e;
+                            }
+                            
+                            body = sb.run(code, $requestState.config.generalConfig.templateTimeout);
                             
                             break;
                         }
 
-                        // reserved for more tags in the future :)
+                        case 2: {// Embedded JS
+                            
+                            var tmp = _.template(body, {
+                                
+                                imports: sb.getGlobals()
+                            });
+                            
+                            if (typeof tmp === 'function') {
+                                
+                                body = tmp();
+                            }
+                            
+                            break;
+                        }
 
-                        default: {
-
-                            // PLACEHOLDER
-                            return '[[[' + $namespace + '::' + $name + ']]]';
-                            // /PLACEHOLDER
-
-                            // query cache, then DB for partial
-                            // execute partial
+                        case 3: {// CoffeeScript
+                            
+                            //Not implemented yet
+                            
+                            break;
                         }
                     }
-                });
-            } 
-            while (foundPattern);
+                    
+                    if (!$requestState.cache.partials) {
+                        
+                        $requestState.cache.partials = [];
+                    }
+                    
+                    if (!$requestState.cache.partials[row.partialNS]) {
+                        
+                        $requestState.cache.partials[row.partialNS] = [];
+                    }
+                    
+                    $requestState.cache.partials[row.partialNS][row.partialName] = row.partialContent;
+                    
+                    i++;
+                }
+                
+                if ($requestState.cache.partials[row.partialNS][$partialName]) {
+                    
+                    body = $requestState.cache.partials[row.partialNS][$partialName];
+                }
+                else {
+                    
+                    body = '<error>ERROR: Partial could not be found!</error>';
+                    httpStatus = 404;
+                }
+                
+                $sql.free();
+                defer.resolve(body, httpStatus, $void);
+            }).done();
+        });
+    }
 
-            $sql.free();
+    return defer.promise;
+};
+
+var _parseTemplate = function f_make_parseTemplate($requestState, $template) {
+    
+    var defer = q.defer();
+
+    // parse partial-inclusion
+    var incPattern = /\{\s*?\$\s*?([\w\-\_\/\:]*?)\:?([\w\-\_\/]+?)?\s*?(\(.+?\))?\s*?\}/; // precompile regex
+    var match = incPattern.exec($template);
+    if (!match) {
+        
+        defer.resolve($template, 200);
+        return defer.promise;
+    }
+    
+    var inc = match[0];
+    var namespace = match[1];
+    var name = match[2];
+    var params = match[3];
+    var offset = match.index;
+
+    if (!namespace || namespace === '') {
+        
+        namespace = 'default';
+    }
+    
+    if (params) {
+
+        params = params
+            .substring(1, params.length - 2)
+            .split(',');
+    }
+    
+    var tmp = $template.substring(0, offset - 1);
+    switch (name) {
+
+        case 'body': {
+            
+            name = $requestState.site !== ''
+                ? $requestState.site
+                : $requestState.config.generalConfig.indexContent.value;
+
+            _getContent($requestState, name, namespace).then(function ($tmp, $httpStatus) {
+                
+                defer.resolve(tmp + $tmp, $httpStatus);
+            }).done();
+
+            break;
+        }
+
+                    // reserved for more tags in the future :)
+
+        default: {
+
+            _getPartial($requestState, name, namespace).then(function ($tmp, $httpStatus) {
+                
+                defer.resolve(tmp + $tmp, $httpStatus);
+            }).done();
+        }
+    }
+    
+    var r = q.defer();
+    defer.promise.then(function ($result) {
+        
+        _parseTemplate($requestState, $result + $template.substring(offset + inc.length)).then(function ($result, $httpStatus) {
+            
+            r.resolve($result, $httpStatus);
+        }).done();
+    }).done();
+
+    return r.promise;
+};
+
+var _siteResponse 
+= me.siteResponse = function f_make_siteResponse($requestState, $siteName, $namespace) {
+    $namespace = $namespace || 'default';
+    $siteName = typeof $siteName === 'string' && $siteName !== '' ? $siteName : 'index';
+    
+    var defer = q.defer();
+    _getPartial($requestState, $requestState.config.generalConfig.rootTemplate.value, $namespace).then(function ($result, $status) {
+        
+        _parseTemplate($requestState, $result).then(function ($body, $status) {
+            
             $requestState.httpStatus = 200;
             $requestState.responseType = 'text/html';
-            $requestState.responseBody = body;
-
-            defer.resolve(body);
+            $requestState.responseBody = $body;
+            defer.resolve($result);
         }).done();
-    });
+    }).done();
 
     return defer.promise;
 };

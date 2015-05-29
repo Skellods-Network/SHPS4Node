@@ -89,10 +89,10 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
             }
             else {
                 
-                _conditions += 'AND ';
+                _conditions += ' AND ';
             }
 
-            _conditions += '(' + _prepare($left(_newSQLConditionBuilder())) + ' AND ' + _prepare($right(_newSQLConditionBuilder())) + ') ';
+            _conditions += '(' + _prepare($left(_newSQLConditionBuilder())) + ' AND ' + _prepare($right(_newSQLConditionBuilder())) + ')';
         }
         else {
 
@@ -113,10 +113,10 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
             }
             else {
                 
-                _conditions += 'OR ';
+                _conditions += ' AND ';
             }
             
-            _conditions += '(' + _prepare($left(_newSQLConditionBuilder())) + ' AND ' + _prepare($right(_newSQLConditionBuilder())) + ') ';
+            _conditions += '(' + _prepare($left(_newSQLConditionBuilder($sqb))) + ' OR ' + _prepare($right(_newSQLConditionBuilder($sqb))) + ')';
         }
         else {
             
@@ -134,7 +134,7 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
         }
         else {
             
-            _conditions += 'AND ';
+            _conditions += ' AND ';
         }
         
         if (typeof $left === 'object') {
@@ -159,10 +159,10 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
         }
         else {
             
-            _conditions += 'AND ';
+            _conditions += ' AND ';
         }
         
-        _conditions += 'BETWEEN ' + _prepare($left) + ' AND ' + _prepare($right);
+        _conditions += ' BETWEEN ' + _prepare($left) + ' AND ' + _prepare($right);
 
         return this;
     };
@@ -289,8 +289,15 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
 
     var _execute =
     this.execute = function f_sqlConditionBuilder_sqlConditionBuilder_execute() {
-    
-        return $sqb.execute(this);
+        
+        if ($sqb) {
+
+            return $sqb.execute(this);
+        }
+        else {
+
+            return this;
+        }
     };
 };
 
