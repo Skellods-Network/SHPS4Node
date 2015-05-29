@@ -40,6 +40,12 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
     var _firstCondition = true;
 
     
+    var _bindQueryBuilder =
+    this.bindQueryBuilder = function f_sqlConditionBuilder_bindQueryBuilder($qb) {
+
+        $sqb = $qb;
+    };
+
     var _toString =
     this.toString = function f_sqlConditionBuilder_toString() {
     
@@ -83,10 +89,10 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
             }
             else {
                 
-                _conditions += 'AND ';
+                _conditions += ' AND ';
             }
 
-            _conditions += '(' + _prepare($left(_newSQLConditionBuilder())) + ' AND ' + _prepare($right(_newSQLConditionBuilder())) + ') ';
+            _conditions += '(' + _prepare($left(_newSQLConditionBuilder())) + ' AND ' + _prepare($right(_newSQLConditionBuilder())) + ')';
         }
         else {
 
@@ -107,10 +113,10 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
             }
             else {
                 
-                _conditions += 'OR ';
+                _conditions += ' AND ';
             }
             
-            _conditions += '(' + _prepare($left(_newSQLConditionBuilder())) + ' AND ' + _prepare($right(_newSQLConditionBuilder())) + ') ';
+            _conditions += '(' + _prepare($left(_newSQLConditionBuilder($sqb))) + ' OR ' + _prepare($right(_newSQLConditionBuilder($sqb))) + ')';
         }
         else {
             
@@ -128,9 +134,19 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
         }
         else {
             
-            _conditions += 'AND ';
+            _conditions += ' AND ';
         }
         
+        if (typeof $left === 'object') {
+            
+            $sqb.addTable($left.getTable());
+        }
+        
+        if (typeof $right === 'object') {
+            
+            $sqb.addTable($right.getTable());
+        }
+
         _conditions += _prepare($left) + $operator + _prepare($right);
     };
     
@@ -143,10 +159,10 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
         }
         else {
             
-            _conditions += 'AND ';
+            _conditions += ' AND ';
         }
         
-        _conditions += 'BETWEEN ' + _prepare($left) + ' AND ' + _prepare($right);
+        _conditions += ' BETWEEN ' + _prepare($left) + ' AND ' + _prepare($right);
 
         return this;
     };
@@ -155,7 +171,7 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
     this.equal =
     this.eq =
     this.same = function f_sqlConditionBuilder_sqlConditionBuilder_equal($left, $right) {
-        
+
         _comparison($left, '=', $right);
         return this;
     };
@@ -234,6 +250,20 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
         _comparison($left, ' IS NOT DISTINCT FROM ', $right);
         return this;
     };
+    
+    /**
+     * Order result by a col
+     * 
+     * @param sqlCol $col
+     * @param boolean $descending //Default: false
+     */
+    var _orderBy =
+    this.orderBy = function f_sqlQueryBuilder_orderBy($col, $descending) {
+        
+        $sqb.orderBy($col, $descending);
+
+        return this;
+    };
 
     /**
      * Grouphuggable
@@ -259,8 +289,15 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
 
     var _execute =
     this.execute = function f_sqlConditionBuilder_sqlConditionBuilder_execute() {
-    
-        return $sqb.execute(this);
+        
+        if ($sqb) {
+
+            return $sqb.execute(this);
+        }
+        else {
+
+            return this;
+        }
     };
 };
 

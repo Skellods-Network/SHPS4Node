@@ -1,0 +1,6 @@
+﻿<ul id=menu>
+  <li>Home</li>
+  <li>Lorum</li>
+  <li>Ipsum</li>
+</ul>
+<div class="clearfix"></div>

@@ -1,135 +1,152 @@
 {
     "configHeader": {
-      
-		"description": "This part contains info about the config file. The version noted here indicates the minimum SHPS version the config file is compatibel with",
+
+        "description": "This part contains info about the config file. The version noted here indicates the minimum SHPS version the config file is compatibel with",
         "SHPSVERSION_MA": 4,
         "SHPSVERSION_MI": 0,
-		"type": "hp"
+        "type": "hp"
     },
     "generalConfig": {
-        
-        "URL"			: {
-            
-            "description": "Your domain",
+
+        "URL": {
+
+            "description": "Your domain. Please use it without protocol. Add all subdirectories until the SHPS root folder. On SHPS-webservers, don't add a subdirectory.",
+            "example": [ "www.example.com", "php.example.com/path/to/root", "node.example.com" ],
             "value": "localhost"
         },
-        "staticResourcesURL"    : {
-            
+        "staticResourcesURL": {
+
             "description": "Your resource URL",
             "value": "localhost"
         },
-        "dirUpload"		: {
-            
+        "dirUpload": {
+
             "description": "Directory for uploaded data",
             "value": "uploads"
         },
-        "mail"			: {
-            
+        "mail": {
+
             "description": "Mail used as `FROM` address",
             "value": "support@example.com"
         },
-        "logCount"		: {
-            
+        "logCount": {
+
             "description": "Number of log entries stored in the DB",
             "value": 50
         },
-        "timezone"		: {
-            
+        "timezone": {
+
             "description": "Timezone of the server",
             "value": "Europe/Berlin"
         },
-        "uploadQuota"		: {
-            
+        "uploadQuota": {
+
             "description": "Maximum amount of data which can be uploaded from this website instance (0=infinite)",
             "value": 0
-        },        
-        "displayStats"          : {
-            
-            "description": "Display speed and resource stats in the homepage's source",
-            "value": true
-        },        
-        "indexContent"          : {
-            
+        },
+        "templateTimeout": { 
+            "description": "Maximum amount of time in seconds a template (partial or content) can take before excution is stopped",
+            "value": 60
+        },
+        "displayStats": {
+
+            "description": "Display speed and resource stats in the homepage's source (not recommended)",
+            "value": false
+        },
+        "indexContent": {
+
             "description": "Content which will be used when nothing else is specified",
             "value": "index"
         },
-        "rootTemplate"          : {
-            
+        "rootTemplate": {
+
             "description": "Template which will contain the raw structure",
             "value": "site"
         },
-        "useHTTP1"              : {
-            "description": "Start HTTP/1.1 server",
+        "useHTTP1": {
+            "description": "Start HTTP/1.1 server (not recommended)",
             "value": true
         },
-        "useHTTP2"              : {
-            "description": "Start HTTP/2.0 server",
+        "useHTTP2": {
+            "description": "Start HTTP/2.0 server. Needs certificates for SSL/TLS (recommended)",
             "value": false
         },
-        "HTTP1Port"              : {
+        "HTTP1Port": {
             "description": "Port to serve HTTP/1.1 on",
             "value": 1280
         },
-        "HTTP2Port"              : {
+        "HTTP2Port": {
             "description": "Port to serve HTTP/2.0 on",
             "value": 12443
+        },
+        "timeToCache": {
+            "description": "Time for how long content should be cached before it gets refreshed in seconds",
+            "value": 3600
+        },
+        "gzipMinSize": {
+            "description": "Content (in byte) which is larger will be gzipped",
+            "value": 256
         }
     },
-    "SSLConfig": {
-        "key"                   : {
+    "TLSConfig": {
+        "key": {
             "description": "",
             "value": "skellods-network.key"
         },
-        "cert"                   : {
+        "cert": {
             "description": "",
             "value": "skellods-network.crt"
         },
-        "ca"                   : {
+        "ca": {
             "description": "",
             "value": "ca-bundle.pem"
+        },
+        "keypin": {
+            "description": "This will be used for HPKP (advanced security). If left blank, SHPS will generate the keypin",
+            "value": ""
         }
     },
     "databaseConfig": {
-        
+
         "default": {
-            
-            "host"           : {
-                
+
+            "host": {
+
                 "description": "DB host",
                 "value": "localhost"
             },
-            "port"           : {
-                
+            "port": {
+
                 "description": "DB port",
                 "value": 3306
             },
-            "name"           : {
-                
+            "name": {
+
                 "description": "Name of schema",
-                "value": ""
+                "value": "shps_test"
             },
-            "user"           : {
-                
+            "user": {
+
                 "description": "DB user",
-                "value": ""
+                "value": "shps"
             },
-            "pass"           : {
-                
+            "pass": {
+
                 "description": "User's password",
+                "value": "shps"
+            },
+            "prefix": {
+
+                "description": "Table prefix",
                 "value": ""
             },
-            "prefix"            : {
-                
-                "description": "Table prefix",
-                "value": "HP_"
-            },
-            "type"           : {
-                
+            "type": {
+
                 "description": "Type of DB",
-                "value": 0,
+                "value": 2,
                 "options": {
-                    "MySQL": 0,
-                    "MSSQL": 10
+                    "MySQL": 2,
+                    "MSSQL": 16
                 }
             },
             "connectionLimit": {
@@ -139,44 +156,44 @@
             }
         },
         "logging": {
-            
-            "host"           : {
-                
+
+            "host": {
+
                 "description": "DB host",
                 "value": "localhost"
             },
-            "port"           : {
-                
+            "port": {
+
                 "description": "DB port",
                 "value": 3306
             },
-            "name"           : {
-                
+            "name": {
+
                 "description": "Name of schema",
-                "value": ""
+                "value": "shps_test"
             },
-            "user"           : {
-                
+            "user": {
+
                 "description": "DB user",
-                "value": ""
+                "value": "shps"
             },
-            "pass"           : {
-                
+            "pass": {
+
                 "description": "User's password",
+                "value": "shps"
+            },
+            "prefix": {
+
+                "description": "Table prefix",
                 "value": ""
             },
-            "prefix"            : {
-                
-                "description": "Table prefix",
-                "value": "HP_"
-            },
-            "type"           : {
-                
+            "type": {
+
                 "description": "Type of DB",
-                "value": 0,
+                "value": 2,
                 "options": {
-                    "MySQL": 0,
-                    "MSSQL": 10
+                    "MySQL": 2,
+                    "MSSQL": 16
                 }
             },
             "connectionLimit": {
@@ -186,44 +203,44 @@
             }
         },
         "usermanagement": {
-            
-           "host"            : {
-                
+
+            "host": {
+
                 "description": "DB host",
                 "value": "localhost"
             },
-            "port"           : {
-                
+            "port": {
+
                 "description": "DB port",
                 "value": 3306
             },
-            "name"           : {
-                
+            "name": {
+
                 "description": "Name of schema",
-                "value": ""
+                "value": "shps_test"
             },
-            "user"           : {
-                
+            "user": {
+
                 "description": "DB user",
-                "value": ""
+                "value": "shps"
             },
-            "pass"           : {
-                
+            "pass": {
+
                 "description": "User's password",
+                "value": "shps"
+            },
+            "prefix": {
+
+                "description": "Table prefix",
                 "value": ""
             },
-            "prefix"            : {
-                
-                "description": "Table prefix",
-                "value": "HP_"
-            },
-            "type"           : {
-                
+            "type": {
+
                 "description": "Type of DB",
-                "value": 0,
+                "value": 2,
                 "options": {
-                    "MySQL": 0,
-                    "MSSQL": 10
+                    "MySQL": 2,
+                    "MSSQL": 16
                 }
             },
             "connectionLimit": {
@@ -231,24 +248,44 @@
                 "description": "Maximum number of simultaneous connections to the DB server",
                 "value": 100
             }
+        }
+    },
+    "securityConfig": {
+
+        "sessionTimeout": {
+
+            "description": "Seconds after which a session is destroyed",
+            "value": 1800
         },
-        "securityConfig": {
-            
-            "sessionTimeout"       : {
-            
-                "description": "Time after which a session is destroyed",
-                "value": 1800
-            },
-            "loginDelay"           : {
-                
-                "description": "Login result delivery delay to add to the next try when a user login fails",
-                "value": 1
-            },
-            "maxLoginDelay"        : {
-                
-                "description": "Maximum delay for the login result delivery delay",
-                "value": 3600
-            }
+        "autoLoginTimeout": {
+
+            "description": "Seconds after which an auto login token is invalid",
+            "value": 2592000
+        },
+        "loginDelay": {
+
+            "description": "Login result delivery delay to add to the next try when a user login fails in seconds",
+            "value": 1
+        },
+        "maxLoginDelay": {
+
+            "description": "Maximum delay for the login result delivery delay",
+            "value": 3600
+        },
+        "STSTimeout": {
+
+            "description": "Maximum age for the HTTPS strict-transport-security. Will only be available for HTTPS",
+            "value": 60000
+        },
+        "STSIncludeSubDomains": {
+
+            "description": "Set HTTPS strict-transport-security for subdomains, too (recommended)",
+            "value": true
+        },
+        "saltRounds": { 
+
+            "description": "How many rounds should be used to generate a salt? The more rounds, the more secure and the longer login takes",
+            "value": 11
         }
     }
 }

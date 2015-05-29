@@ -1,4 +1,4 @@
-﻿"use strict";
+﻿'use strict';
 
 var me = module.exports;
 
@@ -6,13 +6,17 @@ var readline = require('readline');
 var cluster = require('cluster');
 var u = require('util');
 
+var cookie = require('./cookie.js');
+var def = require('./default.js');
 var helper = require('./helper.js');
 var log = require('./log.js');
 var main = require('./main.js');
+var sandbox = require('./sandbox.js');
 
 var rl = {};
 var _isInitialized = false;
 var self = this;
+var sb = sandbox.newSandbox();
 
 
 var completer = function ($line, $callback) {
@@ -82,6 +86,19 @@ var _init
 
     rl.setPrompt('SHPS> ');
     rl.prompt();
+
+    var internalRS = new helper.requestState();
+    internalRS.request = {
+    
+        headers: {},
+        connection: { remoteAddress: 'localhost' },
+    };
+
+    internalRS.COOKIE = cookie.newCookieJar(internalRS);
+    internalRS.config = def.config;
+    internalRS.domain = new helper.SHPS_domain('localhost');
+    sb.addFeature.all(internalRS);
+
     _isInitialized = true;
 
     return rl;
@@ -109,7 +126,7 @@ var _handleRequest
                 _isInitialized = false;
                 rl.close();
                 cluster.disconnect();
-                process.exit(0); //todo: nice shutdown
+                process.exit(0); //todo: nice shutdown - also need to exit parent process if available
                 break;
             }
 
@@ -147,7 +164,7 @@ var _handleRequest
                     
                     try {
 
-                        log.write(eval($line.replace(/^\s*?!/, '')) + '\n');
+                        log.write(sb.run(sandbox.newScript($line.replace(/^\s*?!/, ''))));
                     }
                     catch ($e) {
 

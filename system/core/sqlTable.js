@@ -53,9 +53,9 @@ var _sqlTable = function c_sqlTable($sql, $name) {
 
     var _col 
     = mp.col =
-    this.col = function f_sqlTable_col($name) {
+    this.col = function f_sqlTable_col($name, $asName) {
 
-        return col.newCol(this, $name);
+        return col.newCol(this, $name, $asName);
     };
 
     var _getSQL =
@@ -111,6 +111,9 @@ var _sqlTable = function c_sqlTable($sql, $name) {
         return [];
     };
     
+    /**
+     * TODO
+     */
     var _create =
     this.create = function f_sqlTable_sqlTable_create() {
         
@@ -134,10 +137,19 @@ var _sqlTable = function c_sqlTable($sql, $name) {
 
             $cols = _getAllColumns();
         }
+        
+        var i = 0;
+        var l = $cols.length;
+        var cols = [];
+        while (i < l) {
+            
+            cols.push(_col($cols[i]));
+            i++;
+        }
 
         return sqb.newSQLQueryBuilder($sql)
-            .get($cols)
-            .fulfilling();
+            .get(cols)
+            .execute();
     };
 
     /**
@@ -224,6 +236,7 @@ var _sqlTable = function c_sqlTable($sql, $name) {
             }
         }
         
+        // TODO: clean this and confirm that SQL-Injection is not possible!
         var qmark = '';
         var i = 0;
         var l = keys.length;
@@ -241,9 +254,9 @@ var _sqlTable = function c_sqlTable($sql, $name) {
             }
         }
 
-        sql.query('INSERT INTO ? (' + qmark + ') VALUES (' + qmark + ');', _getAbsoluteName(), keys, vals, function f_sqlTable_insert_2($r) {
+        sql.query('INSERT INTO ' + _getAbsoluteName() + ' (' + keys + ') VALUES (' + vals + ');').then(function f_sqlTable_insert_2($e, $r) {
             
-            defer.resolve($r);
+            defer.resolve($e, $r);
             sql.free();
         });
 

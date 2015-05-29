@@ -3,6 +3,7 @@
 var me = module.exports;
 
 var mysql = require('mysql');
+var oa = require('object-assign');
 var u = require('util');
 
 var log = require('./log.js');
@@ -58,10 +59,31 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
     /**
      * Table to use for set or delete operations
      * 
-     * @var \SHPS\sql_table
+     * @var sqlTable
      */
     var table = null;
     
+    /**
+     * Col by which the result is sorted
+     * 
+     * @var sqlCol
+     */
+    var orderCol = null;
+    
+    /**
+     * Order ascending (descending if false)
+     * 
+     * @var boolean
+     */
+    var orderASC = true;
+    
+    /**
+     * Additional tables which need to be listed in the SQL query
+     * 
+     * @var []
+     */
+    var additionalTables = [];
+
 
     /**
      * Grouphuggable
@@ -147,14 +169,40 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
     };
 
     var _fulfilling =
-    this.fulfilling = function f_sqlQueryBuilder_fulfilling() {
-    
+    this.fulfilling = function f_sqlQueryBuilder_fulfilling($conditions) {
+        
         if (operation === 0) {
-
+            
             log.error('An action has to be selected before calling `fulfilling` on a queryBuilder!');
         }
+        
+        if (typeof $conditions === 'undefined') {
+            
+            return scb.newSQLConditionBuilder(this);
+        }
+        else {
+            
+            var cb = oa({}, $conditions);
+            cb.bindQueryBuilder(this);
 
-        return scb.newSQLConditionBuilder(this);
+            return cb;
+        }
+    };
+
+    /**
+     * Order result by a col
+     * 
+     * @param sqlCol $col
+     * @param boolean $descending //Default: false
+     */
+    var _orderBy =
+    this.orderBy = function f_sqlQueryBuilder_orderBy($col, $descending) {
+        $descending = typeof $descending !== 'undefined' ? $descending : false;
+
+        orderCol = $col;
+        orderASC = !$descending;
+
+        return this;
     };
 
     var _getSQL =
@@ -167,7 +215,7 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
     
         var query = 'SELECT ';
         var colCount = buf.length;
-        var tables = [];
+        var tables = additionalTables;
         var i = 0;
         var tmp = null;
         while (i < colCount) {
@@ -210,8 +258,38 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
             query += ' WHERE ' + $conditions.toString();
         }
         
+        if (orderCol !== null) {
+
+            query += ' ORDER BY ' + orderCol.toString();
+            query += orderASC ? ' ASC' : ' DESC';
+        }
+        
         query += ';';
         return $sql.query(query);
+    };
+
+    /**
+     * Add table to list of tables in SQL query
+     * @todo Make faster
+     * 
+     * @param sqlTable $table
+     */
+    var _addTable =
+    this.addTable = function f_sqlQueryBuilder_addTable($table) {
+        
+        var i = 0;
+        var c = additionalTables.length;
+        while (i < c) {
+            
+            if (additionalTables[i].getAbsoluteName() == $table.getAbsoluteName()) {
+
+                return;
+            }
+
+            i++;
+        }
+
+        additionalTables.push($table);
     };
 
     var _execute =
