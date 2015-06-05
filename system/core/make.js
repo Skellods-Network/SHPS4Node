@@ -384,7 +384,7 @@ var _siteResponse
         
         _parseTemplate($requestState, $result).then(function ($body, $status) {
             
-            io.
+            
 
             $requestState.httpStatus = 200;
             $requestState.responseType = 'text/html';
