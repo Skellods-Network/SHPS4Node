@@ -10,6 +10,7 @@ var _ = require('lodash');
 var auth = require('./auth.js');
 var cache = require('./cache.js');
 var helper = require('./helper.js');
+var io = require('./io.js');
 var log = require('./log.js');
 var sandbox = require('./sandbox.js');
 var SFFM = require('./SFFM.js');
@@ -230,13 +231,12 @@ var _getPartial = function f_make_getPartial($requestState, $partialName, $names
                             
                             try {
                                 code = sandbox.newScript(body);
+                                body = sb.run(code, $requestState.config.generalConfig.templateTimeout);
                             }
                             catch ($e) {
                                 
-                                var str = $e;
+                                body = '<error>ERROR: Could not parse partial ' + $namespace + ':' + $partialName + '</error>';
                             }
-                            
-                            body = sb.run(code, $requestState.config.generalConfig.templateTimeout);
                             
                             break;
                         }
@@ -252,6 +252,10 @@ var _getPartial = function f_make_getPartial($requestState, $partialName, $names
                                 
                                 body = tmp();
                             }
+                            else {
+
+                                body = '<error>ERROR: Could not parse partial ' + $namespace + ':' + $partialName + '</error>';
+                            }
                             
                             break;
                         }
@@ -259,7 +263,8 @@ var _getPartial = function f_make_getPartial($requestState, $partialName, $names
                         case 3: {// CoffeeScript
                             
                             //Not implemented yet
-                            
+                            body = '<error>CoffeeScript not implemented yet!</error>';
+
                             break;
                         }
                     }
@@ -274,7 +279,7 @@ var _getPartial = function f_make_getPartial($requestState, $partialName, $names
                         $requestState.cache.partials[row.partialNS] = [];
                     }
                     
-                    $requestState.cache.partials[row.partialNS][row.partialName] = row.partialContent;
+                    $requestState.cache.partials[row.partialNS][row.partialName] = body;
                     
                     i++;
                 }
@@ -379,6 +384,8 @@ var _siteResponse
         
         _parseTemplate($requestState, $result).then(function ($body, $status) {
             
+            io.
+
             $requestState.httpStatus = 200;
             $requestState.responseType = 'text/html';
             $requestState.responseBody = $body;
@@ -503,6 +510,7 @@ var _requestResponse
                 }
                 else {
                     
+                    var sb = sandbox.newSandbox();
                     sb.reset();
                     sb.addFeature.allSHPS($requestState);
                     $requestState.responseBody = JSON.stringify({

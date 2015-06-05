@@ -125,6 +125,7 @@ var _log
 = me.log = function ($level, $str) {
     $str = typeof $str !== 'undefined' ? $str : '';
     
+    _dbLog();
     if ((level == 1 && $level > 3) || (level != 1 && level <= $level)) {
         
         if (level == 1) {
@@ -148,6 +149,19 @@ var _log
     }
     
     addToTrace(strLevel, $str);
+};
+
+var _dbLog 
+= me.dbLog = function f_log_dbLog() {
+
+    try {
+
+
+    }
+    catch ($e) {
+
+        // Weeeeell. This might be serious. I should really implement a debug argument which prints out all dbLogs to the console.
+    }
 };
 
 /**

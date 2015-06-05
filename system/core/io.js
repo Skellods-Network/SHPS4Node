@@ -8,6 +8,7 @@ var oa = require('object-assign');
 var util = require('util');
 
 var auth = require('./auth.js');
+var cl = require('./componentLibrary.js');
 var helper = require('./helper.js');
 var sql = require('./sql.js');
 var main = require('./main.js');
@@ -41,6 +42,25 @@ var _hug
         
         return true;
     });
+};
+
+var _makeJSURL = function f_io_makeJSURL($fileName) {
+
+
+};
+
+var _evaluateWebsite 
+= me.evaluateWebsite = function f_io_evaluateWebsite($requestState, $html) {
+    
+    var reBody = /\<\/\s*body\s*.*?\>/i;
+    if ($html.match(reBody)) {
+
+        $html = $html.replace(reBody, cl.makeClosedTag('script', { type: 'text/javascript', src: _makeJSURL('##placeholder##') }) + '</body>');
+    }
+    else {
+
+        $html += cl.makeClosedTag('script', { type: 'text/javascript', src: _makeJSURL('##placeholder##') });
+    }
 };
 
 var _serveFile

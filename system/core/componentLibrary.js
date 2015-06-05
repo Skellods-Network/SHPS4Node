@@ -40,6 +40,12 @@ var _makeHyperlink
   return '<a href="' + url + '"' + attr + '>' + $description + '</a>';
 };
 
+var _buildURL 
+= me.buildURL = function f_componentLibrary_buildURL($) {
+
+
+};
+
 /**
  * Grouphuggable
  * https://github.com/php-fig/fig-standards/blob/master/proposed/psr-8-hug/psr-8-hug.md

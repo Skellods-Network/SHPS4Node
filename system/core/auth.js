@@ -394,7 +394,7 @@ var Auth
                 r.httpStatus = 401; // UNAUTHORIZED
             }
             
-            r.key = a.getAccessKeyFromID($key);
+            r.key = _getAccessKeyFromID($key);
             r.message = 'ERROR: Missing Authorization Key: ' + r.key;
         }
 
