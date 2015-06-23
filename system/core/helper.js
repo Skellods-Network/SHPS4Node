@@ -2,6 +2,7 @@
 
 var me = module.exports;
 
+var net = require('net');
 var url = require('url');
 var promise = require('promise');
 var qs = require('querystring');
@@ -23,9 +24,26 @@ var mp = {
 me.SHPS_domain = function ($uri) {
     
     var parsed = url.parse($uri, true, true);
+    var colon = parsed.href.indexOf(':');
     if (parsed.href.substring(0, 9) === 'localhost') {
         
         parsed.host = 'localhost';
+    }
+    else if (net.isIP(parsed.href)) {
+        
+        parsed.host = parsed.href;
+        parsed.protocol = null;
+    }
+    else if (colon >= 0) {
+        
+        parsed.host = parsed.href.slice(0, colon);
+        parsed.protocol = null;
+    }
+    
+    colon = parsed.host.indexOf(':');
+    if (colon >= 0) {
+        
+        parsed.host.slice(0, colon);
     }
 
     var a = parsed.host.split('.');

@@ -112,13 +112,12 @@ var _getContent = function f_make_getContent($requestState, $contentName, $names
                     
                     try {
                         var code = sandbox.newScript(body);
+                        body = sb.run(code, $requestState.config.generalConfig.templateTimeout);
                     }
                     catch ($e) {
                         
                         status = 500;
                     }
-                    
-                    body = sb.run(code, $requestState.config.generalConfig.templateTimeout);
                     
                     break;
                 }

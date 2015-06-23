@@ -491,6 +491,7 @@ var _readConfig
                                 catch ($e) {
                                     
                                     log.write('Config file `' + $file + '` was ' + 'invalid'.red.bold + '! ' + 'SKIPPED'.red.bold);
+                                    log.write($e.toString().red.bold);
                                 }
                                 finally {
                                     
