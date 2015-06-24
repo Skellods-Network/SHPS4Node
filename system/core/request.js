@@ -26,7 +26,13 @@ var _handleRequest
     $requestState.httpStatus = 501;
 
     var unblock;
-    if (typeof $requestState.GET['favicon.ico'] !== 'undefined') {
+    if (typeof $requestState.config === 'undefined') {
+
+        $requestState.result.writeHead(404, { 'Server': 'SHPS' });
+        $requestState.result.end('The requested domain is not configured!');
+        $requestState.resultPending = false;
+    }
+    else if (typeof $requestState.GET['favicon.ico'] !== 'undefined') {
 
         // annoying browsers ask for favicon.ico if not specified... have to handle this...
         $requestState.httpStatus = 404;
@@ -99,7 +105,12 @@ var _handleRequest
         };
     }
     
-    unblock.then(function () {
+    unblock.done(function () {
+        
+        if (!$requestState.resultPending) {
+            
+            return;
+        }
         
         var bodyLengthMatch;
         if ($requestState.isResponseBinary) {
@@ -140,22 +151,22 @@ var _handleRequest
             'X-XSS-Protection': '1;mode=block',
             'X-Content-Type-Options': 'nosniff',
             'X-Powered-By': 'SHPS',
-
+            
             // ASVS V2 3.10
             'X-Frame-Options': 'SAMEORIGIN',
         };
         
         if (typeof $requestState.responseHeaders !== 'undefined') {
-         
+            
             headers = oa(headers, $requestState.responseHeaders);
         }
         
         if (SFFM.isHTTPS($requestState.request)) {
-
+            
             // ASVS V2 3.15
             headers['Strict-Transport-Security'] = 'max-age=' + $requestState.config.securityConfig.STSTimeout.value;
             if ($requestState.config.securityConfig.STSIncludeSubDomains.value) {
-
+                
                 headers['Strict-Transport-Security'] += ';includeSubDomains';
             }
             
@@ -166,27 +177,27 @@ var _handleRequest
                 headers['Public-Key-Pins'] += ';includeSubDomains'
             }
         }
-
-        defer.promise.then(function () {
+        
+        defer.promise.done(function () {
             
             //lang.getLanguage($requestState).done(function ($lang) {
             var $lang = 'en';
-                headers['Content-Length'] = $requestState.responseBody.length + (bodyLengthMatch ? bodyLengthMatch.length : 0);
-                headers['Content-Encoding'] = $requestState.responseEncoding;
-                headers['Content-Language'] = $lang;
-                $requestState.result.writeHead($requestState.httpStatus, headers);
-                if ($requestState.isResponseBinary) {
+            headers['Content-Length'] = $requestState.responseBody.length + (bodyLengthMatch ? bodyLengthMatch.length : 0);
+            headers['Content-Encoding'] = $requestState.responseEncoding;
+            headers['Content-Language'] = $lang;
+            $requestState.result.writeHead($requestState.httpStatus, headers);
+            if ($requestState.isResponseBinary) {
                 
-                    $requestState.result.write($requestState.responseBody, 'binary');
-                    $requestState.result.end();
-                }
-                else {
+                $requestState.result.write($requestState.responseBody, 'binary');
+                $requestState.result.end();
+            }
+            else {
                 
-                    $requestState.result.end($requestState.responseBody);
-                }
+                $requestState.result.end($requestState.responseBody);
+            }
             //});
-        }).done();
-    }).done();
+        });
+    });
 };
 
 

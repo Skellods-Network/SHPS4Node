@@ -4,9 +4,10 @@ var me = module.exports;
 
 var net = require('net');
 var url = require('url');
-var promise = require('promise');
 var qs = require('querystring');
 var u = require('util');
+
+var q = require('q');
 
 var cookie = require('./cookie.js');
 var log = require('./log.js');
@@ -21,49 +22,37 @@ var mp = {
 /**
  * Domain representation class
  */
-me.SHPS_domain = function ($uri) {
+me.SHPS_domain = function ($uri, $prependHTTPProtocol/* = false */) {
     
+    if ($prependHTTPProtocol && !/^https?\:\/\//i.test($uri)) {
+        
+        $uri = 'http://' + $uri;
+    }
+
     var parsed = url.parse($uri, true, true);
     var colon = parsed.href.indexOf(':');
-    if (parsed.href.substring(0, 9) === 'localhost') {
-        
-        parsed.host = 'localhost';
-    }
-    else if (net.isIP(parsed.href)) {
-        
-        parsed.host = parsed.href;
-        parsed.protocol = null;
-    }
-    else if (colon >= 0) {
-        
-        parsed.host = parsed.href.slice(0, colon);
-        parsed.protocol = null;
-    }
     
-    colon = parsed.host.indexOf(':');
-    if (colon >= 0) {
-        
-        parsed.host.slice(0, colon);
-    }
+    if (parsed.hostname) {
 
-    var a = parsed.host.split('.');
-
-    parsed.tld = a[a.length - 1];
-    a.splice(a.length - 1, 1);
-    parsed.sld = a[a.length - 1];
-    a.splice(a.length - 1, 1);
-    if (a.length > 0) {
+        var a = parsed.hostname.split('.');
         
-        parsed.sub = a.join('.'); 
+        parsed.tld = a[a.length - 1];
+        a.splice(a.length - 1, 1);
+        parsed.sld = a[a.length - 1];
+        a.splice(a.length - 1, 1);
+        if (a.length > 0) {
+            
+            parsed.sub = a.join('.');
+        }
     }
     
     parsed.toString = function () {
         
-        return this.href;
+        return parsed.href;
     };
-
+    
     return parsed;
-}
+};
 
 /**
  * Contains state of request:
@@ -75,7 +64,7 @@ me.requestState = function () {
     var self = this;
     var _GET = null;
     var _POST = null;
-
+    
     this._COOKIE = [];
     this.cache = {};
     this.locked = false;
@@ -93,14 +82,15 @@ me.requestState = function () {
     this.responseEncoding = 'identity';
     this.request = null;
     this.result = null;
-
+    this.resultPending = true;
+    
     this.__defineGetter__('GET', function () {
         
         if (_GET === null) {
             
             _GET = SFFM.splitQueryString(self.path);
         }
-
+        
         return _GET;
     });
     
@@ -108,47 +98,41 @@ me.requestState = function () {
         
         _GET = $val
     });
-
+    
     this.__defineGetter__('POST', function () {
         
         if (_POST === null) {
             
-            var prom = new promise(function ($res, $rej) {
-                
-                var queryData = '';
-                
-                if (self.request.method == 'POST') {
-                    
-                    self.request.on('data', function func_processPost_onData($data) {
-                        
-                        queryData += $data;
-                        if (queryData.length > 1e6) { // can only handle requests smaller than 1e6 == 1MB
-                            
-                            queryData = "";
-                            self.response.writeHead(413, { 'Content-Type': 'text/plain' }).end();
-                            self.request.connection.destroy();
-                            $rej();
-                        }
-                    });
-                    
-                    self.request.on('end', function func_processPost_onEnd() {
-                        
-                        $res(querystring.parse(queryData));
-                    });
-                }
-                else {
-                    
-                    $rej(null);
-                }
-            });
+            var defer = q.defer();
+            var queryData = '';
             
-            return prom.then(function ($r) {
+            if (self.request.method == 'POST') {
                 
-                _POST = $r;
-                return $r;
-            });
+                self.request.on('data', function func_processPost_onData($data) {
+                    
+                    queryData += $data;
+                    if (queryData.length > 1e6) { // can only handle requests smaller than 1e6 == 1MB
+                        
+                        queryData = "";
+                        self.response.writeHead(413, { 'Content-Type': 'text/plain' }).end();
+                        self.request.connection.destroy();
+                        defer.resolve(null);
+                    }
+                });
+                
+                self.request.on('end', function func_processPost_onEnd() {
+                    
+                    defer.resolve(querystring.parse(queryData));
+                });
+            }
+            else {
+                
+                defer.resolve(null);
+            }
+            
+            return defer.promise;
         }
-
+        
         return _POST;
     });
     
@@ -190,7 +174,7 @@ var _genericHug
         
         $self.hug.count = [];
     }
-
+    
     if ($self.hug.lastPartner[$self] != $h) {
         
         $self.hug.lastPartner[$self] = $h;
@@ -198,7 +182,7 @@ var _genericHug
     }
     
     if (typeof $self.hug.count[$self] === 'undefined') {
-
+        
         $self.hug.count[$self] = [];
     }
     
@@ -226,7 +210,7 @@ var _genericHug
         $h[i].self.hug($self);
         i++;
     }
-
+    
     return $self;
 };
 

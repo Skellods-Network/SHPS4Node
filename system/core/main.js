@@ -306,6 +306,19 @@ var _listen
     
     var port = [];
     
+    var httpResponse = function ($req, $res) {
+        
+        var rs = new helper.requestState();
+        rs.domain = new helper.SHPS_domain($req.headers.host, true);
+        rs.uri = domain.href;
+        rs.config = _getConfig(rs.domain.hostname);
+        rs.path = $req.url;
+        rs.request = $req;
+        rs.result = $res;
+        rs.COOKIE = cookie.newCookieJar(rs);
+        request.handleRequest(rs);
+    };
+    
     for (var $c in config) {
         
         if (config[$c].generalConfig.useHTTP1.value) {
@@ -313,19 +326,7 @@ var _listen
             var p = config[$c].generalConfig.HTTP1Port.value;
             if (port.indexOf(p) == -1) {
                 
-                http.createServer(function ($req, $res) {
-                    
-                    var rs = new helper.requestState();
-                    var domain = new helper.SHPS_domain($req.headers.host);
-                    rs.uri = domain.host;
-                    rs.config = _getConfig(rs.uri);
-                    rs.path = $req.url;
-                    rs.request = $req;
-                    rs.result = $res;
-                    rs.domain = domain;
-                    rs.COOKIE = cookie.newCookieJar(rs);
-                    request.handleRequest(rs);
-                })
+                http.createServer(httpResponse)
             .listen(p);
                 
                 log.write('HTTP/1.1 port opened on ' + (p + '').green);
@@ -343,19 +344,7 @@ var _listen
                     key: fs.readFileSync(_getDir(SHPS_DIR_CERTS) + config[$c].TLSConfig.key.value),
                     cert: fs.readFileSync(_getDir(SHPS_DIR_CERTS) + config[$c].TLSConfig.cert.value),
                     ca: fs.readFileSync(_getDir(SHPS_DIR_CERTS) + config[$c].TLSConfig.ca.value)
-                }, function ($res, $req) {
-                    
-                    var rs = new helper.requestState();
-                    var domain = new helper.SHPS_domain($req.headers.host);
-                    rs.uri = domain.host;
-                    rs.config = _getConfig(rs.uri);
-                    rs.path = $req.url;
-                    rs.request = $req;
-                    rs.result = $res;
-                    rs.domain = domain;
-                    rs.COOKIE = cookie.newCookieJar(rs);
-                    request.handleRequest(rs);
-                })
+                }, httpResponse)
                 .listen(p);
                 
                 log.write('HTTP/2.0 port opened on ' + (p + '').green);
@@ -481,7 +470,7 @@ var _readConfig
 
                                         case 'hp': {
                                             
-                                            var cName = helper.SHPS_domain(c.generalConfig.URL.value).host;
+                                            var cName = helper.SHPS_domain(c.generalConfig.URL.value, true).host;
                                             config[cName] = c;
                                             log.write('Config file `' + $file + '` was ' + ('loaded successfully (' + cName + ')').green);
                                             break;
