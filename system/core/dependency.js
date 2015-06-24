@@ -89,9 +89,9 @@ cp.exec('openssl version', function ($error, $stdout, $stderr) {
     }
 
     //ex. OpenSSL 1.0.2a 19 Mar 2015
-    if (!/1\.0\.2/.test($stdout)) {
+    if (!/1\.0\.[12]/.test($stdout)) {
         
-        schedule.sendSignal('onDependencyError', 'openssl', '>=1.0.2', 'Wrong version: ' + $stdout);
+        schedule.sendSignal('onDependencyError', 'openssl', '>=1.0.1', 'Wrong version: ' + $stdout);
     }
 });
 

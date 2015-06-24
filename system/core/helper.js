@@ -2,11 +2,11 @@
 
 var me = module.exports;
 
+var net = require('net');
 var url = require('url');
+var promise = require('promise');
 var qs = require('querystring');
 var u = require('util');
-
-var q = require('q');
 
 var cookie = require('./cookie.js');
 var log = require('./log.js');
@@ -24,18 +24,26 @@ var mp = {
 me.SHPS_domain = function ($uri) {
     
     var parsed = url.parse($uri, true, true);
+    var colon = parsed.href.indexOf(':');
     if (parsed.href.substring(0, 9) === 'localhost') {
         
         parsed.host = 'localhost';
     }
-    else {
-
+    else if (net.isIP(parsed.href)) {
+        
         parsed.host = parsed.href;
+        parsed.protocol = null;
+    }
+    else if (colon >= 0) {
+        
+        parsed.host = parsed.href.slice(0, colon);
+        parsed.protocol = null;
     }
     
-    if (parsed.host && parsed.host.indexOf(':') >= 0) {
-
-        parsed.host = parsed.host.split(':')[0];
+    colon = parsed.host.indexOf(':');
+    if (colon >= 0) {
+        
+        parsed.host.slice(0, colon);
     }
 
     var a = parsed.host.split('.');
@@ -105,36 +113,42 @@ me.requestState = function () {
         
         if (_POST === null) {
             
-            var defer = q.defer();
-            var queryData = '';
-            
-            if (self.request.method == 'POST') {
+            var prom = new promise(function ($res, $rej) {
                 
-                self.request.on('data', function func_processPost_onData($data) {
+                var queryData = '';
+                
+                if (self.request.method == 'POST') {
                     
-                    queryData += $data;
-                    if (queryData.length > 1e6) { // can only handle requests smaller than 1e6 == 1MB
+                    self.request.on('data', function func_processPost_onData($data) {
                         
-                        queryData = "";
-                        self.response.writeHead(413, { 'Content-Type': 'text/plain' }).end();
-                        self.request.connection.destroy();
-                        defer.resolve(null);
-                    }
-                });
-                
-                self.request.on('end', function func_processPost_onEnd() {
+                        queryData += $data;
+                        if (queryData.length > 1e6) { // can only handle requests smaller than 1e6 == 1MB
+                            
+                            queryData = "";
+                            self.response.writeHead(413, { 'Content-Type': 'text/plain' }).end();
+                            self.request.connection.destroy();
+                            $rej();
+                        }
+                    });
                     
-                    defer.resolve(querystring.parse(queryData));
-                });
-            }
-            else {
-                
-                defer.resolve(null);
-            }
+                    self.request.on('end', function func_processPost_onEnd() {
+                        
+                        $res(querystring.parse(queryData));
+                    });
+                }
+                else {
+                    
+                    $rej(null);
+                }
+            });
             
-            return defer.promise;
+            return prom.then(function ($r) {
+                
+                _POST = $r;
+                return $r;
+            });
         }
-        
+
         return _POST;
     });
     

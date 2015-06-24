@@ -3,6 +3,7 @@
 var me = module.exports;
 
 var async = require('vasync');
+var promise = require('promise');
 var q = require('q');
 var _ = require('lodash');
 
@@ -69,7 +70,7 @@ var _preparePartialSB = function ($requestState, $ext) {
 var _getContent = function f_make_getContent($requestState, $contentName, $namespace) {
 
     var defer = q.defer();
-    sql.newSQL('default', $requestState).done(function ($sql) {
+    sql.newSQL('default', $requestState).then(function ($sql) {
 
         var tblNS = $sql.openTable('namespace');
         var tblCon = $sql.openTable('content');
@@ -84,7 +85,7 @@ var _getContent = function f_make_getContent($requestState, $contentName, $names
         .fulfilling()
         .eq(tblCon.col('name'), $contentName)
         .execute()
-        .done(function ($rows) {
+        .then(function ($rows) {
             
             $sql.free();
             if ($rows.length <= 0) {
@@ -95,64 +96,59 @@ var _getContent = function f_make_getContent($requestState, $contentName, $names
             
             var row = $rows[0];
             var a = auth.newAuth($requestState);
-            a.hasAccessKeyExt(row.accessKey).done(function ($akExt) {
-                        
-                if (!$akExt.hasAccessKey) {
-                    
-                    defer.resolve('<error>' + hak.message + '</error>', hak.httpStatus);
-                    return;
-                }
-
-                var sb = _preparePartialSB($requestState, row.extSB);
-                var status = 200;
-                var body = row.content;
-                switch (row.language) {
-
-                    case 1: {// JS
-                        
-                        try {
-                            var code = sandbox.newScript(body);
-                        }
-                    catch ($e) {
-                            
-                            status = 500;
-                        }
-                        
-                        body = sb.run(code, $requestState.config.generalConfig.templateTimeout);
-                        
-                        break;
-                    }
-
-                    case 2: {// Embedded JS
-                        
-                        var tmp = _.template(body, {
-                            
-                            imports: sb.getGlobals()
-                        });
-                        
-                        if (typeof tmp === 'function') {
-                            
-                            body = tmp();
-                        }
-                        
-                        break;
-                    }
-
-                    case 3: {// CoffeeScript
-                        
-                        //Not implemented yet
-                        
-                        break;
-                    }
-                }
+            var hak = a.hasAccessKeyExt(row.accessKey);
+            if (!hak.hasAccessKey) {
                 
-                defer.resolve({
-                    body: body,
-                    status: status,
-                });
-            });
-        });
-    });
+                defer.resolve('<error>' + hak.message + '</error>', hak.httpStatus);
+                return;
+            }
+
+            var sb = _preparePartialSB($requestState, row.extSB);
+            var status = 200;
+            var body = row.content;
+            switch (row.language) {
+
+                case 1: {// JS
+                    
+                    try {
+                        var code = sandbox.newScript(body);
+                        body = sb.run(code, $requestState.config.generalConfig.templateTimeout);
+                    }
+                    catch ($e) {
+                        
+                        status = 500;
+                    }
+                    
+                    break;
+                }
+
+                case 2: {// Embedded JS
+                    
+                    var tmp = _.template(body, {
+                        
+                        imports: sb.getGlobals()
+                    });
+                    
+                    if (typeof tmp === 'function') {
+                        
+                        body = tmp();
+                    }
+                    
+                    break;
+                }
+
+                case 3: {// CoffeeScript
+                    
+                    //Not implemented yet
+                    
+                    break;
+                }
+            }
+
+            defer.resolve(body, status);
+
+        }).done();
+    }).done();
 
     return defer.promise;
 };
@@ -165,33 +161,14 @@ var _getPartial = function f_make_getPartial($requestState, $partialName, $names
         
         if ($requestState.cache.partials[$namespace][$partialName]) {
 
-            defer.resolve({
-                body: $requestState.cache.partials[$namespace][$partialName],
-                status: 200,
-                'void': $void,
-            });
+            defer.resolve($requestState.cache.partials[$namespace][$partialName], 200, $void);
         }
         else {
 
-            defer.reject({
-                body: '<error>ERROR: Partial could not be found!</error>',
-                status: 404,
-                void: $void,
-            });
+            defer.resolve('<error>ERROR: Partial could not be found!</error>', 404, $void);
         }
     }
     else {
-        
-        if (!$requestState.cache.partials) {
-        
-            $requestState.cache.partials = [];
-        }
-    
-        if (!$requestState.cache.partials[$namespace]) {
-        
-            $requestState.cache.partials[$namespace] = [];
-        }
-
         sql.newSQL('default', $requestState).then(function ($sql) {
             
             var tblNS = $sql.openTable('namespace');
@@ -209,122 +186,116 @@ var _getPartial = function f_make_getPartial($requestState, $partialName, $names
             .eq(tblNS.col('name'), $namespace)
             .eq(tblNS.col('ID'), tblPar.col('namespace'))
             .execute()
-            .done(function ($rows) {
+            .then(function ($rows) {
                 
-                $sql.free();
                 if ($rows.length <= 0) {
                     
-                    defer.resolve({
-                        body: '<error>ERROR: Partial could not be found!</error>',
-                        status: 404,
-                        'void': $void,
-                    });
+                    $sql.free();
+                    defer.resolve('<error>ERROR: Partial could not be found!</error>', 404, $void);
                     return;
                 }
                 
+                var i = 0;
+                var l = $rows.length;
+                var row = undefined;
+                var code = undefined;
+                var sb = undefined;
+                var hak = undefined;
                 var httpStatus = 200;
                 var a = auth.newAuth($requestState);
-                async.forEachPipeline({
+                while (i < l) {
                     
-                    inputs: $rows,
-                    func: function ($row, $cb) {
+                    row = $rows[i];
+                    
+                    hak = a.hasAccessKeyExt(row.partialAK)
+                    if (!hak.hasAccessKey) {
+                        
+                        if (row.partialName === $partialName) {
+                            
+                            httpStatus = hak.httpStatus;
+                            body = '<error>' + hak.message + '</error>';
+                            break;
+                        }
+                        
+                        continue;
+                    }
+                    
+                    // params are not implemented yet...
+                    var body = row.partialContent.replace(/\$[0-9]+/g , 'undefined');
+                    
+                    sb = _preparePartialSB($requestState, row.extSB);
+                    switch (row.partialSLang) {
 
-                        a.hasAccessKeyExt($row.partialAK).done(function ($akExt) {
-                                        
-                            if (!$akExt.hasAccessKey) {
-
-                                if ($row.partialName === $partialName) {
-                                    
-                                    httpStatus = $akExt.httpStatus;
-                                    $cb($akExt.message, '<error>' + $akExt.message + '</error>');
-                                }
-                                else {
-
-                                    $cb();
-                                }
-
-                                return;
+                        case 1: {// JS
+                            
+                            try {
+                                code = sandbox.newScript(body);
+                                body = sb.run(code, $requestState.config.generalConfig.templateTimeout);
+                            }
+                            catch ($e) {
+                                
+                                body = '<error>ERROR: Could not parse partial ' + $namespace + ':' + $partialName + '</error>';
                             }
                             
-                            // params are not implemented yet...
-                            var body = $row.partialContent.replace(/\$[0-9]+/g , 'undefined');
-                            var sb = _preparePartialSB($requestState, $row.extSB);
-                            var code = undefined;
-                            switch ($row.partialSLang) {
+                            break;
+                        }
 
-                                case 1: {// JS
-                                    
-                                    try {
-                                        code = sandbox.newScript(body);
-                                        body = sb.run(code, $requestState.config.generalConfig.templateTimeout);
-                                    }
-                                    catch ($e) {
-                                        
-                                        body = '<error>ERROR: Could not parse partial ' + $namespace + ':' + $partialName + '</error>';
-                                    }
-                                    
-                                    break;
-                                }
-
-                                case 2: {// Embedded JS
-                                    
-                                    var tmp = _.template(body, {
-                                        
-                                        imports: sb.getGlobals()
-                                    });
-                                    
-                                    if (typeof tmp === 'function') {
-                                        
-                                        body = tmp();
-                                    }
-                                    else {
-                                        
-                                        body = '<error>ERROR: Could not parse partial ' + $namespace + ':' + $partialName + '</error>';
-                                    }
-                                    
-                                    break;
-                                }
-
-                                case 3: {// CoffeeScript
-                                    
-                                    //Not implemented yet
-                                    body = '<error>CoffeeScript not implemented yet!</error>';
-                                    
-                                    break;
-                                }
+                        case 2: {// Embedded JS
+                            
+                            var tmp = _.template(body, {
+                                
+                                imports: sb.getGlobals()
+                            });
+                            
+                            if (typeof tmp === 'function') {
+                                
+                                body = tmp();
                             }
+                            else {
 
-                            $requestState.cache.partials[$namespace][$row.partialName] = body;
-                            $cb(null, body);
-                        });
-                    },
-                }, function ($err, $res) {
+                                body = '<error>ERROR: Could not parse partial ' + $namespace + ':' + $partialName + '</error>';
+                            }
+                            
+                            break;
+                        }
+
+                        case 3: {// CoffeeScript
+                            
+                            //Not implemented yet
+                            body = '<error>CoffeeScript not implemented yet!</error>';
+
+                            break;
+                        }
+                    }
                     
-                    var body = '';          
-                    if ($requestState.cache.partials[$namespace][$partialName]) {
+                    if (!$requestState.cache.partials) {
                         
-                        body = $requestState.cache.partials[$namespace][$partialName];
-                    }
-                    else {
-                        
-                        body = '<error>ERROR: Partial could not be found!</error>';
-                        httpStatus = 404;
+                        $requestState.cache.partials = [];
                     }
                     
-                    if ($err) {
-
-                        defer.reject($err);
+                    if (!$requestState.cache.partials[row.partialNS]) {
+                        
+                        $requestState.cache.partials[row.partialNS] = [];
                     }
-                    else {
-
-                        defer.resolve({
-                            body: body,
-                            status: httpStatus,
-                            'void': $void,
-                        });
-                    }
-                });
-            });
+                    
+                    $requestState.cache.partials[row.partialNS][row.partialName] = body;
+                    
+                    i++;
+                }
+                
+                if ($requestState.cache.partials[row.partialNS][$partialName]) {
+                    
+                    body = $requestState.cache.partials[row.partialNS][$partialName];
+                }
+                else {
+                    
+                    body = '<error>ERROR: Partial could not be found!</error>';
+                    httpStatus = 404;
+                }
+                
+                $sql.free();
+                defer.resolve(body, httpStatus, $void);
+            }).done();
         });
     }
 
@@ -340,11 +311,7 @@ var _parseTemplate = function f_make_parseTemplate($requestState, $template) {
     var match = incPattern.exec($template);
     if (!match) {
         
-        defer.resolve({
-            body: $template,
-            status: 200,
-        });
-
+        defer.resolve($template, 200);
         return defer.promise;
     }
     
@@ -375,36 +342,33 @@ var _parseTemplate = function f_make_parseTemplate($requestState, $template) {
                 ? $requestState.site
                 : $requestState.config.generalConfig.indexContent.value;
 
-            _getContent($requestState, name, namespace).done(function ($res) {
+            _getContent($requestState, name, namespace).then(function ($tmp, $httpStatus) {
                 
-                defer.resolve({
-                    body: tmp + $res.body,
-                    status: $res.status,
-                });
-            }, defer.reject);
+                defer.resolve(tmp + $tmp, $httpStatus);
+            }).done();
 
             break;
         }
 
-        // reserved for more tags in the future :)
+                    // reserved for more tags in the future :)
 
         default: {
 
-            _getPartial($requestState, name, namespace).done(function ($res) {
+            _getPartial($requestState, name, namespace).then(function ($tmp, $httpStatus) {
                 
-                defer.resolve({
-                    body: tmp + $res.body,
-                    status: $res.status,
-                });
-            }, defer.reject);
+                defer.resolve(tmp + $tmp, $httpStatus);
+            }).done();
         }
     }
     
     var r = q.defer();
-    defer.promise.done(function ($result) {
+    defer.promise.then(function ($result) {
         
-        _parseTemplate($requestState, $result.body + $template.substring(offset + inc.length)).done(r.resolve, r.reject);
-    });
+        _parseTemplate($requestState, $result + $template.substring(offset + inc.length)).then(function ($result, $httpStatus) {
+            
+            r.resolve($result, $httpStatus);
+        }).done();
+    }).done();
 
     return r.promise;
 };
@@ -415,18 +379,18 @@ var _siteResponse
     $siteName = typeof $siteName === 'string' && $siteName !== '' ? $siteName : 'index';
     
     var defer = q.defer();
-    _getPartial($requestState, $requestState.config.generalConfig.rootTemplate.value, $namespace).done(function ($res) {
+    _getPartial($requestState, $requestState.config.generalConfig.rootTemplate.value, $namespace).then(function ($result, $status) {
         
-        _parseTemplate($requestState, $res.body).done(function ($res) {
+        _parseTemplate($requestState, $result).then(function ($body, $status) {
             
             
 
             $requestState.httpStatus = 200;
             $requestState.responseType = 'text/html';
-            $requestState.responseBody = $res.body;
-            defer.resolve($res);
-        }, defer.reject);
-    }, defer.reject);
+            $requestState.responseBody = $body;
+            defer.resolve($result);
+        }).done();
+    }).done();
 
     return defer.promise;
 };
@@ -436,7 +400,7 @@ var _requestResponse
     $namespace = $namespace || 'default';
     
     var defer = q.defer();
-    sql.newSQL('default', $requestState).done(function ($sql) {
+    sql.newSQL('default', $requestState).then(function ($sql) {
         
         var tblReq = $sql.openTable('request');
         var tblNS = $sql.openTable('namespace');
@@ -452,9 +416,8 @@ var _requestResponse
             .eq(tblNS.col('name'), $namespace)
             .eq(tblReq.col('name'), $scriptName)
             .execute()
-            .done(function ($rows) {
+            .then(function ($rows) {
             
-            $sql.free();
             if ($rows.length <= 0) {
                 
                 $requestState.httpStatus = 404;
@@ -485,10 +448,7 @@ var _requestResponse
             }
 
             var a = auth.newAuth($requestState);
-            var hak = a.hasAccessKeyExt(row.accessKey);
-            
-            throw 'hasAccessKey returns a promise -> have to fix this!';
-
+            var hak = a.hasAccessKeyExt(row.accessKey)
             if (!hak.hasAccessKey) {
 
                 $requestState.httpStatus = hak.httpStatus;
@@ -561,8 +521,9 @@ var _requestResponse
                     defer.resolve();
                 }
             }
-            }, defer.reject);
-    });
+            })
+            .done();
+    }).done();
 
     return defer.promise;
 };
