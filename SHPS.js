@@ -20,8 +20,17 @@ var app = function f_app($debug) {// I'm so childish for laughing about this  :D
         
         var cp = require('child_process');
         var SFFM = require('./system/core/SFFM.js');
-        
-        cp.spawn(SFFM.isIOJS() ? 'iojs' : 'node', ['--expose-gc', '--harmony', './SHPS.js'], { stdio: 'inherit' });
+        var param = ['--expose-gc'];
+        if (SFFM.isHarmonyActivated()) {
+
+            param.push('--harmony');
+        }
+
+        param.push('./SHPS.js');
+        var bin = SFFM.isIOJS() ? 'iojs'
+                                : 'node';
+
+        cp.spawn(bin, param, { stdio: 'inherit' });
     }
 };
 

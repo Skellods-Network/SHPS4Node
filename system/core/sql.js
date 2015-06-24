@@ -8,11 +8,12 @@ GLOBAL.SHPS_SQL_MSSQL = 16;
 GLOBAL.SHPS_SQL_MARIA = SHPS_SQL_MYSQL | 4;
 GLOBAL.SHPS_SQL_PERCONA = SHPS_SQL_MYSQL | 8;
 
+GLOBAL.SHPS_ERROR_NO_ROWS = 'No rows were returned!';
+
 var mysql = require('mysql');
 var mssql = require('mssql');
 var pooling = require('generic-pool');
 var async = require('vasync');
-var Promise = require('promise');
 var q = require('q');
 
 var main = require('./main.js');
@@ -29,7 +30,6 @@ var _sqlConnectionPool = {};
 var mp = {
     self: this
 };
-
 
 /**
  * SQL string determinators
@@ -221,7 +221,21 @@ var _SQL
      */
     var _includeTable = [];
     
+    /**
+     * Array with results of last query
+     * 
+     * @var array of sqlRow
+     */
+    var _resultRows = [];
     
+    /**
+     * Array with field catalogue of last query
+     * 
+     * @var array of Object
+     */
+    var _resultFields = [];
+    
+
     /**
      * Grouphuggable
      * Breaks after 3 hugs per partner
@@ -249,14 +263,15 @@ var _SQL
      * @param string $query OPTIONAL
      * @param string $domain Needed for $param
      * @param mixed $param several parameters for SQL statement
-     * @return mixed Promise if a query was given, else a queryBuilder object is returned
+     * @return mixed
+     *   Promise([]) if a query was given, else a queryBuilder object is returned
      */
     var _query 
     = this.query = function ($query, $domain, $param) {
         
         _free = false;
         _fetchIndex = -1;
-        var _resultRows = [];
+        
         
         if (typeof $param !== 'undefined') {
             
@@ -270,25 +285,26 @@ var _SQL
             _queryCount++;
             var start = process.hrtime();
             
-            return new Promise(function ($fulfill, $reject) {
+            var defer = q.defer();
+            $connection.query($query, function ($err, $rows, $fields) {
                 
-                $connection.query($query, function ($err, $rows, $fields) {
+                var t = process.hrtime(start);
+                _lastQueryTime = t[0] + (t[1] / 1000000000);
+                _queryTime += _lastQueryTime;
+                
+                if ($err) {
                     
-                    var t = process.hrtime(start);
-                    _lastQueryTime = t[0] + (t[1] / 1000000000);
-                    _queryTime += _lastQueryTime;
+                    defer.reject(new Error($err));
+                }
+                else {
                     
-                    if ($err) {
-                        
-                        $reject($err);
-                    }
-                    else {
-                        
-                        _resultRows = $rows;
-                        $fulfill($rows, $fields);
-                    }
-                });
+                    _resultRows = $rows;
+                    _resultFields = $fields;
+                    defer.resolve($rows, $fields);
+                }
             });
+
+            return defer.promise;
         }
         
         return SQLQueryBuilder.newSQLQueryBuilder(this);
@@ -468,9 +484,19 @@ var _SQL
     var _free =
     this.free = function f_sql_SQL_free() {
         
-        if ($dbConfig.type.value == SHPS_SQL_MSSQL) {
+        switch ($dbConfig.type.value) {
+
+            case SHPS_SQL_MSSQL: {
+
+                _sqlConnectionPool[_makePoolName($dbConfig)].release($connection);
+                break;
+            }
             
-            _sqlConnectionPool[_makePoolName($dbConfig)].release($connection);
+            case SHPS_SQL_MARIA:
+            case SHPS_SQL_MYSQL: {
+
+                $connection.release();
+            }
         }
         
         _free = true;
@@ -519,15 +545,15 @@ var _SQL
 
         case SHPS_SQL_MYSQL: {
             
-            _query('SET NAMES \'UTF8\';').then().done();
+            _query('SET NAMES \'UTF8\';').done();
             _dbType = SHPS_SQL_MYSQL;
-            _query('SELECT VERSION();').then(function ($res) {
+            _query('SELECT VERSION();').done(function ($res) {
                 
                 if ($res[0]['VERSION()'].indexOf('MariaDB') > 0) {
                     
                     _dbType |= SHPS_SQL_MARIA;
                 }
-            }).done();
+            });
             
             break;
         }
@@ -572,7 +598,7 @@ var _makePoolName = function f_sql_makePoolName($dbConfig) {
  * 
  * @param string $alias //Default: 'default'
  * @param $requestState requestState Object
- * @return _SQL
+ * @return promise(SQL)
  */
 var _newSQL 
 = me.newSQL = function f_sql_newSQL($alias, $requestState) {
@@ -615,7 +641,7 @@ var _newSQL
                     }
                     else {
 
-                        defer.reject($err);
+                        defer.reject(new Error($err));
                     }
                 });
 
@@ -636,9 +662,6 @@ var _newSQL
                             user: dbConfig.user.value,
                             password: dbConfig.pass.value,
                             database: dbConfig.name.value
-                        }, function ($err) {
-                                
-                            
                         }));
                     },
                     destroy: function f_sql_newSQL_destroy_MSSQL_pool($res) {
@@ -662,7 +685,7 @@ var _newSQL
                     }
                     else {
 
-                        defer.reject($err);
+                        defer.reject(new Error($err));
                     }
                     
                 });
@@ -685,7 +708,14 @@ var _newSQL
 
                 nPool.getConnection(function ($err, $con) {
                     
-                    defer.resolve(new _SQL(dbConfig, $con));
+                    if ($err) {
+
+                        defer.reject(new Error($err));
+                    }
+                    else {
+
+                        defer.resolve(new _SQL(dbConfig, $con));
+                    }
                 });
 
                 break;
@@ -695,7 +725,14 @@ var _newSQL
 
                 nPool.acquire(function ($err, $client) {
                     
-                    defer.resolve(new _SQL(dbConfig, $client));
+                    if ($err) {
+                        
+                        defer.reject(new Error($err));
+                    }
+                    else {
+                        
+                        defer.resolve(new _SQL(dbConfig, $client));
+                    }
                 });
 
                 break;

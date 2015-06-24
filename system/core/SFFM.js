@@ -101,11 +101,20 @@ var _getIP
 
         return $request.ip;
     }
+    
+    if (!($request.headers['x-forwarded-for'] 
+        || $request.connection.remoteAddress 
+        || $request.socket.remoteAddress 
+        || ($request.connection.socket && $request.connection.socket.remoteAddress))) {
+
+        var e = 'OH, FUCK!';
+        throw new Error(e);
+    }
 
     var ip = $request.headers['x-forwarded-for']
         || $request.connection.remoteAddress 
         || $request.socket.remoteAddress 
-        || $request.connection.socket.remoteAddress;
+        || ($request.connection.socket && $request.connection.socket.remoteAddress);
 
     if (u.isArray(ip)) {
         

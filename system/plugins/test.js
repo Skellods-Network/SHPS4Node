@@ -4,6 +4,7 @@ var me = module.exports;
 
 var q = require('q');
 
+var lang = require('../core/language.js');
 var log = require('../core/log.js');
 var sffm = require('../core/SFFM.js');
 var sql = require('../core/sql.js');
@@ -62,8 +63,14 @@ var _onDirectCall
     }
 
     $requestState.responseBody += $requestState.SESSION['sth'];
-    defer.resolve();
+    
+    lang.getString($requestState, 'test', 'test0').then(function ($string) {
+    
+        $requestState.responseBody += '\n' + $string;
+        defer.resolve();
+    }).done();
 
+    
     return defer.promise;
     
     

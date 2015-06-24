@@ -3,7 +3,6 @@
 var me = module.exports;
 
 var q = require('q');
-var promise = require('promise');
 
 var helper = require('./helper.js');
 var sql = require('./sql.js');
@@ -38,7 +37,7 @@ var _hug
  * Get language to use
  * 
  * @param Object $requestState
- * @return string
+ * @return promise
  */
 var _getLanguage 
 = me.getLanguage = function f_language_getLanguage($requestState) {
@@ -51,7 +50,7 @@ var _getLanguage
         
         var defer = q.defer();
         
-        sql.newSQL('default', $requestState).then(function ($sql) {
+        sql.newSQL('default', $requestState).done(function ($sql) {
             
             var tblLang = $sql.openTable('language');
             $sql.query()
@@ -60,7 +59,7 @@ var _getLanguage
                     ])
                     .orderBy(tblLang.col('ID'))
                     .execute()
-                    .then(function ($rows) {
+                    .done(function ($rows) {
                 
                     $sql.free();
                     var ll = _getAcceptLanguageList($requestState);
@@ -111,8 +110,8 @@ var _getLanguage
                             }
                         }
                     }
-            }).done();
-        }).done();
+            });
+        });
         
         return defer.promise;
     }
@@ -224,5 +223,65 @@ var _getAcceptLanguageEnumerator
 
             return r;
         }
+    };
+};
+
+var _getString 
+= me.getString = function f_language_getString($requestState, $group, $key, $namespace) {
+    $namespace = typeof $namespace === 'string' ? $namespace : 'default';
+
+    var defer = q.defer();
+    
+    _getLanguage($requestState).done(function ($lang) {
+    
+        sql.newSQL('default', $requestState).done(function ($err, $sql) {
+            
+            var tblLang = $sql.openTable('language');
+            var tblString = $sql.openTable('string');
+            var tblSG = $sql.openTable('stringGroup');
+            var tblNS = $sql.openTable('namespace');
+            $sql.query()
+                .get(tblString.col('value'))
+                .fulfilling()
+                .eq(tblString.col('namespace'), tblNS.col('ID'))
+                .eq(tblNS.col('name'), $namespace)
+                .eq(tblSG.col('ID'), tblString.col('group'))
+                .eq(tblSG.col('name'), $group)
+                .eq(tblLang.col('ID'), tblString.col('langID'))
+                .eq(tblLang.col('name'), $lang)
+                .eq(tblString.col('key'), $key)
+                .execute()
+                .done(function ($err, $rows) {
+                
+                $sql.free();
+                if ($rows.length <= 0) {
+                    
+                    defer.resolve('N/A');
+                }
+                
+                defer.resolve($rows[0].value);
+            });
+        });
+    });
+
+    return defer.promise;
+};
+
+var _focus
+= me.focus = function c_language_focus($requestState) {
+
+    this.getLanguage = function () {
+        
+        _getLanguage($requestState);
+    };
+
+    this.getAcceptLanguageList = function () {
+
+        _getAcceptLanguageList($requestState);
+    };
+
+    this.getAcceptLanguageEnumerator = function () {
+
+        _getAcceptLanguageEnumerator($requestState);
     };
 };

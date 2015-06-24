@@ -124,7 +124,7 @@ var _sqlTable = function c_sqlTable($sql, $name) {
 
             case SHPS_SQL_MYSQL: {
 
-                $sql.query('CREATE TABLE IF NOT EXISTS ' + _getAbsoluteName() + ' ( `ID` INT UNSIGNED NOT NULL AUTO_INCREMENT , PRIMARY KEY (`ID`) ) ENGINE = Aria CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;');
+                return $sql.query('CREATE TABLE IF NOT EXISTS ' + _getAbsoluteName() + ' ( `ID` INT UNSIGNED NOT NULL AUTO_INCREMENT , PRIMARY KEY (`ID`) ) ENGINE = Aria CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;');
             }
         }
         
@@ -167,9 +167,13 @@ var _sqlTable = function c_sqlTable($sql, $name) {
             : sql = sql.newSQL($sql);
         
         var defer = q.defer();
-        sql.query('DROP TABLE ?;', _getAbsoluteName(), function f_sqlTable_drop_1($r) {
+        sql.query('DROP TABLE ?;', _getAbsoluteName()).done(function ($r) {
             
             defer.resolve($r);
+            sql.free();
+        }, function ($err) {
+        
+            defer.reject(new Error($err));
             sql.free();
         });
 

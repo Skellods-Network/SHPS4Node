@@ -61,13 +61,15 @@ var _evaluateWebsite
 
         $html += cl.makeClosedTag('script', { type: 'text/javascript', src: _makeJSURL('##placeholder##') });
     }
+
+    return $html;
 };
 
 var _serveFile
 = me.serveFile = function f_io_serveFile($requestState, $name) {
 
     var defer = q.defer();
-    sql.newSQL('default', $requestState).then(function ($sql) {
+    sql.newSQL('default', $requestState).done(function ($err, $sql) {
 
         var tblMT = $sql.openTable('mimeType');
         var tblU = $sql.openTable('upload');
@@ -84,8 +86,9 @@ var _serveFile
             .eq(tblU.col('mimeType'), tblMT.col('ID'))
             .eq(tblU.col('name'), $name)
             .execute()
-            .then(function ($rows) {
-
+            .done(function ($err, $rows) {
+            
+            $sql.free();
             if ($rows.length > 0) {
                 
                 var row = $rows[0];
@@ -150,8 +153,8 @@ var _serveFile
                 $requestState.httpStatus = 404;
                 defer.resolve();
             }
-        }).done();
-    }).done();
+        });
+    });
 
     return defer.promise;
 };

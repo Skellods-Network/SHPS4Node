@@ -216,7 +216,8 @@ var _init
             function f_init_checkFS($_p1, $_p2) { _checkFS($_p2); }
             , function f_init_readConfig($_p1, $_p2) { _readConfig($_p2); }
             , function f_init_loadPlugins($_p1, $_p2) { plugin.loadPlugins($_p2); }
-            , function f_init_parallelize($_p1, $_p2) { _parallelize($_p2); }
+            //, function f_init_parallelize($_p1, $_p2) { _parallelize($_p2); }
+            , function f_init_parallelize($_p1, $_p2) { _listen($_p2); }
             , function f_init_event($_p1, $_p2) {
                 
                 log.write('');
@@ -249,7 +250,7 @@ var _parallelize = function ($cb) {
         }
         else {
 
-            numWorkers = 0;//os.cpus().length; // Smart regulation later on
+            numWorkers = os.cpus().length; // Smart regulation later on
         }
     }
 
@@ -480,8 +481,9 @@ var _readConfig
 
                                         case 'hp': {
                                             
-                                            config[helper.SHPS_domain(c.generalConfig.URL.value).host] = c;
-                                            log.write('Config file `' + $file + '` was ' + 'loaded successfully'.green);
+                                            var cName = helper.SHPS_domain(c.generalConfig.URL.value).host;
+                                            config[cName] = c;
+                                            log.write('Config file `' + $file + '` was ' + ('loaded successfully (' + cName + ')').green);
                                             break;
                                         }
                                     }
@@ -491,6 +493,7 @@ var _readConfig
                                 catch ($e) {
                                     
                                     log.write('Config file `' + $file + '` was ' + 'invalid'.red.bold + '! ' + 'SKIPPED'.red.bold);
+                                    log.write($e.toString().red.bold);
                                 }
                                 finally {
                                     

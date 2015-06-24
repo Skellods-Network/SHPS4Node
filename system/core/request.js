@@ -29,6 +29,10 @@ var _handleRequest
     if (typeof $requestState.GET['favicon.ico'] !== 'undefined') {
 
         // annoying browsers ask for favicon.ico if not specified... have to handle this...
+        $requestState.httpStatus = 404;
+        var p = q.promise();
+        p.resolve();
+        unblock = p;
     }
     else if (typeof $requestState.GET['request'] !== 'undefined') {
 
@@ -104,7 +108,7 @@ var _handleRequest
         }
         else {
             
-            bodyLengthMatch = encodeURIComponent($requestState.responseBody).match(/%[89ABab]/g);
+            bodyLengthMatch = 0;//encodeURIComponent($requestState.responseBody).match(/%[89ABab]/g);
         }
         
         var defer = q.defer();
@@ -165,8 +169,8 @@ var _handleRequest
 
         defer.promise.then(function () {
             
-            lang.getLanguage($requestState).then(function ($lang) {
-                
+            //lang.getLanguage($requestState).done(function ($lang) {
+            var $lang = 'en';
                 headers['Content-Length'] = $requestState.responseBody.length + (bodyLengthMatch ? bodyLengthMatch.length : 0);
                 headers['Content-Encoding'] = $requestState.responseEncoding;
                 headers['Content-Language'] = $lang;
@@ -180,7 +184,7 @@ var _handleRequest
                 
                     $requestState.result.end($requestState.responseBody);
                 }
-            }).done();
+            //});
         }).done();
     }).done();
 };

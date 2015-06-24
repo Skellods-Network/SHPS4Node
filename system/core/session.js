@@ -93,6 +93,16 @@ var Session = function c_Session($requestState) {
     this.genNewSID = function f_session_session_genNewSID() {
 
         var _sha1 = crypto.createHash('sha1');
+        
+        var $request = $requestState.request;
+        if (!($request.headers['x-forwarded-for'] 
+        || $request.connection.remoteAddress 
+        || $request.socket.remoteAddress 
+        || ($request.connection.socket && $request.connection.socket.remoteAddress))) {
+            
+            $request.headers['x-forwarded-for'] = 'localhost';
+        }
+
         _sha1.update(SFFM.getIP($requestState.request), 'ascii');
         _sha1.update(SFFM.randomString(2048), 'ascii');
         _sha1.update((new Date).toISOString(), 'ascii');

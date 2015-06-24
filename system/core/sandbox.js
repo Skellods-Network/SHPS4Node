@@ -6,6 +6,7 @@ var vm = require('vm');
 
 var auth = require('./auth.js');
 var helper = require('./helper.js');
+var lang = require('./language.js');
 var log = require('./log.js');
 var SFFM = require('./SFFM.js');
 var sql = require('./sql.js');
@@ -139,7 +140,7 @@ var _newSandbox
                 sb.require = require;
                 rebuildContext = true;
             },
-
+            
             baseProcess: function f_sandbox_newSandbox_addFeature_baseProcess() {
                 
                 sb.process = process;
@@ -152,12 +153,25 @@ var _newSandbox
                 rebuildContext = true;
             },
             
+            shpsLanguage: function f_sandbox_newSandbox_addFeature_shpsLanguage($requestState) {
+
+                sb.lang = lang.focus($requestState);
+                rebuildContext = true;
+            },
+
             shpsLog: function f_sandbox_newSandbox_addFeature_shpsLog() {
                 
                 sb.log = log;
                 rebuildContext = true;
             },
             
+            shpsParameters: function f_sandbox_newSandbox_addFeature_shpsParameters($requestState) {
+
+                sb.GET = $requestState.GET;
+                sb.POST = $requestState.POST;
+                sb.SESSION = $requestState.SESSION;
+            },
+
             shpsSFFM: function f_sandbox_newSandbox_addFeature_shpsSFFM() {
                 
                 sb.SFFM = SFFM;

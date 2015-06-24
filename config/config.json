@@ -12,7 +12,7 @@
 
             "description": "Your domain. Please use it without protocol. Add all subdirectories until the SHPS root folder. On SHPS-webservers, don't add a subdirectory.",
             "example": [ "www.example.com", "php.example.com/path/to/root", "node.example.com" ],
-            "value": "localhost"
+            "value": "sgdc13735.zf-lenksysteme.net"
         },
         "staticResourcesURL": {
 
