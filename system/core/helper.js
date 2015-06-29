@@ -9,9 +9,39 @@ var u = require('util');
 
 var q = require('q');
 
-var cookie = require('./cookie.js');
-var log = require('./log.js');
-var request = require('./request.js');
+var _cookie = null;
+__defineGetter__('cookie', function () {
+    
+    if (!_cookie) {
+        
+        _cookie = require('./cookie.js');
+    }
+    
+    return _cookie;
+});
+
+var _log = null;
+__defineGetter__('log', function () {
+
+    if (!_log) {
+
+        _log = require('./log.js');
+    }
+
+    return _log;
+});
+
+var _request = null;
+__defineGetter__('request', function () {
+    
+    if (!_request) {
+        
+        _request = require('./request.js');
+    }
+    
+    return _request;
+});
+
 var SFFM = require('./SFFM.js');
 
 var mp = {
@@ -160,30 +190,31 @@ me.requestState = function () {
 var _genericHug 
 = me.genericHug = function f_helper_genericHug($h, $self, $breakCondition) {
     
-    if (typeof $self.hug.lastPartner === 'undefined') {
+    var self = $self.self;
+    if (typeof self.hug.lastPartner === 'undefined') {
         
-        $self.hug.lastPartner = [];
+        self.hug.lastPartner = [];
     }
     
-    if (typeof $self.hug.lastPartner[$self] === 'undefined') {
+    if (typeof self.hug.lastPartner[self] === 'undefined') {
         
-        $self.hug.lastPartner[$self] = $h;
+        self.hug.lastPartner[self] = $h;
     }
     
-    if (typeof $self.hug.count === 'undefined') {
+    if (typeof self.hug.count === 'undefined') {
         
-        $self.hug.count = [];
+        self.hug.count = [];
     }
     
-    if ($self.hug.lastPartner[$self] != $h) {
+    if (self.hug.lastPartner[self] != $h) {
         
-        $self.hug.lastPartner[$self] = $h;
-        $self.hug.count[$self] = [];
+        self.hug.lastPartner[self] = $h;
+        self.hug.count[self] = [];
     }
     
-    if (typeof $self.hug.count[$self] === 'undefined') {
+    if (typeof self.hug.count[self] === 'undefined') {
         
-        $self.hug.count[$self] = [];
+        self.hug.count[self] = [];
     }
     
     if (!u.isArray($h)) {
@@ -195,13 +226,13 @@ var _genericHug
     var l = $h.length;
     while (i < l) {
         
-        if (!$self.hug.count[$self][$h[i]]) {
+        if (!self.hug.count[self][$h[i]]) {
             
-            $self.hug.count[$self][$h[i]] = 0;
+            self.hug.count[self][$h[i]] = 0;
         }
         
-        $self.hug.count[$self][$h[i]]++;
-        if (!$breakCondition($self.hug.count[$self][$h[i]])) {
+        self.hug.count[self][$h[i]]++;
+        if (!$breakCondition(self.hug.count[self][$h[i]])) {
             
             i++;
             continue;

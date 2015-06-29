@@ -7,6 +7,16 @@ var cp = require('child_process');
 
 var schedule = require('./schedule.js');
 var SFFM = require('./SFFM.js');
+var _log = null;
+__defineGetter__('log', function () {
+    
+    if (!_log) {
+        
+        _log = require('./log.js');
+    }
+    
+    return _log;
+});
 
 var me = module.exports;
 var bcryptModule = undefined;
@@ -45,7 +55,6 @@ var description = undefined;
  */
 schedule.addSlot('onDependencyError', function ($depName, $depVer, $error) {
 
-    var log = require('./log.js');
     log.writeFatal('The dependency `' + $depName + '` (ver.' + $depVer + ') is missing or does not work as expected.\n' + $error);
 
     schedule.sendSignal('fatalError');
@@ -53,7 +62,6 @@ schedule.addSlot('onDependencyError', function ($depName, $depVer, $error) {
 
 schedule.addSlot('onDependencyWarning', function ($depName, $warning) {
     
-    var log = require('./log.js');
     log.writeWarning('The dependency `' + $depName + '` has thrown a warning:\n' + $warning);
 });
 

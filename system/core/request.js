@@ -50,8 +50,8 @@ var _handleRequest
         // call plugin
         if (plugin.pluginExists($requestState.GET['plugin'])) {
             
-        unblock = plugin.callPluginEvent('onDirectCall', $requestState.GET['plugin'], $requestState);
-    }
+            unblock = plugin.callPluginEvent('onDirectCall', $requestState.GET['plugin'], $requestState);
+        }
         else {
 
             $requestState.httpStatus = 404;
@@ -98,8 +98,12 @@ var _handleRequest
                 return this;
             },
 
-            done: function () {
+            done: function ($cb) {
+                
+                if ($cb) {
 
+                    $cb();
+                }
                 return this;
             }
         };
@@ -197,6 +201,10 @@ var _handleRequest
             }
             //});
         });
+    }, function ($err) {
+    
+        $requestState.result.writeHead(500, { 'Server': 'SHPS' });
+        $requestState.result.end($err.toString());
     });
 };
 

@@ -6,12 +6,74 @@ var readline = require('readline');
 var cluster = require('cluster');
 var u = require('util');
 
-var cookie = require('./cookie.js');
 var def = require('./default.js');
-var helper = require('./helper.js');
-var log = require('./log.js');
-var main = require('./main.js');
-var sandbox = require('./sandbox.js');
+
+
+var _cookie = null;
+__defineGetter__('cookie', function () {
+    
+    if (!_cookie) {
+        
+        _cookie = require('./cookie.js');
+    }
+    
+    return _cookie;
+});
+
+var _parallelize = null;
+__defineGetter__('parallel', function () {
+    
+    if (!_parallelize) {
+        
+        _parallelize = require('./parallelize.js');
+    }
+    
+    return _parallelize;
+});
+
+var _helper = null;
+__defineGetter__('helper', function () {
+    
+    if (!_helper) {
+        
+        _helper = require('./helper.js');
+    }
+    
+    return _helper
+});
+
+var _log = null;
+__defineGetter__('log', function () {
+    
+    if (!_log) {
+        
+        _log = require('./log.js');
+    }
+    
+    return _log;
+});
+
+var _main = null;
+__defineGetter__('main', function () {
+    
+    if (!_main) {
+        
+        _main = require('./main.js');
+    }
+    
+    return _main;
+});
+
+var _sandbox = null;
+__defineGetter__('sandbox', function () {
+    
+    if (!_sandbox) {
+        
+        _sandbox = require('./sandbox.js');
+    }
+    
+    return _sandbox;
+});
 
 var rl = {};
 var _isInitialized = false;
@@ -112,6 +174,7 @@ var _handleRequest
     
     rl.on('line', function ($line) {
         
+        $line = $line.trim();
         switch ($line) {
 
             case 'cls': {
@@ -125,8 +188,9 @@ var _handleRequest
                 
                 _isInitialized = false;
                 rl.close();
-                cluster.disconnect();
-                process.exit(0); //todo: nice shutdown - also need to exit parent process if available
+                parallel.killAll();
+                main.killAllServers();
+                process.exit(0); //todo: nice shutdown
                 break;
             }
 
@@ -179,7 +243,14 @@ var _handleRequest
             default: {
                 
                 //call plugins
-                log.write('Command not found!\n');
+                if ($line !== '') {
+
+                    log.write('Command not found!\n');
+                }
+                else {
+
+                    rl.prompt();
+                }
             }
         }
         

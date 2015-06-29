@@ -8,8 +8,39 @@ var cluster = require('cluster');
 var readline = require('readline');
 
 var schedule = require('./schedule.js');
-var cl = require('./commandline.js');
-var main = require('./main.js');
+var _config = null;
+__defineGetter__('config', function () {
+    
+    if (!_config) {
+        
+        _config = require('./config.js');
+    }
+    
+    return _config;
+});
+
+var _cl = null;
+__defineGetter__('cl', function () {
+    
+    if (!_cl) {
+        
+        _cl = require('./commandline.js');
+    }
+    
+    return _cl;
+});
+
+var _main = null;
+__defineGetter__('main', function () {
+    
+    if (!_main) {
+        
+        _main = require('./main.js');
+    }
+    
+    return _main;
+});
+
 var helper = require('./helper.js');
 var SFFM = require('./SFFM.js');
 
@@ -271,9 +302,14 @@ var _out
     
     if (cluster.isMaster || $forceWrite) {
         
-        if (main.getHPConfig('1337')) {
+        if (config.getHPConfig('1337')) {
             
             $str = _l337($str);
+        }
+        
+        if (cluster.isWorker) {
+
+            process.send({ workerMSG: $str });
         }
 
         console.log($str);

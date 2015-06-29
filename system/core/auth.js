@@ -4,7 +4,6 @@ var me = module.exports;
 
 GLOBAL.SHPS_COOKIE_AUTOLOGINTOKEN = 'SHPSALT';
 
-var dep = require('./dependency.js');
 var q = require('q');
 var oa = require('object-assign');
 var async = require('vasync');
@@ -16,6 +15,7 @@ var session = require('./session.js');
 var SFFM = require('./SFFM.js');
 var sql = require('./sql.js');
 var log = require('./log.js');
+var dep = require('./dependency.js');
 
 var mp = {
     self: this

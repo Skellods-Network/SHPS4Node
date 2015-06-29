@@ -1,18 +1,38 @@
 'use strict';
 
+var cluster = require('cluster');
+
+var log = require('./system/core/log.js');
+
+
+////// ONLY FOR DEVELOPMENT PURPOSES \\\\\\
+// This will start SHPS as if it was starting without debug - but it will not reconfigure the start parameters
+// This is important for debugging purposes as I cannot use breakpoints in a child process...
+var __debug__ = true;
+////// ONLY FOR DEVELOPMENT PURPOSES \\\\\\
+
+
 /**
  * Will start SHPS with exposed garbage collector
  */
 var app = function f_app($debug) {// I'm so childish for laughing about this  :D
     $debug = typeof $debug !== 'undefined' ? $debug : false;
-
-    if (global.gc || $debug) {// Running the script in a child process destroys the possibility to debug
+    
+    if (global.gc || $debug  || __debug__) {// Running the script in a child process destroys the possibility to debug
         
         var main = require('./system/core/main');
-        var log = require('./system/core/log.js');
         
-        log.cls();
+        if (cluster.isMaster) {
+
+            log.cls();
+        }
+                
         log.writeWelcome();
+        
+        if ($debug) {
+
+            main.setDebug($debug);
+        }
         
         main.init();
     }
@@ -30,7 +50,8 @@ var app = function f_app($debug) {// I'm so childish for laughing about this  :D
         var bin = SFFM.isIOJS() ? 'iojs'
                                 : 'node';
 
-        cp.spawn(bin, param, { stdio: 'inherit' });
+        var x = cp.spawn(bin, param, { stdio: 'inherit' });
+        log.write('Reconfiguring start parameters...');
     }
 };
 
@@ -50,17 +71,18 @@ if (process.argv.length > 1) {
         i++;
     }
 
-    if (debug) {
+    if (debug || __debug__) {
 
         // Timeout needed because VS2013 is too slow.
         // It won 't connect to the debugger in time for all of the startup-action otherwise :/
+        log.write('Starting wait for debugger...');
         setTimeout(function () {
             
-            app(true);
+            app(debug);
         }, 1000);
     }
     else {
 
-        app();
+        process.nextTick(app);
     }
 }

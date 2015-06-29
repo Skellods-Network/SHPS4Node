@@ -14,13 +14,26 @@ var _plugins = {};
 var self = this;
 
 
+/**
+ * Load all plugins
+ * 
+ * @return Promise()
+ */
 var _loadPlugins 
-= me.loadPlugins = function ($cb) {
+= me.loadPlugins = function f_plugin_loadPlugins() {
     
+    var defer = q.defer();
     var dir = main.getDir(SHPS_DIR_PLUGINS);
     fs.readdir(dir, function ($err, $files) {
         
         log.write('\nDetecting plugins...');
+        
+        if ($err) {
+
+            defer.reject(new Error($err));
+            return;
+        }
+
         var i = 0;
         while (i < $files.length) {
             
@@ -61,11 +74,10 @@ var _loadPlugins
             i++;
         }
         
-        if (typeof $cb !== 'undefined') {
-            
-            $cb();
-        }
+        defer.resolve();
     });
+
+    return defer.promise;
 };
 
 var _pluginExists 

@@ -69,7 +69,7 @@ var _serveFile
 = me.serveFile = function f_io_serveFile($requestState, $name) {
 
     var defer = q.defer();
-    sql.newSQL('default', $requestState).done(function ($err, $sql) {
+    sql.newSQL('default', $requestState).done(function ($sql) {
 
         var tblMT = $sql.openTable('mimeType');
         var tblU = $sql.openTable('upload');
@@ -86,7 +86,7 @@ var _serveFile
             .eq(tblU.col('mimeType'), tblMT.col('ID'))
             .eq(tblU.col('name'), $name)
             .execute()
-            .done(function ($err, $rows) {
+            .done(function ($rows) {
             
             $sql.free();
             if ($rows.length > 0) {

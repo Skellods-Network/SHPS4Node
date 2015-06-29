@@ -485,31 +485,30 @@ var _requestResponse
             }
             
             var a = auth.newAuth($requestState);
-            var hak = a.hasAccessKeyExt(row.accessKey);
-            
-            throw 'hasAccessKey returns a promise -> have to fix this!';
-            
-            if (!hak.hasAccessKey) {
+
+            a.hasAccessKeyExt(row.accessKey).done(function ($akExt) {
                 
-                $requestState.httpStatus = hak.httpStatus;
-                
-                $requestState.responseBody = JSON.stringify({
+                if (!$akExt.hasAccessKey) {
                     
-                    status: 'error',
-                    message: hak.message,
-                    accessKey: hak.key,
-                });
-                
-                defer.resolve();
-            }
-            else {
-                
-                $requestState.httpStatus = 200;
-                if (row.extSB > 0) {
+                    $requestState.httpStatus = $akExt.httpStatus;
                     
-                    extSb.reset();
-                    extSb.addFeature.all($requestState);
-                    try {
+                    $requestState.responseBody = JSON.stringify({
+                        
+                        status: 'error',
+                        message: $akExt.message,
+                        accessKey: $akExt.key,
+                    });
+                    
+                    defer.resolve();
+                }
+                else {
+                    
+                    $requestState.httpStatus = 200;
+                    if (row.extSB > 0) {
+                        
+                        var extSb = sandbox.newSandbox();
+                        extSb.reset();
+                        extSb.addFeature.all($requestState);
                         var r = extSb.run(sandbox.newScript(row.script));
                         
                         if (typeof r === 'object' && r.then !== undefined) {
@@ -528,7 +527,7 @@ var _requestResponse
                                 }
                                 
                                 defer.resolve();
-                            });
+                            }, defer.reject);
                         }
                         else {
                             
@@ -541,26 +540,21 @@ var _requestResponse
                             defer.resolve();
                         }
                     }
-                    catch ($e) {
+                    else {
                         
-                        log.writeError($e);
+                        var sb = sandbox.newSandbox();
+                        sb.reset();
+                        sb.addFeature.allSHPS($requestState);
+                        $requestState.responseBody = JSON.stringify({
+                            
+                            status: 'ok',
+                            result: sb.run(sandbox.newScript(row.script)),
+                        });
+                        
+                        defer.resolve();
                     }
-                    
                 }
-                else {
-                    
-                    var sb = sandbox.newSandbox();
-                    sb.reset();
-                    sb.addFeature.allSHPS($requestState);
-                    $requestState.responseBody = JSON.stringify({
-                        
-                        status: 'ok',
-                        result: sb.run(sandbox.newScript(row.script)),
-                    });
-                    
-                    defer.resolve();
-                }
-            }
+            }, defer.reject);
         }, defer.reject);
     });
     

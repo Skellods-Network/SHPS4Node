@@ -17,6 +17,17 @@ var async = require('vasync');
 var q = require('q');
 
 var main = require('./main.js');
+var _config = null;
+__defineGetter__('config', function () {
+    
+    if (!_config) {
+        
+        _config = require('./config.js');
+    }
+    
+    return _config;
+});
+
 var log = require('./log.js');
 var helper = require('./helper.js');
 var sffm = require('./SFFM.js');
@@ -275,7 +286,7 @@ var _SQL
         
         if (typeof $param !== 'undefined') {
             
-            $query = mysql.format($query, $param, true, main.getHPConfig('generalConfig', 'timezone', $domain));
+            $query = mysql.format($query, $param, true, config.getHPConfig('generalConfig', 'timezone', $domain));
             mysql.createQuery($query, cb);
         }
         
@@ -654,15 +665,20 @@ var _newSQL
                         
                     name: poolName,
                     create: function f_sql_newSQL_create_MSSQL_pool($cb) {
+                        
+                        var con = new mssql.Connection({
                             
-                        $cb(null, new mssql.Connection({
-                                
                             server: dbConfig.host.value,
                             port: dbConfig.port.value,
                             user: dbConfig.user.value,
                             password: dbConfig.pass.value,
                             database: dbConfig.name.value
-                        }));
+                        });
+
+                        con.connect(function ($err) {
+
+                            $cb($err, con);
+                        });
                     },
                     destroy: function f_sql_newSQL_destroy_MSSQL_pool($res) {
                         
@@ -731,7 +747,18 @@ var _newSQL
                     }
                     else {
                         
-                        defer.resolve(new _SQL(dbConfig, $client));
+                        if (!$client.query) {
+
+                            $client.query = function ($query, $cb) {
+
+                                var req = new mssql.Request($client);
+                                req.query($query, $cb);
+                            };
+                        }
+                        else {
+
+                            defer.resolve(new _SQL(dbConfig, $client));
+                        }
                     }
                 });
 

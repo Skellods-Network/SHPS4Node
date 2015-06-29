@@ -5,8 +5,28 @@ var me = module.exports;
 var os = require('os');
 
 var scheduler = require('./schedule.js');
-var log = require('./log.js');
-var herlper = require('./helper.js');
+var _config = null;
+__defineGetter__('config', function () {
+    
+    if (!_config) {
+        
+        _config = require('./config.js');
+    }
+    
+    return _config;
+});
+
+var _log = null;
+__defineGetter__('log', function () {
+    
+    if (!_log) {
+        
+        _log = require('./log.js');
+    }
+    
+    return _log;
+});
+
 var main = require('./main.js');
 var SFFM = require('./SFFM.js');
 
@@ -106,7 +126,7 @@ var _checkConfigForRisks
                 log.writeHint('Consider increasing the number of workers in ' + $file + ' to ' + numCPUs + ' (CPU core count) or setting it to -1 for smart handling.');
             }
             
-            if (main.getHPConfig('eastereggs')) {
+            if (config.getHPConfig('eastereggs')) {
                 
                 // Eastereggs are fun for intranet applications, but could reveal too much information about the SHPS version in use
                 log.writeWarning('Public eastereggs are enabled for in ' + $file + '!');

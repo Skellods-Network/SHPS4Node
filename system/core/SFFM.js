@@ -4,10 +4,29 @@ var me = module.exports;
 
 var path = require('path');
 var u = require('util');
-var _ = require('lodash');
 var crypto = require('crypto');
+var __ = null;
+__defineGetter__('_', function () {
+    
+    if (!__) {
+        
+        __ = require('lodash');
+    }
 
-var helper = require('./helper.js');
+    return __;
+});
+
+
+var _helper = null;
+__defineGetter__('helper', function () {
+    
+    if (!_helper) {
+        
+        _helper = require('./helper.js');
+    }
+    
+    return _helper
+});
 
 var mp = {
     self: this
@@ -107,8 +126,7 @@ var _getIP
         || $request.socket.remoteAddress 
         || ($request.connection.socket && $request.connection.socket.remoteAddress))) {
 
-        var e = 'OH, FUCK!';
-        throw new Error(e);
+        $request.headers['x-forwarded-for'] = 'Something went to hell in here.... So we just add a random value';
     }
 
     var ip = $request.headers['x-forwarded-for']

@@ -4,12 +4,61 @@ var me = module.exports;
 
 var vm = require('vm');
 
-var auth = require('./auth.js');
-var helper = require('./helper.js');
-var lang = require('./language.js');
-var log = require('./log.js');
+var _auth = null;
+__defineGetter__('auth', function () {
+    
+    if (!_auth) {
+        
+        _auth = require('./auth.js');
+    }
+    
+    return _auth
+});
+
+var _helper = null;
+__defineGetter__('helper', function () {
+    
+    if (!_helper) {
+        
+        _helper = require('./helper.js');
+    }
+    
+    return _helper
+});
+
+var _lang = null;
+__defineGetter__('lang', function () {
+    
+    if (!_lang) {
+        
+        _lang = require('./language.js');
+    }
+    
+    return _lang
+});
+
+var _log = null;
+__defineGetter__('log', function () {
+    
+    if (!_log) {
+        
+        _log = require('./log.js');
+    }
+    
+    return _log;
+});
+
 var SFFM = require('./SFFM.js');
-var sql = require('./sql.js');
+var _sql = null;
+__defineGetter__('sql', function () {
+    
+    if (!_sql) {
+        
+        _sql = require('./sql.js');
+    }
+    
+    return _sql;
+});
 
 var mp = {
     self: this
