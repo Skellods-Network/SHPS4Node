@@ -10,6 +10,7 @@ var sffm = require('../core/SFFM.js');
 var sql = require('../core/sql.js');
 
 var auth = require('../core/auth.js');
+var compLib = require('../core/componentLibrary.js');
 
 
 var _info 
@@ -46,7 +47,17 @@ var _onDirectCall
     
     var defer = q.defer();
     
+    // CL Test
+    /*$requestState.responseType = 'text/html';
+    $requestState.httpStatus = 200;
+    $requestState.responseBody = compLib.newCL($requestState).makeHyperlink('//google.de', 'Test Descr.');
     
+    process.nextTick(defer.resolve);
+
+    return defer.promise;*/
+
+    x.y();
+
     // SESSION TEST
     $requestState.responseType = 'text/plain';
     $requestState.httpStatus = 200;

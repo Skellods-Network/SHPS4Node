@@ -8,7 +8,7 @@ var log = require('./system/core/log.js');
 ////// ONLY FOR DEVELOPMENT PURPOSES \\\\\\
 // This will start SHPS as if it was starting without debug - but it will not reconfigure the start parameters
 // This is important for debugging purposes as I cannot use breakpoints in a child process...
-var __debug__ = true;
+var __debug__ = false;
 ////// ONLY FOR DEVELOPMENT PURPOSES \\\\\\
 
 

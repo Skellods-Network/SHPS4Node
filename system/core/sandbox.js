@@ -48,6 +48,17 @@ __defineGetter__('log', function () {
     return _log;
 });
 
+var _cl = null;
+__defineGetter__('complib', function () {
+    
+    if (!_cl) {
+        
+        _cl = require('./componentLibrary.js');
+    }
+    
+    return _cl;
+});
+
 var SFFM = require('./SFFM.js');
 var _sql = null;
 __defineGetter__('sql', function () {
@@ -199,6 +210,12 @@ var _newSandbox
             shpsAuth: function f_sandbox_newSandbox_addFeature_shpsAuth($requestState) {
                 
                 sb.auth = new auth.focus($requestState);
+                rebuildContext = true;
+            },
+            
+            shpsComponentLibrary: function f_sandbox_newSandbox_addFeature_shpsComponentLibrary($requestState) {
+
+                sb.cl = complib.newCL($requestState);
                 rebuildContext = true;
             },
             
