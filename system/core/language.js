@@ -42,13 +42,12 @@ var _hug
 var _getLanguage 
 = me.getLanguage = function f_language_getLanguage($requestState) {
     
+    var defer = q.defer();
     if (typeof $requestState.cache.language !== 'undefined') {
         
-        return $requestState.cache.language;
+        defer.resolve($requestState.cache.language);
     }
     else {
-        
-        var defer = q.defer();
         
         sql.newSQL('default', $requestState).done(function ($sql) {
             
@@ -112,9 +111,9 @@ var _getLanguage
                     }
             });
         });
-        
-        return defer.promise;
     }
+
+    return defer.promise;
 };
 
 var _getAcceptLanguageList
@@ -272,16 +271,16 @@ var _focus
 
     this.getLanguage = function () {
         
-        _getLanguage($requestState);
+       return _getLanguage($requestState);
     };
 
     this.getAcceptLanguageList = function () {
 
-        _getAcceptLanguageList($requestState);
+        return _getAcceptLanguageList($requestState);
     };
 
     this.getAcceptLanguageEnumerator = function () {
 
-        _getAcceptLanguageEnumerator($requestState);
+        return _getAcceptLanguageEnumerator($requestState);
     };
 };

@@ -12,30 +12,56 @@ var mp = {
 var _CL 
 = me.CL = function c_CL($requestState) {
     
+    var _getContentURL =
+    this.getContentURL = function ($content, $namespace, $ssl) {
+
+        return _getURL($content, $namespace, $ssl, false);
+    };
+    
+    var _getFileURL =
+    this.getFileURL =
+    this.getResourceURL = function ($resource, $namespace, $ssl) {
+
+        return _getURL($resource, $namespace, $ssl, true);
+    };
+    
+    var _getURL =
+    this.getURL = function ($name, $namespace, $ssl, $resource) {
+
+        var rawURL = _buildURL($namespace, $ssl, $resource);
+        if (!$resource && $name !== $requestState.config.generalConfig.URL.value) {
+            
+            rawURL.url += rawURL.paramChar + 'site=' + $name;
+            rawURL.paramChar = '&';
+        }
+        else if ($resource) {
+
+            rawURL.url += rawURL.paramChar + 'file=' + $name;
+            rawURL.paramChar = '&';
+        }
+        
+        return rawURL;
+    };
+
     var _makeHyperlink =
     this.makeHyperlink = function ($ref, $description, $basicAttributes, $newTab, $namespace, $ssl) {
         $basicAttributes = typeof $basicAttributes !== 'undefined' ? $basicAttributes : null;
-        $newTab = typeof $newTab !== 'undefined' ? $newTab : false;
+        $newTab = typeof $newTab !== 'undefined' ? $newTab : null;
         $namespace = typeof $namespace !== 'undefined' ? $namespace : null;
         $ssl = typeof $ssl !== 'undefined' ? $ssl : null;
         
         var url;
-        if (!$ref.match(/[a-zA-Z_\-]+/)) {
+        var attr = '';
+        var ext = false;
+        if ($ref.match(/(^\/\/.+)|(.+:\/\/.+)|(mailto:.+)/i)) {
             
-            var attr = ' rel="nofollow"';
+            attr = ' rel="nofollow"';
             url = $ref;
+            ext = true;
         }
         else {
             
-            var attr = '';
-            var param = {};
-            var rawURL = _buildURL($namespace, $ssl, false);
-            url = rawURL.url;
-            if ($ref !== $requestState.config.generalConfig.URL.value) {
-
-                url += rawURL.paramChar + 'site=' + $ref;
-                rawURL.paramChar = '&';
-            }
+            url = _getContentURL($ref, $namespace, $ssl).url;
         }
         
         if ($basicAttributes !== null) {
@@ -43,7 +69,7 @@ var _CL
             attr += ' ' + $basicAttributes;
         }
         
-        if ($newTab) {
+        if ($newTab === true || ($newTab === null && ext)) {
             
             attr += ' target="_blank"';
         }
@@ -125,6 +151,16 @@ var _CL
             paramChar: pc,
             toString: function () { return url; },
         };
+    };
+    
+    var _makeLangLink =
+    this.makeLangLink = function ($lang, $description, $basicAttributes) {
+
+        var rawUrl = _buildURL();
+        var url = rawUrl.url + rawUrl.paramChar + 'lang=' + $lang;
+        rawUrl.paramChar = '&';
+
+        return '<a href="' + url + '"' + ($basicAttributes !== null ? ' ' + $basicAttributes.toString() : '') + '>' + $description + '</a>';
     };
     
     /**

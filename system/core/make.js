@@ -89,7 +89,12 @@ var _getContent = function f_make_getContent($requestState, $contentName, $names
             $sql.free();
             if ($rows.length <= 0) {
                 
-                defer.resolve('<error>ERROR: Site not found!</error>', 404);
+                defer.reject({
+                
+                    status: 404,
+                    body: '<error>ERROR: Site not found!</error>',
+                });
+
                 return;
             }
             
@@ -381,7 +386,17 @@ var _parseTemplate = function f_make_parseTemplate($requestState, $template) {
                     body: tmp + $res.body,
                     status: $res.status,
                 });
-            }, defer.reject);
+            }, function ($err) {
+                
+                if ($err.status && $err.body) {
+
+                    defer.resolve($err);
+                }
+                else {
+
+                    defer.reject($err);
+                }
+            });
             
             break;
         }
@@ -403,7 +418,15 @@ var _parseTemplate = function f_make_parseTemplate($requestState, $template) {
     var r = q.defer();
     defer.promise.done(function ($result) {
         
-        _parseTemplate($requestState, $result.body + $template.substring(offset + inc.length)).done(r.resolve, r.reject);
+        _parseTemplate($requestState, $result.body + $template.substring(offset + inc.length)).done(function ($res) {
+            
+            if ($result.status == 404) {
+
+                $res.status = 404;
+            }
+
+            r.resolve($res);
+        }, r.reject);
     });
     
     return r.promise;
@@ -419,9 +442,7 @@ var _siteResponse
         
         _parseTemplate($requestState, $res.body).done(function ($res) {
             
-            
-            
-            $requestState.httpStatus = 200;
+            $requestState.httpStatus = $res.status;
             $requestState.responseType = 'text/html';
             $requestState.responseBody = $res.body;
             defer.resolve($res);
@@ -441,12 +462,12 @@ var _requestResponse
         var tblReq = $sql.openTable('request');
         var tblNS = $sql.openTable('namespace');
         $sql.query()
-                .get([
-            tblReq.col('script'),
-            tblReq.col('accessKey'),
-            tblReq.col('tls'),
-            tblReq.col('extSB'),
-        ])
+            .get([
+                tblReq.col('script'),
+                tblReq.col('accessKey'),
+                tblReq.col('tls'),
+                tblReq.col('extSB'),
+            ])
             .fulfilling()
             .eq(tblNS.col('ID'), tblReq.col('namespace'))
             .eq(tblNS.col('name'), $namespace)

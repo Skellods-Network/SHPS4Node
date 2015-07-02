@@ -389,6 +389,7 @@ var _listen
         rs.request = $req;
         rs.result = $res;
         rs.COOKIE = cookie.newCookieJar(rs);
+
         request.handleRequest(rs);
     };
     
