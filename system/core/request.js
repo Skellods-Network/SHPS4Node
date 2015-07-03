@@ -221,10 +221,13 @@ var _handleRequest
                 }
             }
 
-            lang.getLanguage($requestState).done(respFun, function () {
+            lang.newLang($requestState).getLanguage().done(respFun, function ($err) {
                         
                 respFun('na');        
             });
+        }, function ($e) {
+            
+            var s = $e;
         });
     }, function ($err) {
     

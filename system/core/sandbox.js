@@ -221,7 +221,7 @@ var _newSandbox
             
             shpsLanguage: function f_sandbox_newSandbox_addFeature_shpsLanguage($requestState) {
 
-                sb.lang = lang.focus($requestState);
+                sb.lang = lang.newLang($requestState);
                 rebuildContext = true;
             },
 
@@ -271,7 +271,7 @@ var _newSandbox
             
             var options = {
 
-                displayErrors: false
+                displayErrors: true
             };
 
             if (typeof $timeout !== 'undefined') {

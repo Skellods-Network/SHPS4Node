@@ -117,13 +117,13 @@ var _getContent = function f_make_getContent($requestState, $contentName, $names
                         
                         try {
                             var code = sandbox.newScript(body);
+                            body = sb.run(code, $requestState.config.generalConfig.templateTimeout.value);
                         }
-                    catch ($e) {
+                        catch ($e) {
                             
                             status = 500;
+                            body = '<error>' + $e + '</error>';
                         }
-                        
-                        body = sb.run(code, $requestState.config.generalConfig.templateTimeout);
                         
                         break;
                     }
@@ -137,7 +137,14 @@ var _getContent = function f_make_getContent($requestState, $contentName, $names
                         
                         if (typeof tmp === 'function') {
                             
-                            body = tmp();
+                            try {
+                                body = tmp(); //TODO: Put this in a sandbox!
+                            }
+                            catch ($e) {
+                                
+                                status = 500;
+                                body = '<error>' + $e + '</error>';
+                            }
                         }
                         
                         break;
@@ -145,16 +152,29 @@ var _getContent = function f_make_getContent($requestState, $contentName, $names
 
                     case 3: {// CoffeeScript
                         
-                        //Not implemented yet
+                        //TODO: Not implemented yet
                         
                         break;
                     }
                 }
-                
-                defer.resolve({
-                    body: body,
-                    status: status,
-                });
+
+                if (body.then) {
+
+                    body.done(function ($body) {
+                                            
+                        defer.resolve({
+                            body: $body,
+                            status: status,
+                        });              
+                    });
+                }
+                else {
+
+                    defer.resolve({
+                        body: body,
+                        status: status,
+                    });
+                }
             });
         });
     });
@@ -251,56 +271,13 @@ var _getPartial = function f_make_getPartial($requestState, $partialName, $names
                                 return;
                             }
                             
-                            // params are not implemented yet...
-                            var body = $row.partialContent.replace(/\$[0-9]+/g , 'undefined');
-                            var sb = _preparePartialSB($requestState, $row.extSB);
-                            var code = undefined;
-                            switch ($row.partialSLang) {
-
-                                case 1: {// JS
-                                    
-                                    try {
-                                        code = sandbox.newScript(body);
-                                        body = sb.run(code, $requestState.config.generalConfig.templateTimeout);
-                                    }
-                                    catch ($e) {
-                                        
-                                        body = '<error>ERROR: Could not parse partial ' + $namespace + ':' + $partialName + '</error>';
-                                    }
-                                    
-                                    break;
-                                }
-
-                                case 2: {// Embedded JS
-                                    
-                                    var tmp = _.template(body, {
-                                        
-                                        imports: sb.getGlobals()
-                                    });
-                                    
-                                    if (typeof tmp === 'function') {
-                                        
-                                        body = tmp();
-                                    }
-                                    else {
-                                        
-                                        body = '<error>ERROR: Could not parse partial ' + $namespace + ':' + $partialName + '</error>';
-                                    }
-                                    
-                                    break;
-                                }
-
-                                case 3: {// CoffeeScript
-                                    
-                                    //Not implemented yet
-                                    body = '<error>CoffeeScript not implemented yet!</error>';
-                                    
-                                    break;
-                                }
-                            }
-                            
-                            $requestState.cache.partials[$namespace][$row.partialName] = body;
-                            $cb(null, body);
+                            $requestState.cache.partials[$namespace][$row.partialName] = {};
+                            $requestState.cache.partials[$namespace][$row.partialName].namespace = $row.partialNS;
+                            $requestState.cache.partials[$namespace][$row.partialName].name = $row.partialName;
+                            $requestState.cache.partials[$namespace][$row.partialName].body = $row.partialContent;
+                            $requestState.cache.partials[$namespace][$row.partialName].lang = $row.partialSLang;
+                            $requestState.cache.partials[$namespace][$row.partialName].extSB = $row.partialExtSB;
+                            $cb(null, $row.partialContent);
                         });
                     },
                 }, function ($err, $res) {
@@ -323,6 +300,8 @@ var _getPartial = function f_make_getPartial($requestState, $partialName, $names
                     else {
                         
                         defer.resolve({
+                            name: $partialName,
+                            namespace: $namespace,
                             body: body,
                             status: httpStatus,
                             'void': $void,
@@ -334,6 +313,74 @@ var _getPartial = function f_make_getPartial($requestState, $partialName, $names
     }
     
     return defer.promise;
+};
+
+var _executeBody = function ($requestState, $nfo, $params) {
+    
+    var body = $nfo.body.replace(/\$([0-9]+)/g , function ($var) {
+        
+        if ($params) {
+            
+            return $params[$var.substr(1)];
+        }
+        else {
+            
+            return 'undefined';
+        }
+    });
+    
+    var sb = _preparePartialSB($requestState, $nfo.extSB);
+    var code = undefined;
+    switch ($nfo.lang) {
+
+        case 1: {// JS
+            
+            try {
+                code = sandbox.newScript(body);
+                body = sb.run(code, $requestState.config.generalConfig.templateTimeout);
+            }
+                catch ($e) {
+                
+                body = '<error>ERROR: Could not parse partial ' + $nfo.namespace + ':' + $nfo.name + '</error>';
+            }
+            
+            break;
+        }
+
+        case 2: {// Embedded JS
+            
+            var tmp = _.template(body, {
+                
+                imports: sb.getGlobals()
+            });
+            
+            if (typeof tmp === 'function') {
+                try {
+                    body = tmp();
+                }
+                catch ($e) {
+
+                    body = '<error>ERROR: Could not parse partial ' + $nfo.namespace + ':' + $nfo.name + ' ' + $e + '</error>';
+                }
+            }
+            else {
+                
+                body = '<error>ERROR: Could not parse partial ' + $nfo.namespace + ':' + $nfo.name + '</error>';
+            }
+            
+            break;
+        }
+
+        case 3: {// CoffeeScript
+            
+            //Not implemented yet
+            body = '<error>CoffeeScript not implemented yet!</error>';
+            
+            break;
+        }
+    }
+    
+    return body;
 };
 
 var _parseTemplate = function f_make_parseTemplate($requestState, $template) {
@@ -367,11 +414,12 @@ var _parseTemplate = function f_make_parseTemplate($requestState, $template) {
     if (params) {
         
         params = params
-            .substring(1, params.length - 2)
+            .substring(1, params.length - 1)
             .split(',');
     }
     
     var tmp = $template.substring(0, offset - 1);
+
     switch (name) {
 
         case 'body': {
@@ -383,7 +431,7 @@ var _parseTemplate = function f_make_parseTemplate($requestState, $template) {
             _getContent($requestState, name, namespace).done(function ($res) {
                 
                 defer.resolve({
-                    body: tmp + $res.body,
+                    body: tmp + _executeBody($requestState, $res, params),
                     status: $res.status,
                 });
             }, function ($err) {
@@ -408,7 +456,7 @@ var _parseTemplate = function f_make_parseTemplate($requestState, $template) {
             _getPartial($requestState, name, namespace).done(function ($res) {
                 
                 defer.resolve({
-                    body: tmp + $res.body,
+                    body: tmp + _executeBody($requestState, $res.body, params),
                     status: $res.status,
                 });
             }, defer.reject);
@@ -440,7 +488,7 @@ var _siteResponse
     var defer = q.defer();
     _getPartial($requestState, $requestState.config.generalConfig.rootTemplate.value, $namespace).done(function ($res) {
         
-        _parseTemplate($requestState, $res.body).done(function ($res) {
+        _parseTemplate($requestState, _executeBody($requestState, $res.body)).done(function ($res) {
             
             $requestState.httpStatus = $res.status;
             $requestState.responseType = 'text/html';
@@ -530,7 +578,21 @@ var _requestResponse
                         var extSb = sandbox.newSandbox();
                         extSb.reset();
                         extSb.addFeature.all($requestState);
-                        var r = extSb.run(sandbox.newScript(row.script));
+                        
+                        try {
+
+                            var r = extSb.run(sandbox.newScript(row.script));
+                        }
+                        catch ($e) {
+
+                            $requestState.responseBody = JSON.stringify({
+                                
+                                status: 'error',
+                                result: $e,
+                            });
+                            
+                            defer.resolve();
+                        }
                         
                         if (typeof r === 'object' && r.then !== undefined) {
                             
@@ -548,7 +610,21 @@ var _requestResponse
                                 }
                                 
                                 defer.resolve();
-                            }, defer.reject);
+                            }, function ($e) {
+                                                    
+                                $requestState.responseBody = JSON.stringify({
+                                    
+                                    status: 'error',
+                                    message: $e,
+                                });
+
+                                if (r.done !== undefined) {
+                                    
+                                    r.done();
+                                }
+
+                                defer.resolve();
+                            });
                         }
                         else {
                             

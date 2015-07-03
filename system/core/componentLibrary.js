@@ -12,12 +12,40 @@ var mp = {
 var _CL 
 = me.CL = function c_CL($requestState) {
     
+    /**
+     * Get content URL
+     * @deprecated Please use getURL() with $resource set to false
+     * 
+     * @param $content string Name of content
+     * @param $namespace string|null
+     *   Name of namespace. null can be used to stay in the currently used namespace
+     *   Default: null
+     * @param $ssl boolean|null
+     *   Set if transport encryption should be used or not.
+     *   Null keeps the current protocol
+     *   Default: null
+     * @return Object(url, paramChar)
+     */
     var _getContentURL =
     this.getContentURL = function ($content, $namespace, $ssl) {
 
         return _getURL($content, $namespace, $ssl, false);
     };
     
+    /**
+     * Get file URL
+     * @deprecated Please use getURL() with $resource set to true
+     * 
+     * @param $resource string Name of file
+     * @param $namespace string|null
+     *   Name of namespace. null can be used to stay in the currently used namespace
+     *   Default: null
+     * @param $ssl boolean|null
+     *   Set if transport encryption should be used or not.
+     *   Null keeps the current protocol
+     *   Default: null
+     * @return Object(url, paramChar)
+     */
     var _getFileURL =
     this.getFileURL =
     this.getResourceURL = function ($resource, $namespace, $ssl) {
@@ -25,10 +53,26 @@ var _CL
         return _getURL($resource, $namespace, $ssl, true);
     };
     
+    /**
+     * Get URL for a file or a content
+     * 
+     * @param $name string Name of resource or content
+     * @param $namespace string|null
+     *   Name of namespace. null can be used to stay in the currently used namespace
+     *   Default: null
+     * @param $tls boolean|null
+     *   Set if transport encryption should be used or not.
+     *   Null keeps the current protocol
+     *   Default: null
+     * @param $resource boolean
+     *   True for files, false for content
+     *   Default: false
+     * @return Object(url, paramChar)
+     */
     var _getURL =
-    this.getURL = function ($name, $namespace, $ssl, $resource) {
+    this.getURL = function ($name, $namespace, $tls, $resource) {
 
-        var rawURL = _buildURL($namespace, $ssl, $resource);
+        var rawURL = _buildURL($namespace, $tls, $resource);
         if (!$resource && $name !== $requestState.config.generalConfig.URL.value) {
             
             rawURL.url += rawURL.paramChar + 'site=' + $name;
@@ -42,7 +86,34 @@ var _CL
         
         return rawURL;
     };
-
+    
+    /**
+     * Make a HTML anchor
+     * 
+     * @param $ref string
+     *   Name of content or URL to external address
+     * @param $description string
+     *   Description for the anchor which will be visible on the site later on.
+     *   You can put anything here, even HTML
+     * @param $basicAttributes Object(toString())
+     *   Object which serializes to HTML attributes
+     *   Default: null
+     * @param $newTab boolean|null
+     *   Should a new tab be opened
+     *   If set to null, new tabs will be opened for external urls, else the site will be opened in the same tab
+     *   Default: null
+     * @param $namespace string|null
+     *   Name of namespace. null can be used to stay in the currently used namespace
+     *   Default: null
+     * @param $ssl boolean|null
+     *   Set if transport encryption should be used or not.
+     *   Null keeps the current protocol
+     *   Default: null
+     * @return string
+     * 
+     * @example 1:
+     *   <%= makeHyperlink('//shps.io', 'SHPS'); %>
+     */
     var _makeHyperlink =
     this.makeHyperlink = function ($ref, $description, $basicAttributes, $newTab, $namespace, $ssl) {
         $basicAttributes = typeof $basicAttributes !== 'undefined' ? $basicAttributes : null;
@@ -61,7 +132,7 @@ var _CL
         }
         else {
             
-            url = _getContentURL($ref, $namespace, $ssl).url;
+            url = _getURL($ref, $namespace, $ssl, false).url;
         }
         
         if ($basicAttributes !== null) {
@@ -153,6 +224,16 @@ var _CL
         };
     };
     
+    /**
+     * Make a HTML anchor to an other language
+     * 
+     * @param $lang string The target language
+     * @param $description The anchor description whih will be visible on the website
+     * @param $basicAttributes Object(toString())
+     *   Object which serializes to HTML attributes
+     *   Default: null
+     * @return string
+     */
     var _makeLangLink =
     this.makeLangLink = function ($lang, $description, $basicAttributes) {
 

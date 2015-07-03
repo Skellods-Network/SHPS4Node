@@ -18,6 +18,8 @@
  * Performance array vs object: http://stackoverflow.com/questions/8423493/what-is-the-performance-of-objects-arrays-in-javascript-specifically-for-googl
  */
 
+require('./error.js');
+
 var me = module.exports;
 
 GLOBAL.SHPS_ = 1;
@@ -263,6 +265,9 @@ var _init
     
     _init.initialized = true;
     log.write('Please wait while we initialize SHPS for you... it won\'t take long ;)');
+
+    process.title = 'SHPS Terminal';
+
     async.pipeline({
         
         'funcs': [

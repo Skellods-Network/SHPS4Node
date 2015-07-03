@@ -47,6 +47,17 @@ var _onDirectCall
     
     var defer = q.defer();
     
+    // LANGUAGE TEST
+    lang.newLang($requestState).getStrings('test').done(function ($strings) {
+    
+        $requestState.responseBody = JSON.stringify($strings);
+        $requestState.responseType = 'application/json';
+        $requestState.httpStatus = 200;
+        defer.resolve();
+    });
+    
+    return defer.promise;
+
     // CL Test
     /*$requestState.responseType = 'text/html';
     $requestState.httpStatus = 200;
