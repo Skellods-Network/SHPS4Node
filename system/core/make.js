@@ -3,15 +3,38 @@
 var me = module.exports;
 
 var async = require('vasync');
-var promise = require('promise');
 var q = require('q');
 var _ = require('lodash');
 
 var auth = require('./auth.js');
 var cache = require('./cache.js');
+var cl = require('./componentLibrary.js');
 var helper = require('./helper.js');
-var log = require('./log.js');
+var __log = null;
+__defineGetter__('_log', function () {
+    
+    if (!__log) {
+        
+        __log = require('./log.js');
+    }
+    
+    return __log;
+});
+
+var main = require('./main.js');
+var __nLog = null;
+__defineGetter__('log', function () {
+    
+    if (!__nLog) {
+        
+        __nLog = _log.newLog();
+    }
+    
+    return __nLog;
+});
+
 var sandbox = require('./sandbox.js');
+var schedule = require('./schedule.js');
 var SFFM = require('./SFFM.js');
 var sql = require('./sql.js');
 
@@ -43,7 +66,7 @@ var _hug
 
 var _preparePartialSB = function ($requestState, $ext) {
     $ext = typeof $ext !== 'undefined' ? $ext : false;
-
+    
     if ($ext) {
         
         if (!$requestState.cache.makePartialSBExt) {
@@ -66,11 +89,131 @@ var _preparePartialSB = function ($requestState, $ext) {
     }
 };
 
+/**
+ * Execute code
+ * 
+ * @param $requestState Object()
+ * @param $code string|Script()
+ * @param $lang integer
+ * @param $sb Sandbox() OPTIONAL
+ *   Default: null
+ * @param $extSB Boolean OPTIONAL
+ *   If no sandbox was given, should the created sandbox be extended?
+ *   Default: false
+ * @return Object(status, result)
+ *   Status can be true or false, depending on if the script executed successfully
+ */
+var _run 
+= me.run = function f_make_run($requestState, $code, $lang, $sb, $extSB) {
+
+    var r = {
+        
+        status: false,
+        result: '',
+    };
+
+    switch ($lang) {
+
+        case undefined:
+        case null:
+        case 0: {// No script
+            r.status = true;
+            r.result = $code;
+
+            break;
+        }
+
+        case 1: {// JS
+            
+            if (typeof $code === 'string') {
+                
+                $code = sandbox.newScript($code);
+            }
+            
+            if (!$sb) {
+                
+                $sb = _preparePartialSB($requestState, $extSB);
+            }
+
+            try {
+                r.result = $sb.run($code, $requestState.config.generalConfig.templateTimeout.value);
+                r.status = true;
+            }
+            catch ($e) {
+                
+                if (main.isDebug()) {
+
+                    r.result = $e;
+                }
+                else {
+
+                    r.result = SHPS_ERROR_CODE_EXECUTION;
+                }
+            }
+            
+            break;
+        }
+
+        case 2: {// Embedded JS
+            
+            if (!$sb) {
+                
+                $sb = _preparePartialSB($requestState, $extSB);
+            }
+
+            var tmp = _.template($code, {
+                
+                imports: $sb.getGlobals()
+            });
+            
+            if (typeof tmp === 'function') {
+                
+                try {
+                    r.result = tmp(); //TODO: Put this in a sandbox!
+                    r.status = true;
+                }
+                catch ($e) {
+                    
+                    if (main.isDebug()) {
+                        
+                        r.result = $e;
+                    }
+                    else {
+                        
+                        r.result = SHPS_ERROR_CODE_EXECUTION;
+                    }
+                }
+            }
+            
+            break;
+        }
+
+        default: {// Call Plugins
+
+            var results = schedule.sendDuplexSignal('onScriptExecuteUnknownLanguage', $requestState, $code, $lang, $sb, $extSB);
+            var i = 0;
+            var l = results.length;
+            while (i < l) {
+                
+                if (results[i]) {
+                    
+                    r.result = results[i];
+                    break;
+                }
+
+                i++;
+            }
+        }
+    }
+
+    return r;
+};
+
 var _getContent = function f_make_getContent($requestState, $contentName, $namespace) {
-
+    
     var defer = q.defer();
-    sql.newSQL('default', $requestState).then(function ($sql) {
-
+    sql.newSQL('default', $requestState).done(function ($sql) {
+        
         var tblNS = $sql.openTable('namespace');
         var tblCon = $sql.openTable('content');
         $sql.query()
@@ -79,77 +222,85 @@ var _getContent = function f_make_getContent($requestState, $contentName, $names
             tblCon.col('accessKey'),
             tblCon.col('extSB'),
             tblCon.col('language'),
-            tblCon.col('tls'), // todo: assert HTTPS if this flag is set
+            tblCon.col('tls'),
         ])
         .fulfilling()
         .eq(tblCon.col('name'), $contentName)
         .execute()
-        .then(function ($rows) {
+        .done(function ($rows) {
             
             $sql.free();
             if ($rows.length <= 0) {
+                
+                defer.reject({
+                
+                    status: 404,
+                    body: '<error>ERROR: Site not found!</error>',
+                });
 
-                defer.resolve('<error>ERROR: Site not found!</error>', 404);
                 return;
             }
             
             var row = $rows[0];
-            var a = auth.newAuth($requestState);
-            var hak = a.hasAccessKeyExt(row.accessKey);
-            if (!hak.hasAccessKey) {
+            if (row.tls && !SFFM.isHTTPS($requestState.request)) {
                 
-                defer.resolve('<error>' + hak.message + '</error>', hak.httpStatus);
+                $requestState.responseHeaders['Location'] = cl.newCL($requestState).getURL(null, null, true, null).url;
+                defer.reject({
+                    
+                    status: 301,
+                    body: '<error>ERROR: TLS mandatory!</error>',
+                });
+                
                 return;
             }
 
-            var sb = _preparePartialSB($requestState, row.extSB);
-            var status = 200;
-            var body = row.content;
-            switch (row.language) {
+            var a = auth.newAuth($requestState);
+            a.hasAccessKeyExt(row.accessKey).done(function ($akExt) {
+                
+                if (!$akExt.hasAccessKey) {
+                    
+                    defer.resolve('<error>' + hak.message + '</error>', hak.httpStatus);
+                    return;
+                }
+                
+                var sb = _preparePartialSB($requestState, row.extSB);
+                var status = 200;
+                var body = row.content;
+                var tmp = _run($requestState, body, row.language, sb, row.extSB);
+                if (tmp.status) {
+                    
+                    status = tmp.status;
+                    body = tmp.result;
+                }
+                else {
 
-                case 1: {// JS
-                    
-                    try {
-                        var code = sandbox.newScript(body);
-                    }
-                    catch ($e) {
-                        
-                        status = 500;
-                    }
-                    
-                    body = sb.run(code, $requestState.config.generalConfig.templateTimeout);
-                    
-                    break;
+                    status = 500;
+                    body = '<error>' + tmp.result + '</error>';
                 }
 
-                case 2: {// Embedded JS
-                    
-                    var tmp = _.template(body, {
-                        
-                        imports: sb.getGlobals()
+                if (body.then) {
+
+                    body.done(function ($body) {
+                                            
+                        defer.resolve({
+
+                            body: $body,
+                            status: status,
+                        });              
                     });
-                    
-                    if (typeof tmp === 'function') {
-                        
-                        body = tmp();
-                    }
-                    
-                    break;
                 }
+                else {
 
-                case 3: {// CoffeeScript
-                    
-                    //Not implemented yet
-                    
-                    break;
+                    defer.resolve({
+
+                        body: body,
+                        status: status,
+                    });
                 }
-            }
-
-            defer.resolve(body, status);
-
-        }).done();
-    }).done();
-
+            });
+        });
+    });
+    
     return defer.promise;
 };
 
@@ -160,15 +311,34 @@ var _getPartial = function f_make_getPartial($requestState, $partialName, $names
     if ($requestState.cache.partials && $requestState.cache.partials[$namespace]) {
         
         if ($requestState.cache.partials[$namespace][$partialName]) {
-
-            defer.resolve($requestState.cache.partials[$namespace][$partialName], 200, $void);
+            
+            defer.resolve({
+                body: $requestState.cache.partials[$namespace][$partialName],
+                status: 200,
+                'void': $void,
+            });
         }
         else {
-
-            defer.resolve('<error>ERROR: Partial could not be found!</error>', 404, $void);
+            
+            defer.reject({
+                body: '<error>ERROR: Partial could not be found!</error>',
+                status: 404,
+                'void': $void,
+            });
         }
     }
     else {
+        
+        if (!$requestState.cache.partials) {
+            
+            $requestState.cache.partials = [];
+        }
+        
+        if (!$requestState.cache.partials[$namespace]) {
+            
+            $requestState.cache.partials[$namespace] = [];
+        }
+        
         sql.newSQL('default', $requestState).then(function ($sql) {
             
             var tblNS = $sql.openTable('namespace');
@@ -186,128 +356,128 @@ var _getPartial = function f_make_getPartial($requestState, $partialName, $names
             .eq(tblNS.col('name'), $namespace)
             .eq(tblNS.col('ID'), tblPar.col('namespace'))
             .execute()
-            .then(function ($rows) {
-                
-                if ($rows.length <= 0) {
-                    
-                    $sql.free();
-                    defer.resolve('<error>ERROR: Partial could not be found!</error>', 404, $void);
-                    return;
-                }
-                
-                var i = 0;
-                var l = $rows.length;
-                var row = undefined;
-                var code = undefined;
-                var sb = undefined;
-                var hak = undefined;
-                var httpStatus = 200;
-                var a = auth.newAuth($requestState);
-                while (i < l) {
-                    
-                    row = $rows[i];
-                    
-                    hak = a.hasAccessKeyExt(row.partialAK)
-                    if (!hak.hasAccessKey) {
-                        
-                        if (row.partialName === $partialName) {
-                            
-                            httpStatus = hak.httpStatus;
-                            body = '<error>' + hak.message + '</error>';
-                            break;
-                        }
-                        
-                        continue;
-                    }
-                    
-                    // params are not implemented yet...
-                    var body = row.partialContent.replace(/\$[0-9]+/g , 'undefined');
-                    
-                    sb = _preparePartialSB($requestState, row.extSB);
-                    switch (row.partialSLang) {
-
-                        case 1: {// JS
-                            
-                            try {
-                                code = sandbox.newScript(body);
-                            }
-                            catch ($e) {
-                                
-                                var str = $e;
-                            }
-                            
-                            body = sb.run(code, $requestState.config.generalConfig.templateTimeout);
-                            
-                            break;
-                        }
-
-                        case 2: {// Embedded JS
-                            
-                            var tmp = _.template(body, {
-                                
-                                imports: sb.getGlobals()
-                            });
-                            
-                            if (typeof tmp === 'function') {
-                                
-                                body = tmp();
-                            }
-                            
-                            break;
-                        }
-
-                        case 3: {// CoffeeScript
-                            
-                            //Not implemented yet
-                            
-                            break;
-                        }
-                    }
-                    
-                    if (!$requestState.cache.partials) {
-                        
-                        $requestState.cache.partials = [];
-                    }
-                    
-                    if (!$requestState.cache.partials[row.partialNS]) {
-                        
-                        $requestState.cache.partials[row.partialNS] = [];
-                    }
-                    
-                    $requestState.cache.partials[row.partialNS][row.partialName] = row.partialContent;
-                    
-                    i++;
-                }
-                
-                if ($requestState.cache.partials[row.partialNS][$partialName]) {
-                    
-                    body = $requestState.cache.partials[row.partialNS][$partialName];
-                }
-                else {
-                    
-                    body = '<error>ERROR: Partial could not be found!</error>';
-                    httpStatus = 404;
-                }
+            .done(function ($rows) {
                 
                 $sql.free();
-                defer.resolve(body, httpStatus, $void);
-            }).done();
+                if ($rows.length <= 0) {
+                    
+                    defer.resolve({
+                        body: '<error>ERROR: Partial could not be found!</error>',
+                        status: 404,
+                        'void': $void,
+                    });
+
+                    return defer.promise;
+                }
+                
+                var httpStatus = 200;
+                var a = auth.newAuth($requestState);
+                async.forEachPipeline({
+                    
+                    inputs: $rows,
+                    func: function ($row, $cb) {
+                        
+                        a.hasAccessKeyExt($row.partialAK).done(function ($akExt) {
+                            
+                            if (!$akExt.hasAccessKey) {
+                                
+                                if ($row.partialName === $partialName) {
+                                    
+                                    httpStatus = $akExt.httpStatus;
+                                    $cb($akExt.message, '<error>' + $akExt.message + '</error>');
+                                }
+                                else {
+                                    
+                                    $cb();
+                                }
+                                
+                                return;
+                            }
+                            
+                            $requestState.cache.partials[$namespace][$row.partialName] = {};
+                            $requestState.cache.partials[$namespace][$row.partialName].namespace = $row.partialNS;
+                            $requestState.cache.partials[$namespace][$row.partialName].name = $row.partialName;
+                            $requestState.cache.partials[$namespace][$row.partialName].body = $row.partialContent;
+                            $requestState.cache.partials[$namespace][$row.partialName].lang = $row.partialSLang;
+                            $requestState.cache.partials[$namespace][$row.partialName].extSB = $row.partialExtSB;
+                            $cb(null, $row.partialContent);
+                        });
+                    },
+                }, function ($err, $res) {
+                    
+                    var body = '';
+                    if ($requestState.cache.partials[$namespace][$partialName]) {
+                        
+                        body = $requestState.cache.partials[$namespace][$partialName].body;
+                    }
+                    else {
+                        
+                        body = '<error>ERROR: Partial could not be found!</error>';
+                        httpStatus = 404;
+                    }
+                    
+                    if ($err) {
+                        
+                        if (main.isDebug()) {
+
+                            defer.reject($err);
+                        }
+                        else {
+
+                            defer.reject(SHPS_ERROR_UNKNOWN);
+                        }
+                    }
+                    else {
+                        
+                        defer.resolve({
+                            name: $partialName,
+                            namespace: $namespace,
+                            body: body,
+                            status: httpStatus,
+                            'void': $void,
+                        });
+                    }
+                });
+            });
         });
     }
-
+    
     return defer.promise;
+};
+
+var _executeBody = function ($requestState, $nfo, $params) {
+    
+    var body = $nfo.body.replace(/\$([0-9]+)/g , function ($var) {
+        
+        if ($params) {
+            
+            return $params[$var.substr(1)];
+        }
+        else {
+            
+            return 'undefined';
+        }
+    });
+    
+    body = _run($requestState, body, $nfo.lang, null, $nfo.extSB).result;
+
+    return body;
 };
 
 var _parseTemplate = function f_make_parseTemplate($requestState, $template) {
     
     var defer = q.defer();
-
+    
     // parse partial-inclusion
     var incPattern = /\{\s*?\$\s*?([\w\-\_\/\:]*?)\:?([\w\-\_\/]+?)?\s*?(\(.+?\))?\s*?\}/; // precompile regex
     var match = incPattern.exec($template);
     if (!match) {
         
-        defer.resolve($template, 200);
+        defer.resolve({
+            body: $template,
+            status: 200,
+        });
+        
         return defer.promise;
     }
     
@@ -316,20 +486,21 @@ var _parseTemplate = function f_make_parseTemplate($requestState, $template) {
     var name = match[2];
     var params = match[3];
     var offset = match.index;
-
+    
     if (!namespace || namespace === '') {
         
         namespace = 'default';
     }
     
     if (params) {
-
+        
         params = params
-            .substring(1, params.length - 2)
+            .substring(1, params.length - 1)
             .split(',');
     }
     
     var tmp = $template.substring(0, offset - 1);
+
     switch (name) {
 
         case 'body': {
@@ -337,35 +508,60 @@ var _parseTemplate = function f_make_parseTemplate($requestState, $template) {
             name = $requestState.site !== ''
                 ? $requestState.site
                 : $requestState.config.generalConfig.indexContent.value;
-
-            _getContent($requestState, name, namespace).then(function ($tmp, $httpStatus) {
+            
+            _getContent($requestState, name, namespace).done(function ($res) {
                 
-                defer.resolve(tmp + $tmp, $httpStatus);
-            }).done();
-
+                defer.resolve({
+                    body: tmp + _executeBody($requestState, $res, params),
+                    status: $res.status,
+                });
+            }, function ($err) {
+                
+                if ($err.status && $err.body) {
+                    
+                    $err.body = tmp + $err.body;
+                    defer.resolve($err);
+                }
+                else {
+                    
+                    var tmpE = {};
+                    tmpE.status = 404;
+                    tmpE.body = tmp + $err;
+                    defer.reject(tmpE);
+                }
+            });
+            
             break;
         }
 
-                    // reserved for more tags in the future :)
+        // reserved for more tags in the future :)
 
         default: {
-
-            _getPartial($requestState, name, namespace).then(function ($tmp, $httpStatus) {
+            
+            _getPartial($requestState, name, namespace).done(function ($res) {
                 
-                defer.resolve(tmp + $tmp, $httpStatus);
-            }).done();
+                defer.resolve({
+                    body: tmp + _executeBody($requestState, $res.body, params),
+                    status: $res.status,
+                });
+            }, defer.reject);
         }
     }
     
     var r = q.defer();
-    defer.promise.then(function ($result) {
+    defer.promise.done(function ($result) {
         
-        _parseTemplate($requestState, $result + $template.substring(offset + inc.length)).then(function ($result, $httpStatus) {
+        _parseTemplate($requestState, $result.body + $template.substring(offset + inc.length)).done(function ($res) {
             
-            r.resolve($result, $httpStatus);
-        }).done();
-    }).done();
+            if ($result.status > $res.status) {
 
+                $res.status = $result.status;
+            }
+
+            r.resolve($res);
+        }, r.reject);
+    });
+    
     return r.promise;
 };
 
@@ -375,17 +571,22 @@ var _siteResponse
     $siteName = typeof $siteName === 'string' && $siteName !== '' ? $siteName : 'index';
     
     var defer = q.defer();
-    _getPartial($requestState, $requestState.config.generalConfig.rootTemplate.value, $namespace).then(function ($result, $status) {
+    _getPartial($requestState, $requestState.config.generalConfig.rootTemplate.value, $namespace).done(function ($res) {
         
-        _parseTemplate($requestState, $result).then(function ($body, $status) {
+        _parseTemplate($requestState, _executeBody($requestState, $res)).done(function ($fRes) {
             
-            $requestState.httpStatus = 200;
-            $requestState.responseType = 'text/html';
-            $requestState.responseBody = $body;
-            defer.resolve($result);
-        }).done();
-    }).done();
+            if ($res.status > $fRes.status) {
 
+                $fRes.status = $res.status;
+            }
+
+            $requestState.httpStatus = $fRes.status;
+            $requestState.responseType = 'text/html';
+            $requestState.responseBody = $fRes.body;
+            defer.resolve($fRes);
+        }, defer.reject);
+    }, defer.reject);
+    
     return defer.promise;
 };
 
@@ -394,12 +595,12 @@ var _requestResponse
     $namespace = $namespace || 'default';
     
     var defer = q.defer();
-    sql.newSQL('default', $requestState).then(function ($sql) {
+    sql.newSQL('default', $requestState).done(function ($sql) {
         
         var tblReq = $sql.openTable('request');
         var tblNS = $sql.openTable('namespace');
         $sql.query()
-                .get([
+            .get([
                 tblReq.col('script'),
                 tblReq.col('accessKey'),
                 tblReq.col('tls'),
@@ -410,8 +611,9 @@ var _requestResponse
             .eq(tblNS.col('name'), $namespace)
             .eq(tblReq.col('name'), $scriptName)
             .execute()
-            .then(function ($rows) {
+            .done(function ($rows) {
             
+            $sql.free();
             if ($rows.length <= 0) {
                 
                 $requestState.httpStatus = 404;
@@ -420,12 +622,12 @@ var _requestResponse
                     status: 'error',
                     message: 'Script not found!',
                 });
-
+                
                 defer.resolve();
-
+                
                 return;
             }
-
+            
             var row = $rows[0];
             if (row.tls > 0 && !SFFM.isHTTPS($requestState.request)) {
                 
@@ -435,40 +637,66 @@ var _requestResponse
                     status: 'error',
                     message: 'Script can only be invoked over a TLS encrypted connection!',
                 });
-
+                
                 defer.resolve();
-
+                
                 return;
             }
-
+            
             var a = auth.newAuth($requestState);
-            var hak = a.hasAccessKeyExt(row.accessKey)
-            if (!hak.hasAccessKey) {
 
-                $requestState.httpStatus = hak.httpStatus;
+            a.hasAccessKeyExt(row.accessKey).done(function ($akExt) {
                 
-                $requestState.responseBody = JSON.stringify({
+                if (!$akExt.hasAccessKey) {
                     
-                    status: 'error',
-                    message: hak.message,
-                    accessKey: hak.key,
-                });
-
-                defer.resolve();
-            }
-            else {
-                
-                $requestState.httpStatus = 200;
-                if (row.extSB > 0) {
+                    $requestState.httpStatus = $akExt.httpStatus;
                     
-                    extSb.reset();
-                    extSb.addFeature.all($requestState);
-                    try {
-                        var r = extSb.run(sandbox.newScript(row.script));
+                    $requestState.responseBody = JSON.stringify({
                         
-                        if (typeof r === 'object' && r.then !== undefined) {
+                        status: 'error',
+                        message: $akExt.message,
+                        accessKey: $akExt.key,
+                    });
+                    
+                    defer.resolve();
+                }
+                else {
+                    
+                    $requestState.httpStatus = 200;
+                    if (row.extSB > 0) {
+                        
+                        var extSb = sandbox.newSandbox();
+                        extSb.reset();
+                        extSb.addFeature.all($requestState);
+                        
+                        try {
+
+                            var r = extSb.run(sandbox.newScript(row.script));
+                        }
+                        catch ($e) {
+
+                            $requestState.responseBody = JSON.stringify({
+                                
+                                status: 'error',
+                                result: $e,
+                            });
                             
-                            r.then(function ($result) {
+                            defer.resolve();
+                        }
+                        
+                        if (typeof r === 'object' && r.done !== undefined) {
+                            
+                            var rFun;
+                            if (r.done !== undefined) {
+
+                                rFun = r.done.bind(r);
+                            }
+                            else {
+
+                                rFun = r.then.bind(r);
+                            }
+
+                            rFun(function ($result) {
                                 
                                 $requestState.responseBody = JSON.stringify({
                                     
@@ -476,11 +704,15 @@ var _requestResponse
                                     result: $result,
                                 });
                                 
-                                if (r.done !== undefined) {
+                                defer.resolve();
+                            }, function ($e) {
+                                                    
+                                $requestState.responseBody = JSON.stringify({
                                     
-                                    r.done();
-                                }
-                                
+                                    status: 'error',
+                                    message: $e,
+                                });
+
                                 defer.resolve();
                             });
                         }
@@ -495,28 +727,23 @@ var _requestResponse
                             defer.resolve();
                         }
                     }
-                    catch ($e) {
-
-                        log.writeError($e);
-                    }
-                    
-                }
-                else {
-                    
-                    sb.reset();
-                    sb.addFeature.allSHPS($requestState);
-                    $requestState.responseBody = JSON.stringify({
+                    else {
                         
-                        status: 'ok',
-                        result: sb.run(sandbox.newScript(row.script)),
-                    });
-
-                    defer.resolve();
+                        var sb = sandbox.newSandbox();
+                        sb.reset();
+                        sb.addFeature.allSHPS($requestState);
+                        $requestState.responseBody = JSON.stringify({
+                            
+                            status: 'ok',
+                            result: sb.run(sandbox.newScript(row.script)),
+                        });
+                        
+                        defer.resolve();
+                    }
                 }
-            }
-            })
-            .done();
-    }).done();
-
+            }, defer.reject);
+        }, defer.reject);
+    });
+    
     return defer.promise;
 };

@@ -7,6 +7,27 @@ var cp = require('child_process');
 
 var schedule = require('./schedule.js');
 var SFFM = require('./SFFM.js');
+var __log = null;
+__defineGetter__('_log', function () {
+    
+    if (!__log) {
+        
+        __log = require('./log.js');
+    }
+    
+    return __log;
+});
+
+var __nLog = null;
+__defineGetter__('log', function () {
+    
+    if (!__nLog) {
+        
+        __nLog = _log.newLog();
+    }
+    
+    return __nLog;
+});
 
 var me = module.exports;
 var bcryptModule = undefined;
@@ -45,7 +66,6 @@ var description = undefined;
  */
 schedule.addSlot('onDependencyError', function ($depName, $depVer, $error) {
 
-    var log = require('./log.js');
     log.writeFatal('The dependency `' + $depName + '` (ver.' + $depVer + ') is missing or does not work as expected.\n' + $error);
 
     schedule.sendSignal('fatalError');
@@ -53,7 +73,6 @@ schedule.addSlot('onDependencyError', function ($depName, $depVer, $error) {
 
 schedule.addSlot('onDependencyWarning', function ($depName, $warning) {
     
-    var log = require('./log.js');
     log.writeWarning('The dependency `' + $depName + '` has thrown a warning:\n' + $warning);
 });
 
@@ -89,9 +108,9 @@ cp.exec('openssl version', function ($error, $stdout, $stderr) {
     }
 
     //ex. OpenSSL 1.0.2a 19 Mar 2015
-    if (!/1\.0\.2/.test($stdout)) {
+    if (!/1\.0\.[12]/.test($stdout)) {
         
-        schedule.sendSignal('onDependencyError', 'openssl', '>=1.0.2', 'Wrong version: ' + $stdout);
+        schedule.sendSignal('onDependencyError', 'openssl', '>=1.0.1', 'Wrong version: ' + $stdout);
     }
 });
 

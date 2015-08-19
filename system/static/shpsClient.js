@@ -1,6 +1,6 @@
 "use strict";
 
-var SHPS = function() f_SHPS {
+var SHPS = function f_SHPS() {
 
   if (CryptoJS == null) {
 
@@ -56,7 +56,7 @@ var SHPS = function() f_SHPS {
     return apiGet('login', $user + ':' + CryptoJS.SHA3($pass), $onDone);
   };
 
-
+  /*
   var request =
   this.request = function f_SHPS_request($name, $param, $onDone) {
 
@@ -73,6 +73,6 @@ var SHPS = function() f_SHPS {
       }
     });
   };
-
+  */
 
 }

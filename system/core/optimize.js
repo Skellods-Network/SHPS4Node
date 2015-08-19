@@ -3,10 +3,42 @@
 var me = module.exports;
 
 var os = require('os');
+var zlib = require('zlib');
 
 var scheduler = require('./schedule.js');
-var log = require('./log.js');
-var herlper = require('./helper.js');
+var _config = null;
+__defineGetter__('config', function () {
+    
+    if (!_config) {
+        
+        _config = require('./config.js');
+    }
+    
+    return _config;
+});
+
+var __log = null;
+__defineGetter__('_log', function () {
+    
+    if (!__log) {
+        
+        __log = require('./log.js');
+    }
+    
+    return __log;
+});
+
+var __nLog = null;
+__defineGetter__('log', function () {
+    
+    if (!__nLog) {
+        
+        __nLog = _log.newLog();
+    }
+    
+    return __nLog;
+});
+
 var main = require('./main.js');
 var SFFM = require('./SFFM.js');
 
@@ -41,6 +73,27 @@ var _dangerCount
     }
 
     return c + _unknownDangersCount;
+};
+
+var _compressStream
+= me.compressStream = function ($requestState, $inStream, $inSize) {
+    
+    if (SFFM.canGZIP($requestState, $inSize)) {
+        
+        $requestState.responseEncoding = 'gzip';
+        if (typeof $inStream.pipe === 'function') {
+
+            return $inStream.pipe(zlib.createGzip());
+        }
+        else {
+
+            return zlib.createGzip().write($inStream);
+        }
+    }
+    else {
+
+        return $inStream;
+    }
 };
 
 var _handleWorkerMessage 
@@ -99,14 +152,14 @@ var _checkConfigForRisks
             var numCPUs = os.cpus().length;
             if ($config.config.workers.value != -1 && $config.config.workers.value > numCPUs) {
                 
-                log.writeHint('Consider reducing the number of workers in ' + $file + ' to ' + numCPUs + ' (CPU core count) or setting it to -1 for smart handling.');
+                log.writeHint('Consider reducing the number of workers in ' + $file + ' to ' + numCPUs + ' (logical CPU core count) or setting it to -1 for smart handling.');
             }
             else if ($config.config.workers.value != -1 && $config.config.workers.value < numCPUs) {
                 
-                log.writeHint('Consider increasing the number of workers in ' + $file + ' to ' + numCPUs + ' (CPU core count) or setting it to -1 for smart handling.');
+                log.writeHint('Consider increasing the number of workers in ' + $file + ' to ' + numCPUs + ' (logical CPU core count) or setting it to -1 for smart handling.');
             }
             
-            if (main.getHPConfig('eastereggs')) {
+            if (config.getHPConfig('eastereggs')) {
                 
                 // Eastereggs are fun for intranet applications, but could reveal too much information about the SHPS version in use
                 log.writeWarning('Public eastereggs are enabled for in ' + $file + '!');

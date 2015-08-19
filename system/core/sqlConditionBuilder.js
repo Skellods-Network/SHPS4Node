@@ -3,7 +3,28 @@
 var me = module.exports;
 
 var helper = require('./helper.js');
-var log = require('./log.js');
+var __log = null;
+__defineGetter__('_log', function () {
+    
+    if (!__log) {
+        
+        __log = require('./log.js');
+    }
+    
+    return __log;
+});
+
+var __nLog = null;
+__defineGetter__('log', function () {
+    
+    if (!__nLog) {
+        
+        __nLog = _log.newLog();
+    }
+    
+    return __nLog;
+});
+
 var sql = require('./sql.js');
 
 var mp = {

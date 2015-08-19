@@ -4,10 +4,29 @@ var me = module.exports;
 
 var path = require('path');
 var u = require('util');
-var _ = require('lodash');
 var crypto = require('crypto');
+var __ = null;
+__defineGetter__('_', function () {
+    
+    if (!__) {
+        
+        __ = require('lodash');
+    }
 
-var helper = require('./helper.js');
+    return __;
+});
+
+
+var _helper = null;
+__defineGetter__('helper', function () {
+    
+    if (!_helper) {
+        
+        _helper = require('./helper.js');
+    }
+    
+    return _helper
+});
 
 var mp = {
     self: this
@@ -80,7 +99,7 @@ var _isHarmonyActivated
 var _replaceAll
 = me.replaceAll = function f_SFFM_replaceAll($str, $mapObj) {
 
-    var re = new RegExp(Object.keys($mapObj).join("|"), "gi");
+    var re = new RegExp(Object.keys($mapObj).join('|'), 'gi');
     
     return $str.replace(re, function ($matched) {
 
@@ -101,11 +120,19 @@ var _getIP
 
         return $request.ip;
     }
+    
+    if (!($request.headers['x-forwarded-for'] 
+        || $request.connection.remoteAddress 
+        || $request.socket.remoteAddress 
+        || ($request.connection.socket && $request.connection.socket.remoteAddress))) {
+
+        $request.headers['x-forwarded-for'] = 'Something went to hell in here.... So we just add a random value';
+    }
 
     var ip = $request.headers['x-forwarded-for']
         || $request.connection.remoteAddress 
         || $request.socket.remoteAddress 
-        || $request.connection.socket.remoteAddress;
+        || ($request.connection.socket && $request.connection.socket.remoteAddress);
 
     if (u.isArray(ip)) {
         
@@ -211,8 +238,7 @@ var _randomString
 var _isHTTPS 
 = me.isHTTPS = function f_SFFM_isHTTPS($request) {
     
-    var s = $request.headers.host.substr(0, 5);
-    if (s === 'https') {
+    if ($request.socket && $request.socket.ssl != undefined) {
 
         return true;
     }
@@ -242,3 +268,71 @@ var _isModuleAvailable
 
     return r;
 };
+
+/**
+ * Calculate length of a string
+ * The problem when using string length or even buffer length is that certain character lengths (especially asian symbols) will be counted in a wrong way for UTF8
+ * That leads to too small character counts
+ * This function aims to solve the problem by adding to the count when special characters are detected
+ * 
+ * @param $str UTF-8 String
+ * @result integer
+ */
+var _stringByteLength 
+= me.stringByteLength = function f_SFFM_stringByteLength($str) {
+
+    if ($str.length === 'undefined') {
+
+        return 0;
+    }
+    
+    var i = 0;
+    var c = $str.length;
+    if (typeof $str !== 'array') {
+
+        var tmp = [];
+        while (i < c) {
+            
+            typeof $str === 'string' ? tmp.push($str.charCodeAt(i))
+                                     : tmp.push($str[i]);
+
+            i++;
+        }
+        
+        $str = tmp;
+    }
+    else {
+
+        i = c;
+    }
+    
+    while (i > 0) {
+
+        var code = $str[i];
+        if (code > 0x7f && code <= 0x7ff) {
+            
+            c++;
+        }
+        else if (code > 0x7ff && code <= 0xffff) {
+            
+            if (code < 0xDC00 || code > 0xDFFF) {
+                
+                c += 2;
+            }
+        }
+
+        i--;
+    }
+
+    return c;
+};
+
+var _canGZIP
+= me.canGZIP = function ($requestState, $fileSize) {
+    $fileSize = $fileSize !== undefined ? $fileSize : $requestState.config.generalConfig.gzipMinSize.value + 1;
+
+    //TODO: This is a bad parser :(
+    return  $requestState.request.headers['accept-encoding'] &&
+            $requestState.request.headers['accept-encoding'].match(/\bgzip\b/) &&
+            $fileSize > $requestState.config.generalConfig.gzipMinSize.value;
+}

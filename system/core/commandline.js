@@ -4,18 +4,86 @@ var me = module.exports;
 
 var readline = require('readline');
 var cluster = require('cluster');
+var cui = require('./CUI.js');
 var u = require('util');
 
-var cookie = require('./cookie.js');
 var def = require('./default.js');
-var helper = require('./helper.js');
-var log = require('./log.js');
-var main = require('./main.js');
-var sandbox = require('./sandbox.js');
+
+
+var _cookie = null;
+__defineGetter__('cookie', function () {
+    
+    if (!_cookie) {
+        
+        _cookie = require('./cookie.js');
+    }
+    
+    return _cookie;
+});
+
+var _parallelize = null;
+__defineGetter__('parallel', function () {
+    
+    if (!_parallelize) {
+        
+        _parallelize = require('./parallelize.js');
+    }
+    
+    return _parallelize;
+});
+
+var _helper = null;
+__defineGetter__('helper', function () {
+    
+    if (!_helper) {
+        
+        _helper = require('./helper.js');
+    }
+    
+    return _helper
+});
+
+var _log = null;
+__defineGetter__('log', function () {
+    
+    if (!_log) {
+        
+        _log = require('./log.js');
+    }
+    
+    return _log;
+});
+
+var _main = null;
+__defineGetter__('main', function () {
+    
+    if (!_main) {
+        
+        _main = require('./main.js');
+    }
+    
+    return _main;
+});
+
+var _sandbox = null;
+__defineGetter__('sandbox', function () {
+    
+    if (!_sandbox) {
+        
+        _sandbox = require('./sandbox.js');
+    }
+    
+    return _sandbox;
+});
+
+var plugin = require('./plugin.js');
 
 var rl = {};
 var _isInitialized = false;
-var self = this;
+var mp = {
+    self: this
+};
+
 var sb = sandbox.newSandbox();
 
 
@@ -44,8 +112,14 @@ var _prompt
     
     if (_isInitialized) {
         
-        rl.prompt();
+        rl.prompt(true);
     }
+};
+
+var __isInitialized 
+= me.isInitialized = function f_commandline_isInitialized() {
+    
+    return _isInitialized;
 };
 
 /**
@@ -58,7 +132,7 @@ var _prompt
 var _hug 
 = me.hug = function f_commandline_hug($h) {
     
-    return helper.genericHug($h, self, function f_commandline_hug_hug($hugCount) {
+    return helper.genericHug($h, mp, function f_commandline_hug_hug($hugCount) {
 
         if ($hugCount > 3) {
 
@@ -73,47 +147,55 @@ var _init
 = me.init = function f_commandline_init() {
     
     if (_isInitialized) {
-
+        
         return rl;
     }
-
+    
     rl = readline.createInterface({
-
+        
         input: process.stdin,
         output: process.stdout,
         completer: completer
     });
+    
+    if (process.stdin.isTTY) {
+        
+        cui.init();
+    }
 
     rl.setPrompt('SHPS> ');
-    rl.prompt();
-
+    
     var internalRS = new helper.requestState();
     internalRS.request = {
-    
+        
         headers: {},
         connection: { remoteAddress: 'localhost' },
     };
-
+    
     internalRS.COOKIE = cookie.newCookieJar(internalRS);
     internalRS.config = def.config;
-    internalRS.domain = new helper.SHPS_domain('localhost');
+    internalRS._domain = new helper.SHPS_domain('localhost');
     sb.addFeature.all(internalRS);
-
+    
     _isInitialized = true;
-
+    
+    rl.prompt(false);
+    
     return rl;
-}
+};
 
 var _handleRequest 
 = me.handleRequest = function () {
 
-    log.write('For help, please input `help` (or just `h` and press [TAB]) and hit [ENTER].\n');
+    log.write('For help, please input `help` (or just `h` and press [TAB]) and hit [ENTER].\n'.bold);
     _init();
     
     rl.on('line', function ($line) {
         
+        $line = $line.trim();
         switch ($line) {
 
+            case 'clear':
             case 'cls': {
                 
                 log.cls();
@@ -125,8 +207,9 @@ var _handleRequest
                 
                 _isInitialized = false;
                 rl.close();
-                cluster.disconnect();
-                process.exit(0); //todo: nice shutdown - also need to exit parent process if available
+                parallel.killAll();
+                main.killAllServers();
+                process.exit(0); //todo: nice shutdown
                 break;
             }
 
@@ -157,6 +240,12 @@ var _handleRequest
                 break;
             }
 
+            case 'whoami': {
+
+                log.write('marco');
+                break;
+            }
+
             case /^\s*?!.*/i.test($line)
                 ? $line
                 : undefined
@@ -178,10 +267,15 @@ var _handleRequest
 
             default: {
                 
-                //call plugins
-                log.write('Command not found!\n');
+                if ($line !== '' && !plugin.callCommand($line)) {
+
+                    log.write('Command not found!\n');
+                }
+                else {
+
+                    rl.prompt(true);
+                }
             }
         }
-        
     });
 };

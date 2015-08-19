@@ -4,11 +4,83 @@ var me = module.exports;
 
 var vm = require('vm');
 
-var auth = require('./auth.js');
-var helper = require('./helper.js');
-var log = require('./log.js');
+var _auth = null;
+__defineGetter__('auth', function () {
+    
+    if (!_auth) {
+        
+        _auth = require('./auth.js');
+    }
+    
+    return _auth
+});
+
+var _helper = null;
+__defineGetter__('helper', function () {
+    
+    if (!_helper) {
+        
+        _helper = require('./helper.js');
+    }
+    
+    return _helper
+});
+
+var _lang = null;
+__defineGetter__('lang', function () {
+    
+    if (!_lang) {
+        
+        _lang = require('./language.js');
+    }
+    
+    return _lang
+});
+
+var __log = null;
+__defineGetter__('_log', function () {
+    
+    if (!__log) {
+        
+        __log = require('./log.js');
+    }
+    
+    return __log;
+});
+
+var __nLog = null;
+__defineGetter__('log', function () {
+    
+    if (!__nLog) {
+        
+        __nLog = _log.newLog();
+    }
+    
+    return __nLog;
+});
+
+var _cl = null;
+__defineGetter__('complib', function () {
+    
+    if (!_cl) {
+        
+        _cl = require('./componentLibrary.js');
+    }
+    
+    return _cl;
+});
+
 var SFFM = require('./SFFM.js');
-var sql = require('./sql.js');
+var _sql = null;
+__defineGetter__('sql', function () {
+    
+    if (!_sql) {
+        
+        _sql = require('./sql.js');
+    }
+    
+    return _sql;
+});
 
 var mp = {
     self: this
@@ -139,7 +211,7 @@ var _newSandbox
                 sb.require = require;
                 rebuildContext = true;
             },
-
+            
             baseProcess: function f_sandbox_newSandbox_addFeature_baseProcess() {
                 
                 sb.process = process;
@@ -152,12 +224,52 @@ var _newSandbox
                 rebuildContext = true;
             },
             
+            shpsComponentLibrary: function f_sandbox_newSandbox_addFeature_shpsComponentLibrary($requestState) {
+
+                sb.cl = complib.newCL($requestState);
+                rebuildContext = true;
+            },
+            
+            shpsLanguage: function f_sandbox_newSandbox_addFeature_shpsLanguage($requestState) {
+
+                sb.lang = lang.newLang($requestState);
+                rebuildContext = true;
+            },
+
             shpsLog: function f_sandbox_newSandbox_addFeature_shpsLog() {
                 
                 sb.log = log;
                 rebuildContext = true;
             },
             
+            shpsParameters: function f_sandbox_newSandbox_addFeature_shpsParameters($requestState) {
+
+                sb.GET = $requestState.GET;
+                sb.POST = $requestState.POST;
+                sb.SESSION = $requestState.SESSION;
+
+                // PHP compat
+                sb._GET = sb.GET;
+                sb._POST = sb.POST;
+                sb._SESSION = sb.SESSION;
+
+                sb.$_GET = sb.GET;
+                sb.$_POST = sb.POST;
+                sb.$_SESSION = sb.SESSION;
+            },
+            
+            shpsRequest: function f_sandbox_newSandbox_addFeature_shpsRequest($requestState) {
+                
+                sb.request = $requestState.request;
+                rebuildContext = true;
+            },
+            
+            shpsResponse: function f_sandbox_newSandbox_addFeature_shpsResponse($requestState) {
+                
+                sb.response = $requestState.response;
+                rebuildContext = true;
+            },
+
             shpsSFFM: function f_sandbox_newSandbox_addFeature_shpsSFFM() {
                 
                 sb.SFFM = SFFM;
@@ -191,7 +303,7 @@ var _newSandbox
             
             var options = {
 
-                displayErrors: false
+                displayErrors: true
             };
 
             if (typeof $timeout !== 'undefined') {
@@ -202,6 +314,7 @@ var _newSandbox
             if (rebuildContext) {
 
                 context = vm.createContext(sb);
+                rebuildContext = false;
             }
 
             return $script.script.runInContext(context, options);

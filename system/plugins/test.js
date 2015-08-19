@@ -4,11 +4,13 @@ var me = module.exports;
 
 var q = require('q');
 
+var lang = require('../core/language.js');
 var log = require('../core/log.js');
 var sffm = require('../core/SFFM.js');
 var sql = require('../core/sql.js');
 
 var auth = require('../core/auth.js');
+var compLib = require('../core/componentLibrary.js');
 
 
 var _info 
@@ -45,7 +47,28 @@ var _onDirectCall
     
     var defer = q.defer();
     
+    // LANGUAGE TEST
+    lang.newLang($requestState).getStrings('test').done(function ($strings) {
     
+        $requestState.responseBody = JSON.stringify($strings);
+        $requestState.responseType = 'application/json';
+        $requestState.httpStatus = 200;
+        defer.resolve();
+    });
+    
+    return defer.promise;
+
+    // CL Test
+    /*$requestState.responseType = 'text/html';
+    $requestState.httpStatus = 200;
+    $requestState.responseBody = compLib.newCL($requestState).makeHyperlink('//google.de', 'Test Descr.');
+    
+    process.nextTick(defer.resolve);
+
+    return defer.promise;*/
+
+    x.y();
+
     // SESSION TEST
     $requestState.responseType = 'text/plain';
     $requestState.httpStatus = 200;
@@ -62,8 +85,14 @@ var _onDirectCall
     }
 
     $requestState.responseBody += $requestState.SESSION['sth'];
-    defer.resolve();
+    
+    lang.getString($requestState, 'test', 'test0').then(function ($string) {
+    
+        $requestState.responseBody += '\n' + $string;
+        defer.resolve();
+    }).done();
 
+    
     return defer.promise;
     
     

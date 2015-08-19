@@ -91,19 +91,31 @@
     "TLSConfig": {
         "key": {
             "description": "",
-            "value": "skellods-network.key"
+            "value": ""
         },
         "cert": {
             "description": "",
-            "value": "skellods-network.crt"
+            "value": ""
+        },
+        "pfx": {
+            "description": "Instead of a key/cert combo, using a pfx file is possible as well. If key, cert and pfx values are given, the key/cert combo is preferred",
+            "value": ""
+        },
+        "passphrase": {
+            "description": "Passphrase for certificate, if applicable",
+            "value": ""
         },
         "ca": {
-            "description": "",
-            "value": "ca-bundle.pem"
+            "description": "Bundle with intermediate certificates",
+            "value": ""
         },
         "keypin": {
             "description": "This will be used for HPKP (advanced security). If left blank, SHPS will generate the keypin",
             "value": ""
+        },
+        "dhParam": {
+            "description": "File with Diffie-Hellman key",
+            "value": "dhParam.pem"
         }
     },
     "databaseConfig": {
