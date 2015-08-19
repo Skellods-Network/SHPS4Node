@@ -2,6 +2,7 @@
 
 var me = module.exports;
 
+var events = require('events');
 var net = require('net');
 var url = require('url');
 var qs = require('querystring');
@@ -20,15 +21,26 @@ __defineGetter__('cookie', function () {
     return _cookie;
 });
 
-var _log = null;
-__defineGetter__('log', function () {
-
-    if (!_log) {
-
-        _log = require('./log.js');
+var __log = null;
+__defineGetter__('_log', function () {
+    
+    if (!__log) {
+        
+        __log = require('./log.js');
     }
+    
+    return __log;
+});
 
-    return _log;
+var __nLog = null;
+__defineGetter__('log', function () {
+    
+    if (!__nLog) {
+        
+        __nLog = _log.newLog();
+    }
+    
+    return __nLog;
 });
 
 var _request = null;
@@ -95,24 +107,27 @@ me.requestState = function () {
     var _GET = null;
     var _POST = null;
     
-    this._COOKIE = [];
+    this._COOKIE = {};
+    this._domain = null;
     this.cache = {};
     this.locked = false;
     this.uri = '';
     this.path = '/';
-    this.SESSION = [];
+    this.SESSION = {};
     this.config = null;
     this.site = '';
     this.namespace = 'default';
     this.httpStatus = 500;
     this.responseType = 'text/plain';
-    this.responseHeaders = undefined;
+    this.responseHeaders = {};
+    this.responseTrailers = [];
     this.isResponseBinary = false;
     this.responseBody = '';
     this.responseEncoding = 'identity';
     this.request = null;
-    this.result = null;
+    this.response = null;
     this.resultPending = true;
+    this.headerPending = true;
     
     this.__defineGetter__('GET', function () {
         
@@ -141,7 +156,7 @@ me.requestState = function () {
                 self.request.on('data', function func_processPost_onData($data) {
                     
                     queryData += $data;
-                    if (queryData.length > 1e6) { // can only handle requests smaller than 1e6 == 1MB
+                    if (queryData.length > 1e6) { // can only handle requests smaller than 1e6 == 1MB, see Node.JS source code
                         
                         queryData = "";
                         self.response.writeHead(413, { 'Content-Type': 'text/plain' }).end();
@@ -152,7 +167,8 @@ me.requestState = function () {
                 
                 self.request.on('end', function func_processPost_onEnd() {
                     
-                    defer.resolve(querystring.parse(queryData));
+                    _POST = qs.parse(queryData);
+                    defer.resolve(_POST);
                 });
             }
             else {
@@ -170,7 +186,11 @@ me.requestState = function () {
         
         _POST = $val
     });
+
+    events.EventEmitter.call(this);
 };
+
+u.inherits(me.requestState, events.EventEmitter);
 
 /**
  * Grouphuggable
@@ -191,6 +211,11 @@ var _genericHug
 = me.genericHug = function f_helper_genericHug($h, $self, $breakCondition) {
     
     var self = $self.self;
+    if (typeof self.hug === 'undefined') {
+        
+        self.hug = {};
+    }
+
     if (typeof self.hug.lastPartner === 'undefined') {
         
         self.hug.lastPartner = [];

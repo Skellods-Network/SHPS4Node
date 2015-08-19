@@ -20,15 +20,26 @@ __defineGetter__('helper', function () {
     return _helper
 });
 
-var _log = null;
-__defineGetter__('log', function () {
+var __log = null;
+__defineGetter__('_log', function () {
     
-    if (!_log) {
+    if (!__log) {
         
-        _log = require('./log.js');
+        __log = require('./log.js');
     }
     
-    return _log;
+    return __log;
+});
+
+var __nLog = null;
+__defineGetter__('log', function () {
+    
+    if (!__nLog) {
+        
+        __nLog = _log.newLog();
+    }
+    
+    return __nLog;
 });
 
 var _config = null;

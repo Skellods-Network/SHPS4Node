@@ -14,7 +14,10 @@ var helper = require('./helper.js');
 var session = require('./session.js');
 var SFFM = require('./SFFM.js');
 var sql = require('./sql.js');
-var log = require('./log.js');
+
+var _log = require('./log.js');
+var log = _log.newLog();
+
 var dep = require('./dependency.js');
 
 var mp = {
@@ -130,70 +133,77 @@ var Auth
      * @param $passwd string
      * @param $validPasswd string
      *   Optional valid password
-     * @param $validSalt string
-     * @result promise(err, boolean)
+     * @result promise(boolean)
      */
     var _checkPassword =
     this.checkPassword = function f_auth_checkPassword($uid, $passwd, $validPasswd) {
         
-        $uid = _getIDFromUser($uid);
-        var defer = q.defer();
-        
-        if (!$validPasswd) {
-            
-            sql.newSQL('usermanagement', $requestState).done(function f_auth_updatePassword_newSQL($sql) {
-                
-                var tbl = $sql.openTable('user');
-                $sql.query()
-                .get(
-                    tbl.col('password')
-                )
-                .fulfilling()
-                .equal(tbl.col('ID'), $uid)
-                .execute()
-                .done(function ($rows) {
-                    
-                    if ($rows.length == 0) {
-                        
-                        log.error('Could not find user with ID ' + $uid + '!');
-                        return;
-                    }
-                    
-                    defer.resolve($rows.password);
-                    $sql.free();
-                }, function ($err) {
-                    
-                    $sql.free();
-                    defer.reject($err);
-                });
-            }, defer.reject);
-        }
-        else {
-
-            defer.resolve($validPasswd);
-        }
-        
         var defer2 = q.defer();
-        defer.promise.done(function ($pw) {
+        
+        _getIDFromUser($uid).done(function ($uid) {
+        
+            log.info('Password Check for UID ' + $uid + '...');
             
-            if (!(crypt = dep.getSCrypt())) {
+            var defer = q.defer();
+
+            if (!$validPasswd) {
                 
-                crypt = dep.getBCrypt();
+                sql.newSQL('usermanagement', $requestState).done(function f_auth_updatePassword_newSQL($sql) {
+                    
+                    var tbl = $sql.openTable('user');
+                    $sql.query()
+                        .get([
+                                tbl.col('pass')
+                            ])
+                        .fulfilling()
+                        .equal(tbl.col('ID'), $uid)
+                        .execute()
+                        .done(function ($rows) {
+                        
+                        if ($rows.length == 0) {
+                            
+                            log.error('Could not find user with ID ' + $uid + '!');
+                            return;
+                        }
+                        
+                        defer.resolve($rows[0].pass);
+                        $sql.free();
+                    }, function ($err) {
+                        
+                        $sql.free();
+                        defer.reject($err);
+                    });
+                }, defer.reject);
+            }
+            else {
+                
+                defer.resolve($validPasswd);
             }
             
-            crypt.compare($passwd, $pw, function ($err, $res) {
+            defer.promise.done(function ($pw) {
                 
-                if (!$err) {
-
-                    //_updatePassword($uid, $passwd); <-- Only needed with multiple pw crypting/hashing algos
-                    defer2.resolve($res);
+                if (!(crypt = dep.getSCrypt())) {
+                    
+                    crypt = dep.getBCrypt();
                 }
-                else {
-
-                    defer2.reject(new Error($err));
-                }
-            });
-        }, defer2.reject);
+                
+                crypt.compare($passwd, $pw, function ($err, $res) {
+                    
+                    if (!$err) {
+                        
+                        //_updatePassword($uid, $passwd); <-- Only needed with multiple pw crypting/hashing algos
+                        log.info('Password Check for UID ' + $uid + ': ' + $res);
+                        defer2.resolve($res);
+                    }
+                    else {
+                        
+                        log.error('Password Check for UID ' + $uid + ': ' + $err);
+                        defer2.reject(new Error($err));
+                    }
+                });
+            }, defer2.reject);
+        });
+        
 
         return defer2.promise;
     };
@@ -221,33 +231,38 @@ var Auth
             authorizer = _session.data['ID'];
         }
         
-        sql.newSQL('usermanagement', $requestState).done(function ($sql) {
-
-            var d = q.defer();
-            if ($isGroup) {
+        _getIDFromAccessKey($key).done(function ($key) {
+            
+            _log.newLog($requestState).audit('ACCESS KEY GRANT INITIATED ' + $key + ' for ' + ($isGroup ? 'group' : 'user') + ' ' + $uid + ': ' + new Date($from * 1000).toUTCString() + ' - ' + new Date($to * 1000).toUTCString());
+            
+            sql.newSQL('usermanagement', $requestState).done(function ($sql) {
                 
-                $sql.openTable('groupSecurity')
-                    .insert({
+                var d = q.defer();
+                if ($isGroup) {
                     
-                    gid: _getIDFromGroup($user),
-                    key: _getIDFromAccessKey($key),
-                    from: $from,
-                    to: $to,
-                    authorizer: authorizer
-                }).done($sql.free, $sql.free);
-            }
-            else {
-                
-                $sql.openTable('userSecurity')
+                    $sql.openTable('groupSecurity')
                     .insert({
+                        
+                        gid: _getIDFromGroup($user),
+                        key: _getIDFromAccessKey($key),
+                        from: $from,
+                        to: $to,
+                        authorizer: authorizer
+                    }).done($sql.free, $sql.free);
+                }
+                else {
                     
-                    gid: _getIDFromUser($user),
-                    key: _getIDFromAccessKey($key),
-                    from: $from,
-                    to: $to,
-                    authorizer: authorizer
-                }).done($sql.free, $sql.free);
-            }
+                    $sql.openTable('userSecurity')
+                    .insert({
+                        
+                        gid: _getIDFromUser($uid),
+                        key: _getIDFromAccessKey($key),
+                        from: $from,
+                        to: $to,
+                        authorizer: authorizer
+                    }).done($sql.free, $sql.free);
+                }
+            });
         });
     };
     
@@ -284,11 +299,14 @@ var Auth
         return defer.promise;
     };
     
-    var _getIDFromTabel = function f_auth_getIDFromTable($table, $refCol, $refColValue) {
+    var _getIDFromTable = function f_auth_getIDFromTable($table, $refCol, $refColValue) {
 
         if (typeof $refColValue == 'number' && $refColValue % 1 == 0) {
             
-            return $refColValue;
+            var defer = q.defer();
+            defer.resolve($refColValue);
+
+            return defer.promise;
         }
 
         return _getFieldFromTable($table, 'ID', $refCol, $refColValue);
@@ -349,12 +367,9 @@ var Auth
         
         _getIDFromAccessKey($key).done(function ($key) {
             
+            _log.newLog($requestState).audit('ACCESS KEY REVOKE INITIATED ' + $key + ' for ' + ($isGroup ? 'group' : 'user') + ' ' + $uid + ': ' + new Date($from * 1000).toUTCString() + ' - ' + new Date($to * 1000).toUTCString());
+
             sql.newSQL('usermanagement', $requestState).done(function ($sql) {
-                
-                if ($err) {
-                    
-                    return;
-                }
 
                 if ($isGroup) {
                     
@@ -574,11 +589,12 @@ var Auth
     };
     
     /**
-     * Delays bruteforcing vertically
+     * Delays bruteforcing vertically or horizontally
      * 
-     * @param $uid integer
+     * @param $uid integer|string
+     *   User ID or password
      * @return
-     *   promise(err)
+     *   Promise()
      */
     var _delayBruteforce = function f_auth_delayBruteforce($uid) {
         
@@ -591,29 +607,34 @@ var Auth
 
         sql.newSQL('usermanagement', $requestState).done(function ($sql) {
             
-            if ($err) {
-                
-                defer.resolve($err);
-                return;
+            if (typeof $uid === 'number') {
+
+                var tblLQ = $sql.openTable('loginQuery');
+                var colLQ = 'uid';
+            }
+            else {
+
+                var tblLQ = $sql.openTable('passQuery');
+                var colLQ = 'pass';
             }
 
-            var tblLQ = $sql.openTable('loginQuery');
             $sql.query()
                 .get(tblLQ.col('time'))
                 .fulfilling()
-                .eq(tblLQ.col('uid'), $uid)
+                .eq(tblLQ.col(colLQ), $uid)
                 .execute()
                 .done(function ($rows) {
                 
-
                 var now = (Date.now() / 1000) | 0;
                 if ($rows.length <= 0) {
-
-                    tblLQ.insert({
                     
-                        uid: $uid,
+                    var objLQ = {
+
                         time: now + $requestState.config.securityConfig.loginDelay.value
-                        })
+                    };
+                    
+                    objLQ[colLQ] = $uid;
+                    tblLQ.insert(objLQ)
                         .done($sql.free, $sql.free);
 
                     defer.resolve();
@@ -630,7 +651,7 @@ var Auth
                         
                         time: det + $requestState.config.securityConfig.loginDelay.value
                     })
-                        .eq(tblLQ.col('uid'), $uid)
+                        .eq(tblLQ.col(colLQ), $uid)
                         .execute()
                         .done($sql.free, $sql.free);
 
@@ -666,8 +687,12 @@ var Auth
         
         // ASVS V2 3.3
         if ($dbRec.isLoggedIn && ((Date.now() / 1000) - $dbRec.lastActivity <= $requestState.config.securityConfig.sessionTimeout.value)) {
-
+            
             return $dbRec.lastSID != 'noSID' ? $dbRec.lastSID : false;
+        }
+        else {
+
+            _log.newLog($requestState).audit('USER NOT LOGGED IN OR LOGGED OUT BY FORCE: ' + $dbRec.ID + ' | ' + $dbRec.user);
         }
 
         return false;
@@ -689,18 +714,19 @@ var Auth
     this.login = function f_auth_login($user, $pw, $autoLogin) {
         $autoLogin = $autoLogin || false;
         
+        _log.newLog($requestState).info('LOGIN TRY: ' + $user + ' from ' + SFFM.getIP($requestState.request));
+
         var defer = q.defer();
         async.waterfall([
         
             function ($cb) {
                 _getIDFromUser($user).done(function ($id) {
-        
-                    $cb(null, $id);
+                    
+                    $user = $id;
+                    $cb();
                 }, $cb);
             },
-            function ($cb, $u) {
-                
-                $user = $u;
+            function ($cb) {
                 
                 /* ASVS V2 2.20 VERTICAL PROTECTION */
                 _delayBruteforce($user).done(function () {
@@ -723,7 +749,7 @@ var Auth
                     $cb(null, $sql);
                 }, $cb);
             },
-            function ($cb, $sql) {
+            function ($sql, $cb) {
                 
                 var alt = '';
                 if ($autoLogin && SFFM.isHTTPS($requestState.request)) {
@@ -745,6 +771,7 @@ var Auth
                     .execute()
                     .done(function ($rows) {
                     
+                    $sql.free();
                     if ($rows.length <= 0) {
                         
                         $cb(new Error(SHPS_ERROR_NO_ROWS, false));
@@ -775,46 +802,50 @@ var Auth
                             _session.closeSession(lastSID);
                         }
                         
-                        if (alt === ur.autoLoginToken/* && check IP range */) {
+                        if (alt !== '' && alt === ur.autoLoginToken/* && check IP range */) {
                             
                             var newToken = _session.genNewSID();
                             $requestState.COOKIE.setCookie(SHPS_COOKIE_AUTOLOGINTOKEN, newToken, $requestState.config.securityConfig.autoLoginTimeout.value, true);
-                            $sql.query()
-                                .set({
-                                
+                            
+                            sql.newSQL('usermanagement', $requestState).done(function ($sql) {
+                                                    
+                                $sql.openTable('user').update({
+                                    
                                     autoLoginToken: newToken,
-                                    lastIP: SFFM.getIP($requestState),
-                                    lastActive: Date.now() / 1000
+                                    lastIP: SFFM.getIP($requestState.request),
+                                    lastActivity: Date.now() / 1000
                                 })
-                                .fulfilling()
                                 .eq(tblU.col('ID'), ur.ID)
                                 .execute()
                                 .done($sql.free, $sql.free);
+                            });
                             
                             $cb(null, true);
-                            
                             return;
                         }
                         
                         _checkPassword($user, $pw, ur.password, ur.salt).done(function ($cpR) {
                             
-                            if (cpR) {
+                            if ($cpR) {
                                 
                                 $requestState.SESSION = oa($requestState.SESSION, ur);
                                 
                                 var newToken = _session.genNewSID();
                                 $requestState.COOKIE.setCookie(SHPS_COOKIE_AUTOLOGINTOKEN, newToken, $requestState.config.securityConfig.autoLoginTimeout.value, true);
-                                $sql.query()
-                                    .set({
+                                
+                                sql.newSQL('usermanagement', $requestState).done(function ($sql) {
                                     
+                                    $sql.openTable('user').update({
+                                        
                                         autoLoginToken: newToken,
-                                        lastIP: SFFM.getIP($requestState),
-                                        lastActive: Date.now() / 1000
+                                        lastIP: SFFM.getIP($requestState.request),
+                                        lastActivity: Date.now() / 1000
                                     })
-                                    .fulfilling()
                                     .eq(tblU.col('ID'), ur.ID)
                                     .execute()
-                                    .done($sql.free,$sql.free());
+                                    .done($sql.free, $sql.free);
+
+                                });
                             }
                             
                             $cb(null, $cpR);             
@@ -822,7 +853,7 @@ var Auth
                     }
                 }, $cb);
             },
-        ], function ($err) {
+        ], function ($err, $res) {
             
             if ($err) {
 
@@ -830,7 +861,7 @@ var Auth
             }
             else {
 
-                defer.resolve();
+                defer.resolve($res);
             }
             
         });
@@ -886,14 +917,12 @@ var Auth
         sql.newSQL('usermanagement', $requestState).done(function ($sql) {
             
             var tblU = $sql.openTable('user');
-            $sql.query()
-                .set(tblU, {
+            tblU.update({
             
                     lastSID: $requestState.SESSION.toString(),
-                    lastIP: SFFM.getIP($requestState),
+                    lastIP: SFFM.getIP($requestState.request),
                     lastActivity: Date.now()
                 })
-                .fulfilling()
                 .eq(tblU.col('ID'), $requestState.SESSION.ID)
                 .execute()
                 .done($sql.free, $sql.free);

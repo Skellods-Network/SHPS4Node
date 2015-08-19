@@ -59,7 +59,7 @@ var _newSession
         }
     }
 
-    $requestState.COOKIE.setCookie('SHPSSID', sid, $requestState.config.securityConfig.sessionTimeout.value, true);
+    $requestState.COOKIE.setCookie('SHPSSID', sid, $requestState.config.securityConfig.sessionTimeout.value, true, SFFM.isHTTPS($requestState.request));
     return _sessionStorage[sid];
 };
 

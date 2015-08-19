@@ -115,7 +115,7 @@ var CookieJar = function c_CookieJar($requestState) {
     this.setCookie = function f_CookieJar_setCookie($name, $value, $expire, $httponly, $secure) {
         $expire = $expire || 0;
         $httponly = $httponly || true;
-        $secure = $secure || /^https.*/i.test($requestState.domain.protocol);
+        $secure = $secure || /^https.*/i.test($requestState._domain.protocol);
 
         $requestState._COOKIE[$name] = $value;
         _newCookies[$name] = {

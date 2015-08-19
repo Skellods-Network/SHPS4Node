@@ -7,14 +7,18 @@ var util = require('util');
 var zip = require('zlib');
 var q = require('q');
 var crypt = require('crypto');
+var streams = require('stream');
 
+var css = require('./css.js');
 var main = require('./main.js');
-var io = require('./io.js');
+var file = require('./file.js');
+var optimize = require('./optimize.js');
 var plugin = require('./plugin.js');
 var helper = require('./helper.js');
 var cookie = require('./cookie.js');
 var make = require('./make.js');
 var SFFM = require('./SFFM.js');
+var scheduler = require('./schedule.js');
 var lang = require('./language.js');
 
 var self = this;
@@ -24,17 +28,32 @@ var _handleRequest
 = me.handleRequest = function handleRequest($requestState) {
     
     $requestState.httpStatus = 501;
+    $requestState.POST;
 
     var unblock;
     if (typeof $requestState.config === 'undefined') {
         
-        $requestState.result.writeHead(404, { 'Server': 'SHPS' });
-        $requestState.result.end('The requested domain is not configured!');
+        $requestState.response.writeHead(404, { 'Server': 'SHPS' });
+        $requestState.response.end('The requested domain is not configured!');
         $requestState.resultPending = false;
     }
     else {
         $requestState.site = $requestState.GET['site'] ? $requestState.GET['site']
                                                        : $requestState.config.generalConfig.indexContent.value;
+        
+        var siteHandler = function ($loop) {
+            
+            // "Do Not Track"-handling. We're nice, ain't we :)
+            if ($requestState.request.headers['dnt'] !== '1') {
+                
+                $requestState.SESSION['lastSite'] = $requestState.site;
+            }
+            
+            var defer = q.defer();
+            defer.resolve($loop);
+
+            return defer.promise;
+        }
 
         if ($requestState.path === '/favicon.ico') {
             
@@ -54,7 +73,7 @@ var _handleRequest
             // call plugin
             if (plugin.pluginExists($requestState.GET['plugin'])) {
                 
-                unblock = plugin.callPluginEvent('onDirectCall', $requestState.GET['plugin'], $requestState);
+                unblock = plugin.callPluginEvent($requestState, 'onDirectCall', $requestState.GET['plugin'], $requestState);
             }
             else {
                 
@@ -64,27 +83,21 @@ var _handleRequest
         else if (typeof $requestState.GET['file'] !== 'undefined') {
             
             // serve file
-            unblock = io.serveFile($requestState, $requestState.GET['file']);
+            unblock = file.serveFile($requestState, $requestState.GET['file']);
         }
         else if (typeof $requestState.GET['js'] !== 'undefined') {
 
         // present JS
         }
         else if (typeof $requestState.GET['css'] !== 'undefined') {
-
-        // render css
+            
+            var tmp = css.newCSS($requestState);
+            unblock = tmp.handle();
         }
         else if (typeof $requestState.GET['site'] !== 'undefined') {
             
             // transmit site
-            unblock = make.siteResponse($requestState, $requestState.GET['site'], $requestState.GET['ns']).then(function ($loop) {
-            
-                $requestState.SESSION['lastSite'] = $requestState.site;
-
-                var defer = q.defer();
-                defer.resolve($loop);
-                return defer;
-            });
+            unblock = make.siteResponse($requestState, $requestState.GET['site'], $requestState.GET['ns']).then(siteHandler);
             
         }
         else if (typeof $requestState.GET['HTCPCP'] !== 'undefined' && main.getHPConfig('eastereggs')) {
@@ -96,15 +109,8 @@ var _handleRequest
         else {
             
             // if they don't know what they want, they should just get the index site...
-            $requestState.GET['site'] = $requestState.config.generalConfig.indexContent.value;
-            unblock = make.siteResponse($requestState, $requestState.GET['site'], $requestState.GET['ns']).then(function ($loop) {
-                
-                $requestState.SESSION['lastSite'] = $requestState.site;
-                
-                var defer = q.defer();
-                defer.resolve($loop);
-                return defer;
-            });
+            $requestState.GET['site'] = $requestState.site;
+            unblock = make.siteResponse($requestState, $requestState.GET['site'], $requestState.GET['ns']).then(siteHandler, siteHandler);
         }
     }
     
@@ -129,60 +135,71 @@ var _handleRequest
         };
     }
     
+    var errFun = function ($err) {
+        
+        $requestState.response.writeHead(500, { 'Server': 'SHPS' });
+        $requestState.response.end($err.toString());//TODO: don't send error info -> might be sensitive data
+    };
+
     unblock.done(function () {
         
-        if (!$requestState.resultPending) {
+        if (!$requestState.resultPending && !$requestState.headerPending) {
             
             return;
         }
-        
-        var bodyLengthMatch;
-        if ($requestState.isResponseBinary) {
+
+        if ($requestState.resultPending) {
             
-            bodyLengthMatch = 0;
-        }
-        else {
-            
-            bodyLengthMatch = 0;//encodeURIComponent($requestState.responseBody).match(/%[89ABab]/g);
-        }
-        
-        var defer = q.defer();
-        var tmp = Buffer.byteLength($requestState.responseBody, 'utf8');
-        if ($requestState.request.headers['accept-encoding'].match(/\bgzip\b/) && Buffer.byteLength($requestState.responseBody, 'utf8') > $requestState.config.generalConfig.gzipMinSize.value) {
-            
-            zip.gzip($requestState.responseBody, function ($err, $buf) {
-                
-                $requestState.responseBody = $buf;
-                $requestState.responseEncoding = 'gzip';
-                defer.resolve();
-            });
-        }
-        else {
-            
-            defer.resolve();
+            $requestState.responseBody = optimize.compressStream($requestState, $requestState.responseBody, Buffer.byteLength($requestState.responseBody, 'utf8'));
         }
         
         var headers = {
             
-            'Content-Type': $requestState.responseType + ';charset=utf-8',
-            'Server': 'SHPS',
-            'Set-Cookie': $requestState.COOKIE.getChangedCookies(),
             'Age': 0, // <-- insert time since caching here
             'Cache-Control': $requestState.config.generalConfig.timeToCache.value,
-            //'Content-MD5': '', // <-- useless. Will not implement it since it only serves the purpose of increasing latency. Will leave here as a reminder.
-            // 'Etag': <-- insert cache token here (change token whenever the cache was rebuilt)
+            'Content-Type': $requestState.responseType + ';charset=utf-8',
+            //'Date': Date.now.toString(), // <-- automatically sent by Node.JS
+            'Set-Cookie': $requestState.COOKIE.getChangedCookies(),
             
-            'X-XSS-Protection': '1;mode=block',
             'X-Content-Type-Options': 'nosniff',
-            'X-Powered-By': 'SHPS',
+            'X-XSS-Protection': '1;mode=block',
             
             // ASVS V2 3.10
             'X-Frame-Options': 'SAMEORIGIN',
         };
         
+        var trailerHeaders = {
+
+            'Server': 'SHPS',
+            'X-Powered-By': 'SHPS4Node',
+            //'Content-MD5': '', // <-- useless for HTML sites. Will not implement it since it only serves the purpose of increasing latency. Will leave here as a reminder.
+            // 'Etag': <-- insert cache token here (change token whenever the cache was rebuilt)
+        };
+        
+        if (main.isDebug()) {
+
+            trailerHeaders['X-Powered-By'] = 'SHPS4Node/' + SHPS_VERSION + SHPS_BUILD;
+            trailerHeaders['X-Version'] = SHPS_VERSION;
+        }
+        
         if (typeof $requestState.responseHeaders !== 'undefined') {
             
             headers = oa(headers, $requestState.responseHeaders);
+        }
+        
+        if (typeof $requestState.responseTrailers !== 'undefined') {
+            
+            trailerHeaders = oa(trailerHeaders, $requestState.responseTrailers);
+        }
+        
+        var useTrailers = $requestState.request.headers.TE && $requestState.request.headers.TE.match(/trailers/i);
+        if (useTrailers) {
+            
+            headers['Trailer'] = Object.keys(trailerHeaders).join(',');
+        }
+        else {
+            
+            headers = oa(headers, trailerHeaders);
         }
         
         if (SFFM.isHTTPS($requestState.request)) {
@@ -195,45 +212,64 @@ var _handleRequest
             }
             
             // SSLLabs suggestion
-            headers['Public-Key-Pins'] = 'pin-sha256="' + $requestState.config.TLSConfig.keypin.value + '";max-age=2592000';
-            if ($requestState.config.securityConfig.HPKPIncludeSubDomains.value) {
+            if ($requestState.config.TLSConfig.keypin.value != '') {
                 
-                headers['Public-Key-Pins'] += ';includeSubDomains'
+                //TODO: calculate the keypin with openssl
+                headers['Public-Key-Pins'] = 'pin-sha256="' + $requestState.config.TLSConfig.keypin.value + '";max-age=2592000';
+                if ($requestState.config.securityConfig.HPKPIncludeSubDomains.value) {
+                    
+                    headers['Public-Key-Pins'] += ';includeSubDomains'
+                }
             }
         }
         
-        defer.promise.done(function () {
-            
-            var respFun = function ($lang) {
-
-                headers['Content-Length'] = $requestState.responseBody.length + (bodyLengthMatch ? bodyLengthMatch.length : 0);
-                headers['Content-Encoding'] = $requestState.responseEncoding;
-                headers['Content-Language'] = $lang;
-                $requestState.result.writeHead($requestState.httpStatus, headers);
-                if ($requestState.isResponseBinary) {
+        var respFun = function ($lang) {
+                
+            if ($requestState.resultPending && typeof $requestState.responseBody === 'string') {
                     
-                    $requestState.result.write($requestState.responseBody, 'binary');
-                    $requestState.result.end();
+                headers['Content-Length'] = SFFM.stringByteLength($requestState.responseBody);
+            }
+                
+            headers['Content-Encoding'] = $requestState.responseEncoding;
+            headers['Content-Language'] = $lang;
+                
+            if ($requestState.headerPending) {
+
+                $requestState.response.writeHead($requestState.httpStatus, headers);
+                $requestState.emit('headerSent');
+            }
+                
+            if ($requestState.resultPending) {
+                
+                if (typeof $requestState.responseBody.pipe === 'function') {
+
+                    $requestState.responseBody.pipe($requestState.response);
                 }
                 else {
-                    
-                    $requestState.result.end($requestState.responseBody);
-                }
-            }
 
-            lang.newLang($requestState).getLanguage().done(respFun, function ($err) {
+                    $requestState.response.write($requestState.responseBody, $requestState.isResponseBinary ? 'binary'
+                                                                                                            : 'utf8');
+                }
+
+                $requestState.emit('bodySent');
+            }
+                
+            if (useTrailers) {
+                  
+                $requestState.response.addTrailers(trailerHeaders);
+            }
+                
+            if ($requestState.resultPending) {
+                  
+                $requestState.response.end();
+            }
+        };
+
+        lang.newLang($requestState).getLanguage().done(respFun, function ($err) {
                         
-                respFun('na');        
-            });
-        }, function ($e) {
-            
-            var s = $e;
+            respFun('na');        
         });
-    }, function ($err) {
-    
-        $requestState.result.writeHead(500, { 'Server': 'SHPS' });
-        $requestState.result.end($err.toString());
-    });
+    }, errFun);
 };
 
 

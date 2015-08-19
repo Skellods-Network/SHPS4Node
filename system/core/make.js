@@ -8,10 +8,33 @@ var _ = require('lodash');
 
 var auth = require('./auth.js');
 var cache = require('./cache.js');
+var cl = require('./componentLibrary.js');
 var helper = require('./helper.js');
-var io = require('./io.js');
-var log = require('./log.js');
+var __log = null;
+__defineGetter__('_log', function () {
+    
+    if (!__log) {
+        
+        __log = require('./log.js');
+    }
+    
+    return __log;
+});
+
+var main = require('./main.js');
+var __nLog = null;
+__defineGetter__('log', function () {
+    
+    if (!__nLog) {
+        
+        __nLog = _log.newLog();
+    }
+    
+    return __nLog;
+});
+
 var sandbox = require('./sandbox.js');
+var schedule = require('./schedule.js');
 var SFFM = require('./SFFM.js');
 var sql = require('./sql.js');
 
@@ -66,6 +89,126 @@ var _preparePartialSB = function ($requestState, $ext) {
     }
 };
 
+/**
+ * Execute code
+ * 
+ * @param $requestState Object()
+ * @param $code string|Script()
+ * @param $lang integer
+ * @param $sb Sandbox() OPTIONAL
+ *   Default: null
+ * @param $extSB Boolean OPTIONAL
+ *   If no sandbox was given, should the created sandbox be extended?
+ *   Default: false
+ * @return Object(status, result)
+ *   Status can be true or false, depending on if the script executed successfully
+ */
+var _run 
+= me.run = function f_make_run($requestState, $code, $lang, $sb, $extSB) {
+
+    var r = {
+        
+        status: false,
+        result: '',
+    };
+
+    switch ($lang) {
+
+        case undefined:
+        case null:
+        case 0: {// No script
+            r.status = true;
+            r.result = $code;
+
+            break;
+        }
+
+        case 1: {// JS
+            
+            if (typeof $code === 'string') {
+                
+                $code = sandbox.newScript($code);
+            }
+            
+            if (!$sb) {
+                
+                $sb = _preparePartialSB($requestState, $extSB);
+            }
+
+            try {
+                r.result = $sb.run($code, $requestState.config.generalConfig.templateTimeout.value);
+                r.status = true;
+            }
+            catch ($e) {
+                
+                if (main.isDebug()) {
+
+                    r.result = $e;
+                }
+                else {
+
+                    r.result = SHPS_ERROR_CODE_EXECUTION;
+                }
+            }
+            
+            break;
+        }
+
+        case 2: {// Embedded JS
+            
+            if (!$sb) {
+                
+                $sb = _preparePartialSB($requestState, $extSB);
+            }
+
+            var tmp = _.template($code, {
+                
+                imports: $sb.getGlobals()
+            });
+            
+            if (typeof tmp === 'function') {
+                
+                try {
+                    r.result = tmp(); //TODO: Put this in a sandbox!
+                    r.status = true;
+                }
+                catch ($e) {
+                    
+                    if (main.isDebug()) {
+                        
+                        r.result = $e;
+                    }
+                    else {
+                        
+                        r.result = SHPS_ERROR_CODE_EXECUTION;
+                    }
+                }
+            }
+            
+            break;
+        }
+
+        default: {// Call Plugins
+
+            var results = schedule.sendDuplexSignal('onScriptExecuteUnknownLanguage', $requestState, $code, $lang, $sb, $extSB);
+            var i = 0;
+            var l = results.length;
+            while (i < l) {
+                
+                if (results[i]) {
+                    
+                    r.result = results[i];
+                    break;
+                }
+
+                i++;
+            }
+        }
+    }
+
+    return r;
+};
+
 var _getContent = function f_make_getContent($requestState, $contentName, $namespace) {
     
     var defer = q.defer();
@@ -79,7 +222,7 @@ var _getContent = function f_make_getContent($requestState, $contentName, $names
             tblCon.col('accessKey'),
             tblCon.col('extSB'),
             tblCon.col('language'),
-            tblCon.col('tls'), // todo: assert HTTPS if this flag is set
+            tblCon.col('tls'),
         ])
         .fulfilling()
         .eq(tblCon.col('name'), $contentName)
@@ -99,6 +242,18 @@ var _getContent = function f_make_getContent($requestState, $contentName, $names
             }
             
             var row = $rows[0];
+            if (row.tls && !SFFM.isHTTPS($requestState.request)) {
+                
+                $requestState.responseHeaders['Location'] = cl.newCL($requestState).getURL(null, null, true, null).url;
+                defer.reject({
+                    
+                    status: 301,
+                    body: '<error>ERROR: TLS mandatory!</error>',
+                });
+                
+                return;
+            }
+
             var a = auth.newAuth($requestState);
             a.hasAccessKeyExt(row.accessKey).done(function ($akExt) {
                 
@@ -111,51 +266,16 @@ var _getContent = function f_make_getContent($requestState, $contentName, $names
                 var sb = _preparePartialSB($requestState, row.extSB);
                 var status = 200;
                 var body = row.content;
-                switch (row.language) {
+                var tmp = _run($requestState, body, row.language, sb, row.extSB);
+                if (tmp.status) {
+                    
+                    status = tmp.status;
+                    body = tmp.result;
+                }
+                else {
 
-                    case 1: {// JS
-                        
-                        try {
-                            var code = sandbox.newScript(body);
-                            body = sb.run(code, $requestState.config.generalConfig.templateTimeout.value);
-                        }
-                        catch ($e) {
-                            
-                            status = 500;
-                            body = '<error>' + $e + '</error>';
-                        }
-                        
-                        break;
-                    }
-
-                    case 2: {// Embedded JS
-                        
-                        var tmp = _.template(body, {
-                            
-                            imports: sb.getGlobals()
-                        });
-                        
-                        if (typeof tmp === 'function') {
-                            
-                            try {
-                                body = tmp(); //TODO: Put this in a sandbox!
-                            }
-                            catch ($e) {
-                                
-                                status = 500;
-                                body = '<error>' + $e + '</error>';
-                            }
-                        }
-                        
-                        break;
-                    }
-
-                    case 3: {// CoffeeScript
-                        
-                        //TODO: Not implemented yet
-                        
-                        break;
-                    }
+                    status = 500;
+                    body = '<error>' + tmp.result + '</error>';
                 }
 
                 if (body.then) {
@@ -163,6 +283,7 @@ var _getContent = function f_make_getContent($requestState, $contentName, $names
                     body.done(function ($body) {
                                             
                         defer.resolve({
+
                             body: $body,
                             status: status,
                         });              
@@ -171,6 +292,7 @@ var _getContent = function f_make_getContent($requestState, $contentName, $names
                 else {
 
                     defer.resolve({
+
                         body: body,
                         status: status,
                     });
@@ -201,7 +323,7 @@ var _getPartial = function f_make_getPartial($requestState, $partialName, $names
             defer.reject({
                 body: '<error>ERROR: Partial could not be found!</error>',
                 status: 404,
-                void: $void,
+                'void': $void,
             });
         }
     }
@@ -244,7 +366,8 @@ var _getPartial = function f_make_getPartial($requestState, $partialName, $names
                         status: 404,
                         'void': $void,
                     });
-                    return;
+
+                    return defer.promise;
                 }
                 
                 var httpStatus = 200;
@@ -285,7 +408,7 @@ var _getPartial = function f_make_getPartial($requestState, $partialName, $names
                     var body = '';
                     if ($requestState.cache.partials[$namespace][$partialName]) {
                         
-                        body = $requestState.cache.partials[$namespace][$partialName];
+                        body = $requestState.cache.partials[$namespace][$partialName].body;
                     }
                     else {
                         
@@ -295,7 +418,14 @@ var _getPartial = function f_make_getPartial($requestState, $partialName, $names
                     
                     if ($err) {
                         
-                        defer.reject($err);
+                        if (main.isDebug()) {
+
+                            defer.reject($err);
+                        }
+                        else {
+
+                            defer.reject(SHPS_ERROR_UNKNOWN);
+                        }
                     }
                     else {
                         
@@ -329,57 +459,8 @@ var _executeBody = function ($requestState, $nfo, $params) {
         }
     });
     
-    var sb = _preparePartialSB($requestState, $nfo.extSB);
-    var code = undefined;
-    switch ($nfo.lang) {
+    body = _run($requestState, body, $nfo.lang, null, $nfo.extSB).result;
 
-        case 1: {// JS
-            
-            try {
-                code = sandbox.newScript(body);
-                body = sb.run(code, $requestState.config.generalConfig.templateTimeout);
-            }
-                catch ($e) {
-                
-                body = '<error>ERROR: Could not parse partial ' + $nfo.namespace + ':' + $nfo.name + '</error>';
-            }
-            
-            break;
-        }
-
-        case 2: {// Embedded JS
-            
-            var tmp = _.template(body, {
-                
-                imports: sb.getGlobals()
-            });
-            
-            if (typeof tmp === 'function') {
-                try {
-                    body = tmp();
-                }
-                catch ($e) {
-
-                    body = '<error>ERROR: Could not parse partial ' + $nfo.namespace + ':' + $nfo.name + ' ' + $e + '</error>';
-                }
-            }
-            else {
-                
-                body = '<error>ERROR: Could not parse partial ' + $nfo.namespace + ':' + $nfo.name + '</error>';
-            }
-            
-            break;
-        }
-
-        case 3: {// CoffeeScript
-            
-            //Not implemented yet
-            body = '<error>CoffeeScript not implemented yet!</error>';
-            
-            break;
-        }
-    }
-    
     return body;
 };
 
@@ -437,12 +518,16 @@ var _parseTemplate = function f_make_parseTemplate($requestState, $template) {
             }, function ($err) {
                 
                 if ($err.status && $err.body) {
-
+                    
+                    $err.body = tmp + $err.body;
                     defer.resolve($err);
                 }
                 else {
-
-                    defer.reject($err);
+                    
+                    var tmpE = {};
+                    tmpE.status = 404;
+                    tmpE.body = tmp + $err;
+                    defer.reject(tmpE);
                 }
             });
             
@@ -468,9 +553,9 @@ var _parseTemplate = function f_make_parseTemplate($requestState, $template) {
         
         _parseTemplate($requestState, $result.body + $template.substring(offset + inc.length)).done(function ($res) {
             
-            if ($result.status == 404) {
+            if ($result.status > $res.status) {
 
-                $res.status = 404;
+                $res.status = $result.status;
             }
 
             r.resolve($res);
@@ -488,12 +573,17 @@ var _siteResponse
     var defer = q.defer();
     _getPartial($requestState, $requestState.config.generalConfig.rootTemplate.value, $namespace).done(function ($res) {
         
-        _parseTemplate($requestState, _executeBody($requestState, $res.body)).done(function ($res) {
+        _parseTemplate($requestState, _executeBody($requestState, $res)).done(function ($fRes) {
             
-            $requestState.httpStatus = $res.status;
+            if ($res.status > $fRes.status) {
+
+                $fRes.status = $res.status;
+            }
+
+            $requestState.httpStatus = $fRes.status;
             $requestState.responseType = 'text/html';
-            $requestState.responseBody = $res.body;
-            defer.resolve($res);
+            $requestState.responseBody = $fRes.body;
+            defer.resolve($fRes);
         }, defer.reject);
     }, defer.reject);
     
@@ -594,20 +684,25 @@ var _requestResponse
                             defer.resolve();
                         }
                         
-                        if (typeof r === 'object' && r.then !== undefined) {
+                        if (typeof r === 'object' && r.done !== undefined) {
                             
-                            r.then(function ($result) {
+                            var rFun;
+                            if (r.done !== undefined) {
+
+                                rFun = r.done.bind(r);
+                            }
+                            else {
+
+                                rFun = r.then.bind(r);
+                            }
+
+                            rFun(function ($result) {
                                 
                                 $requestState.responseBody = JSON.stringify({
                                     
                                     status: 'ok',
                                     result: $result,
                                 });
-                                
-                                if (r.done !== undefined) {
-                                    
-                                    r.done();
-                                }
                                 
                                 defer.resolve();
                             }, function ($e) {
@@ -617,11 +712,6 @@ var _requestResponse
                                     status: 'error',
                                     message: $e,
                                 });
-
-                                if (r.done !== undefined) {
-                                    
-                                    r.done();
-                                }
 
                                 defer.resolve();
                             });

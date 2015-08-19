@@ -10,7 +10,27 @@ var sql = require('./sql.js');
 var col = require('./sqlCol.js');
 var row = require('./sqlRow.js');
 var sqb = require('./sqlQueryBuilder.js');
-var log = require('./log.js');
+var __log = null;
+__defineGetter__('_log', function () {
+    
+    if (!__log) {
+        
+        __log = require('./log.js');
+    }
+    
+    return __log;
+});
+
+var __nLog = null;
+__defineGetter__('log', function () {
+    
+    if (!__nLog) {
+        
+        __nLog = _log.newLog();
+    }
+    
+    return __nLog;
+});
 
 var mp = {
     self: this
@@ -212,11 +232,6 @@ var _sqlTable = function c_sqlTable($sql, $name) {
             return;
         }
 
-        /*let*/var sql;
-        $sql.isFree()
-            ? sql = $sql
-            : sql = sql.newSQL($sql);
-        
         var vals = [];
         var keys = [];
         for (var key in $vals) {
@@ -258,10 +273,16 @@ var _sqlTable = function c_sqlTable($sql, $name) {
             }
         }
 
-        sql.query('INSERT INTO ' + _getAbsoluteName() + ' (' + keys + ') VALUES (' + vals + ');').then(function f_sqlTable_insert_2($e, $r) {
+        $sql.query('INSERT INTO ' + _getAbsoluteName() + ' (' + keys + ') VALUES (' + vals + ');').then(function f_sqlTable_insert_2($e, $r) {
             
-            defer.resolve($e, $r);
-            sql.free();
+            if ($e) {
+
+                defer.reject($e);
+            }
+            else {
+
+                defer.resolve($r);
+            }
         });
 
         return defer.promise;
@@ -275,7 +296,57 @@ var _sqlTable = function c_sqlTable($sql, $name) {
 
     var _update =
     this.update = function f_sqlTable_update($values, $conditions) {
-    
-        log.warning('f_sqlTable_update not implemented yet!');
+        
+        if (!$conditions) {
+            
+            return sqb.newSQLQueryBuilder($sql).set(this, $values).fulfilling();
+        }
+
+        var vals = [];
+        var keys = [];
+        for (var key in $values) {
+            
+            keys.push(key);
+            if (typeof $values[key] === 'string') {
+                
+                vals.push($sql.standardizeString($values[key]));
+            }
+            else if (typeof $values[key] === 'boolean') {
+                
+                vals.push(
+                    $values[key]
+                        ? 1
+                        : 0
+                );
+            }
+            else {
+                
+                vals.push($values[key]);
+            }
+        }
+        
+        var newVals = '';
+        var first = true;
+        var i = 0;
+        var l = keys.length;
+        while (i < l) {
+            
+            if (first) {
+
+                first = false;
+            }
+            else {
+
+                newVals += ',';
+            }
+
+            newVals += keys[i] + '=' + vals[i]; //TODO: Clean this!
+            i++;
+        }
+        
+        
+
+        var query = 'UPDATE ' + _getAbsoluteName() + ' SET ' + newVals + ' WHERE ' + $conditions.toString();
+        return $sql.query(query);
     };
 };

@@ -28,7 +28,28 @@ __defineGetter__('config', function () {
     return _config;
 });
 
-var log = require('./log.js');
+var __log = null;
+__defineGetter__('_log', function () {
+    
+    if (!__log) {
+        
+        __log = require('./log.js');
+    }
+    
+    return __log;
+});
+
+var __nLog = null;
+__defineGetter__('log', function () {
+    
+    if (!__nLog) {
+        
+        __nLog = _log.newLog();
+    }
+    
+    return __nLog;
+});
+
 var helper = require('./helper.js');
 var sffm = require('./SFFM.js');
 var row = require('./sqlRow.js');
@@ -525,6 +546,18 @@ var _SQL
         return _free;
     };
     
+    var _getAlias =
+    this.getAlias = function f_sql_getAlias() {
+        
+        return $alias;
+    };
+    
+    var _getRequestState =
+    this.getRequestState = function f_sql_getRequestState() {
+        
+        return $requestState;
+    };
+    
     /**
      * Get DB name
      * 
@@ -755,10 +788,8 @@ var _newSQL
                                 req.query($query, $cb);
                             };
                         }
-                        else {
-
-                            defer.resolve(new _SQL(dbConfig, $client));
-                        }
+                        
+                        defer.resolve(new _SQL(dbConfig, $client));
                     }
                 });
 

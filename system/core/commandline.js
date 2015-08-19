@@ -4,6 +4,7 @@ var me = module.exports;
 
 var readline = require('readline');
 var cluster = require('cluster');
+var cui = require('./CUI.js');
 var u = require('util');
 
 var def = require('./default.js');
@@ -75,9 +76,14 @@ __defineGetter__('sandbox', function () {
     return _sandbox;
 });
 
+var plugin = require('./plugin.js');
+
 var rl = {};
 var _isInitialized = false;
-var self = this;
+var mp = {
+    self: this
+};
+
 var sb = sandbox.newSandbox();
 
 
@@ -106,8 +112,14 @@ var _prompt
     
     if (_isInitialized) {
         
-        rl.prompt();
+        rl.prompt(true);
     }
+};
+
+var __isInitialized 
+= me.isInitialized = function f_commandline_isInitialized() {
+    
+    return _isInitialized;
 };
 
 /**
@@ -120,7 +132,7 @@ var _prompt
 var _hug 
 = me.hug = function f_commandline_hug($h) {
     
-    return helper.genericHug($h, self, function f_commandline_hug_hug($hugCount) {
+    return helper.genericHug($h, mp, function f_commandline_hug_hug($hugCount) {
 
         if ($hugCount > 3) {
 
@@ -135,41 +147,47 @@ var _init
 = me.init = function f_commandline_init() {
     
     if (_isInitialized) {
-
+        
         return rl;
     }
-
+    
     rl = readline.createInterface({
-
+        
         input: process.stdin,
         output: process.stdout,
         completer: completer
     });
+    
+    if (process.stdin.isTTY) {
+        
+        cui.init();
+    }
 
     rl.setPrompt('SHPS> ');
-    rl.prompt();
-
+    
     var internalRS = new helper.requestState();
     internalRS.request = {
-    
+        
         headers: {},
         connection: { remoteAddress: 'localhost' },
     };
-
+    
     internalRS.COOKIE = cookie.newCookieJar(internalRS);
     internalRS.config = def.config;
-    internalRS.domain = new helper.SHPS_domain('localhost');
+    internalRS._domain = new helper.SHPS_domain('localhost');
     sb.addFeature.all(internalRS);
-
+    
     _isInitialized = true;
-
+    
+    rl.prompt(false);
+    
     return rl;
-}
+};
 
 var _handleRequest 
 = me.handleRequest = function () {
 
-    log.write('For help, please input `help` (or just `h` and press [TAB]) and hit [ENTER].\n');
+    log.write('For help, please input `help` (or just `h` and press [TAB]) and hit [ENTER].\n'.bold);
     _init();
     
     rl.on('line', function ($line) {
@@ -177,6 +195,7 @@ var _handleRequest
         $line = $line.trim();
         switch ($line) {
 
+            case 'clear':
             case 'cls': {
                 
                 log.cls();
@@ -221,6 +240,12 @@ var _handleRequest
                 break;
             }
 
+            case 'whoami': {
+
+                log.write('marco');
+                break;
+            }
+
             case /^\s*?!.*/i.test($line)
                 ? $line
                 : undefined
@@ -242,17 +267,15 @@ var _handleRequest
 
             default: {
                 
-                //call plugins
-                if ($line !== '') {
+                if ($line !== '' && !plugin.callCommand($line)) {
 
                     log.write('Command not found!\n');
                 }
                 else {
 
-                    rl.prompt();
+                    rl.prompt(true);
                 }
             }
         }
-        
     });
 };

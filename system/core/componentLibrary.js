@@ -56,7 +56,10 @@ var _CL
     /**
      * Get URL for a file or a content
      * 
-     * @param $name string Name of resource or content
+     * @param $name string|null
+     *   Name of resource or content
+     *   In case of null, the current file or site will be used
+     *   Default: null
      * @param $namespace string|null
      *   Name of namespace. null can be used to stay in the currently used namespace
      *   Default: null
@@ -64,13 +67,34 @@ var _CL
      *   Set if transport encryption should be used or not.
      *   Null keeps the current protocol
      *   Default: null
-     * @param $resource boolean
+     * @param $resource boolean|null
      *   True for files, false for content
-     *   Default: false
+     *   null works like false, except it will automatically determine the URL, but only if $name was also set to null
+     *   Default: null
      * @return Object(url, paramChar)
      */
     var _getURL =
     this.getURL = function ($name, $namespace, $tls, $resource) {
+        
+        if ($name === null || $name === undefined) {
+
+            if ($requestState.GET['file']) {
+
+                $name = $requestState.GET['file'];
+                if ($resource === null || $resource === undefined) {
+
+                    $resource = true;
+                }
+            }
+            else {
+
+                $name = $requestState.site;
+                if ($resource === null || $resource === undefined) {
+                    
+                    $resource = false;
+                }
+            }
+        }
 
         var rawURL = _buildURL($namespace, $tls, $resource);
         if (!$resource && $name !== $requestState.config.generalConfig.URL.value) {
@@ -191,9 +215,17 @@ var _CL
             url += $requestState.config.generalConfig.URL.value;
         }
         
-        if ($requestState.domain.port) {
+        if ($ssl === null && $requestState._domain.port) {
             
-            url += ':' + $requestState.domain.port
+            url += ':' + $requestState._domain.port
+        }
+        else if ($ssl && $requestState.config.generalConfig.HTTP2Port.value !== 443) {
+
+            url += ':' + $requestState.config.generalConfig.HTTP2Port.value;
+        }
+        else if ($requestState.config.generalConfig.HTTP1Port.value !== 80) {
+
+            url += ':' + $requestState.config.generalConfig.HTTP1Port.value;
         }
         
         if (typeof $requestState.GET['lang'] !== 'undefined') {

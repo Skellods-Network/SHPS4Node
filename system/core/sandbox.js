@@ -37,15 +37,26 @@ __defineGetter__('lang', function () {
     return _lang
 });
 
-var _log = null;
-__defineGetter__('log', function () {
+var __log = null;
+__defineGetter__('_log', function () {
     
-    if (!_log) {
+    if (!__log) {
         
-        _log = require('./log.js');
+        __log = require('./log.js');
     }
     
-    return _log;
+    return __log;
+});
+
+var __nLog = null;
+__defineGetter__('log', function () {
+    
+    if (!__nLog) {
+        
+        __nLog = _log.newLog();
+    }
+    
+    return __nLog;
 });
 
 var _cl = null;
@@ -236,6 +247,27 @@ var _newSandbox
                 sb.GET = $requestState.GET;
                 sb.POST = $requestState.POST;
                 sb.SESSION = $requestState.SESSION;
+
+                // PHP compat
+                sb._GET = sb.GET;
+                sb._POST = sb.POST;
+                sb._SESSION = sb.SESSION;
+
+                sb.$_GET = sb.GET;
+                sb.$_POST = sb.POST;
+                sb.$_SESSION = sb.SESSION;
+            },
+            
+            shpsRequest: function f_sandbox_newSandbox_addFeature_shpsRequest($requestState) {
+                
+                sb.request = $requestState.request;
+                rebuildContext = true;
+            },
+            
+            shpsResponse: function f_sandbox_newSandbox_addFeature_shpsResponse($requestState) {
+                
+                sb.response = $requestState.response;
+                rebuildContext = true;
             },
 
             shpsSFFM: function f_sandbox_newSandbox_addFeature_shpsSFFM() {
@@ -282,6 +314,7 @@ var _newSandbox
             if (rebuildContext) {
 
                 context = vm.createContext(sb);
+                rebuildContext = false;
             }
 
             return $script.script.runInContext(context, options);

@@ -39,6 +39,7 @@ GLOBAL.SHPS_DIR_CONFIGS = 3;
 GLOBAL.SHPS_DIR_UPLOAD = 4;
 
 
+var constants = require('constants')
 var fs = require('fs');
 var async = require('vasync');
 var colors = require('colors');
@@ -98,15 +99,26 @@ __defineGetter__('helper', function () {
     return _helper
 });
 
-var _log = null;
-__defineGetter__('log', function () {
+var __log = null;
+__defineGetter__('_log', function () {
     
-    if (!_log) {
+    if (!__log) {
         
-        _log = require('./log.js');
+        __log = require('./log.js');
     }
     
-    return _log;
+    return __log;
+});
+
+var __nLog = null;
+__defineGetter__('log', function () {
+    
+    if (!__nLog) {
+        
+        __nLog = _log.newLog();
+    }
+    
+    return __nLog;
 });
 
 var _request = null;
@@ -272,7 +284,8 @@ var _init
         
         'funcs': [
             //update  //log.write('Checking for new versions...');
-            function f_init_checkFS($_p1, $_p2) { _checkFS().done($_p2, $_p2); }
+            function f_init_checkUpdate($_p1, $_p2) { _checkUpdate().done($_p2, $_p2); }
+            , function f_init_checkFS($_p1, $_p2) { _checkFS().done($_p2, $_p2); }
             , function f_init_readConfig($_p1, $_p2) { config.readConfig().done($_p2, $_p2); }
             , function f_init_parallelize($_p1, $_p2) {
                 
@@ -307,10 +320,26 @@ var _init
         ]
     }, function func_init_done ($err) {
         
-        log.write('\nWe done here! SHPS at your service - what can we do for you?');
+        log.write('\nWe done here! SHPS at your service - what can we do for you?'.bold);
         cl.handleRequest();
     });
 }
+
+var _checkUpdate = function f_main_checkUpdate() {
+
+    var defer = q.defer();
+
+    log.write('\nChecking for updates...', false);
+
+    scheduler.sendSignal('onCheckForUpdate', false);
+    
+    // Do the check here...
+
+    log.append(' OK'.green.bold);
+    defer.resolve();
+
+    return defer.promise;
+};
 
 var _parallelize = function ($cb) {
     
@@ -387,12 +416,12 @@ var _listen
     var httpResponse = function ($req, $res) {
         
         var rs = new helper.requestState();
-        rs.domain = new helper.SHPS_domain($req.headers.host, true);
-        rs.uri = rs.domain.href;
-        rs.config = config.getConfig(rs.domain.hostname);
+        rs._domain = new helper.SHPS_domain($req.headers.host, true);
+        rs.uri = rs._domain.href;
+        rs.config = config.getConfig(rs._domain.hostname);
         rs.path = $req.url;
         rs.request = $req;
-        rs.result = $res;
+        rs.response = $res;
         rs.COOKIE = cookie.newCookieJar(rs);
 
         request.handleRequest(rs);
@@ -422,18 +451,47 @@ var _listen
             var p = configHug.config[$c].generalConfig.HTTP2Port.value;
             if (port.indexOf(p) == -1) {
                 
-                server = https.createServer({
-                    key: fs.readFileSync(_getDir(SHPS_DIR_CERTS) + configHug.config[$c].TLSConfig.key.value),
-                    cert: fs.readFileSync(_getDir(SHPS_DIR_CERTS) + configHug.config[$c].TLSConfig.cert.value),
-                    ca: fs.readFileSync(_getDir(SHPS_DIR_CERTS) + configHug.config[$c].TLSConfig.ca.value)
-                }, httpResponse);
+                //TODO: implement TLS Tickets, OCSP stapling, SNI
+                var options =  {
+                    
+                    secureProtocol: 'SSLv23_method',
+                    secureOptions: constants.SSL_OP_NO_SSLv3 | constants.SSL_OP_NO_SSLv2,
+                    ciphers: 'AES256+EECDH:AES256+EDH:!aNULL',
+                    honorCipherOrder: true,
+                };
+                
+                if (configHug.config[$c].TLSConfig.key.value != '' && configHug.config[$c].TLSConfig.cert.value != '') {
 
+                    options.key = fs.readFileSync(_getDir(SHPS_DIR_CERTS) + configHug.config[$c].TLSConfig.key.value);
+                    options.cert = fs.readFileSync(_getDir(SHPS_DIR_CERTS) + configHug.config[$c].TLSConfig.cert.value);
+                }
+                else if (configHug.config[$c].TLSConfig.pfx.value) {
+
+                    options.pfx = fs.readFileSync(_getDir(SHPS_DIR_CERTS) + configHug.config[$c].TLSConfig.pfx.value);
+                }
+                
+                if (configHug.config[$c].TLSConfig.ca.value != '') {
+
+                    options.ca = fs.readFileSync(_getDir(SHPS_DIR_CERTS) + configHug.config[$c].TLSConfig.ca.value);
+                }
+                
+                if (configHug.config[$c].TLSConfig.passphrase.value != '') {
+                    
+                    options.passphrase = configHug.config[$c].TLSConfig.passphrase.value;
+                }
+                
+                if (configHug.config[$c].TLSConfig.dhParam.value != '') {
+                    
+                    options.dhparam = _getDir(SHPS_DIR_CERTS) + configHug.config[$c].TLSConfig.dhParam.value
+                }
+
+                server = https.createServer(options, httpResponse);
                 server.listen(p);
                 servers.push(server);
                 
-                log.write('HTTP/2.0 port opened on ' + (p + '').green);
+                log.write('HTTP/2 port opened on ' + (p + '').green);
                 port += p;
-                scheduler.sendSignal('onListenStart', 'HTTP/2.0', p);
+                scheduler.sendSignal('onListenStart', 'HTTP/2', p);
             }
         }
     }
@@ -509,7 +567,6 @@ var _hug
     });
 };
 
-
 /**
  * Focus all actions on a given requestState
  * Basically this is a wrapper so web developers don't have to worry about which domain their scripts are served to
@@ -542,10 +599,5 @@ var _focus
     this.isDebug = function f_main_focus_isDebug() {
         
         return _isDebug();
-    };
-    
-    this.setDebug = function f_main_focus_setDebug($onOff) {
-        
-        return _setDebug($onOff);
     };
 };
