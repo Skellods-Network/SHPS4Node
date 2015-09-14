@@ -2,33 +2,10 @@
 
 var me = module.exports;
 
-var helper = require('./helper.js');
-var __log = null;
-__defineGetter__('_log', function () {
-    
-    if (!__log) {
-        
-        __log = require('./log.js');
-    }
-    
-    return __log;
-});
-
-var __nLog = null;
-__defineGetter__('log', function () {
-    
-    if (!__nLog) {
-        
-        __nLog = _log.newLog();
-    }
-    
-    return __nLog;
-});
-
-var sql = require('./sql.js');
+var libs = require('./perf.js').commonLibs;
 
 var mp = {
-    self: this
+    self: this,
 };
 
 
@@ -60,13 +37,27 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
      */
     var _firstCondition = true;
 
-    
+    /**
+     * Bind a QueryBuilder to this ConditionBuilder
+     * A ConditionBuilder must always be attached to a QueryBuilder!
+     * 
+     * @param Object QueryBuilder
+     * @result Object this ConditionBuilder
+     */
     var _bindQueryBuilder =
     this.bindQueryBuilder = function f_sqlConditionBuilder_bindQueryBuilder($qb) {
 
         $sqb = $qb;
+        return this;
     };
-
+    
+    /**
+     * Query-conformant serialization
+     * For example:
+     *   `SHPS_test`.`user`.`user`='admin' OR `SHPS_test`.`user`.`user`='root'
+     *   
+     * @result string
+     */
     var _toString =
     this.toString = function f_sqlConditionBuilder_toString() {
     
@@ -93,12 +84,33 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
         else {
 
             $value = 'NULL';
-            log.error('Value Type mismatch in sqlConditionsBuilder_prepare!');
+            libs.gLog.error('Value Type mismatch in sqlConditionsBuilder_prepare!');
         }
 
         return $value;
     };
     
+    /**
+     * Adds an AND-statement in breakets into the condition string
+     * The two functions will be called with a ConditionBuilder as first parameter
+     * This can be used to build either side of the AND-statement
+     * e.g.
+     *   $sql.get(tblTest.col('foo'))
+     *       .fulfilling()
+     *       .and(function($sqb) {
+     *       
+     *           $sqb.eq(tblTest.col('bar'), 'val');
+     *       }, function($sqb) {
+     *       
+     *           $sqb.gt(tblTest.col('ID'), 1);
+     *       })
+     *       .execute()
+     *       .done(...);
+     *       
+     * @param function(ConditionBuilder) $left
+     * @param function(ConditionBuilder) $right
+     * @result Object this ConditionBuilder
+     */
     var _and =
     this.and = function f_sqlConditionBuilder_sqlConditionBuilder_and($left, $right) {
     
@@ -117,12 +129,33 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
         }
         else {
 
-            log.error('Value Type mismatch in sqlConditionsBuilder_and!');
+            libs.gLog.error('Value Type mismatch in sqlConditionsBuilder_and!');
         }
 
         return this;
     };
     
+    /**
+     * Adds an OR-statement in breakets into the condition string
+     * The two functions will be called with a ConditionBuilder as first parameter
+     * This can be used to build either side of the OR-statement
+     * e.g.
+     *   $sql.get(tblTest.col('foo'))
+     *       .fulfilling()
+     *       .or(function($sqb) {
+     *       
+     *           $sqb.eq(tblTest.col('bar'), 'val');
+     *       }, function($sqb) {
+     *       
+     *           $sqb.lt(tblTest.col('ID'), 10);
+     *       })
+     *       .execute()
+     *       .done(...);
+     *       
+     * @param function(ConditionBuilder) $left
+     * @param function(ConditionBuilder) $right
+     * @result Object this ConditionBuilder
+     */
     var _or =
     this.or = function f_sqlConditionBuilder_sqlConditionBuilder_or($left, $right) {
     
@@ -141,7 +174,7 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
         }
         else {
             
-            log.error('Value Type mismatch in sqlConditionsBuilder_and!');
+            libs.gLog.error('Value Type mismatch in sqlConditionsBuilder_and!');
         }
         
         return this;
@@ -171,8 +204,16 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
         _conditions += _prepare($left) + $operator + _prepare($right);
     };
     
+    /**
+     * Needed condition-value is in between two values
+     * 
+     * @param $col Object sqlCol
+     * @param $left mixed
+     * @param $right mixed
+     * @result Object this ConditionBuilder
+     */
     var _between =
-    this.between = function f_sqlConditionBuilder_sqlConditionBuilder_between($left, $right) {
+    this.between = function f_sqlConditionBuilder_sqlConditionBuilder_between($col, $left, $right) {
         
         if (_firstCondition) {
             
@@ -183,11 +224,23 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
             _conditions += ' AND ';
         }
         
-        _conditions += ' BETWEEN ' + _prepare($left) + ' AND ' + _prepare($right);
+        $sqb.addTable($col.getTable());
+
+        _conditions += _prepare($col) + ' BETWEEN ' + _prepare($left) + ' AND ' + _prepare($right);
 
         return this;
     };
-
+    
+    /**
+     * Some col of the table needs to be equal to some other col or value
+     * Function-Aliases:
+     *   - eq
+     *   - same
+     * 
+     * @param mixed $left
+     * @param $right mixed
+     * @result Object this ConditionBuilder
+     */
     var _equal =
     this.equal =
     this.eq =
@@ -197,6 +250,17 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
         return this;
     };
     
+    /**
+     * Some col of the table must not be equal to some other col or value
+     * Function-Aliases:
+     *   - ne
+     *   - different
+     *   - notEqual
+     * 
+     * @param mixed $left
+     * @param $right mixed
+     * @result Object this ConditionBuilder
+     */
     var _unequal =
     this.unequal =
     this.different =
@@ -207,6 +271,16 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
         return this;
     };
     
+    /**
+     * Some col of the table must be greater than some other col or value
+     * Function-Aliases:
+     *   - gt
+     *   - more
+     * 
+     * @param mixed $left
+     * @param $right mixed
+     * @result Object this ConditionBuilder
+     */
     var _greater =
     this.greater =
     this.more =
@@ -216,6 +290,16 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
         return this;
     };
     
+    /**
+     * Some col of the table must be less than some other col or value
+     * Function-Aliases:
+     *   - lt
+     *   - smaller
+     * 
+     * @param mixed $left
+     * @param $right mixed
+     * @result Object this ConditionBuilder
+     */
     var _less =
     this.less =
     this.smaller =
@@ -225,6 +309,16 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
         return this;
     };
     
+    /**
+     * Some col of the table must be greater or equal than some other col or value
+     * Function-Aliases:
+     *   - ge
+     *   - moreEqual
+     * 
+     * @param mixed $left
+     * @param $right mixed
+     * @result Object this ConditionBuilder
+     */
     var _greaterEqual =
     this.greaterEqual =
     this.moreEqual =
@@ -234,6 +328,16 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
         return this;
     };
     
+    /**
+     * Some col of the table must be less or equal than some other col or value
+     * Function-Aliases:
+     *   - ge
+     *   - moreEqual
+     * 
+     * @param mixed $left
+     * @param $right mixed
+     * @result Object this ConditionBuilder
+     */
     var _lessEqual =
     this.lessEqual =
     this.smallerEqual =
@@ -243,6 +347,15 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
         return this;
     };
     
+    /**
+     * Some col of the table must be (sql-)like some other value
+     * Function-Aliases:
+     *   - similar
+     * 
+     * @param mixed $left
+     * @param $right mixed
+     * @result Object this ConditionBuilder
+     */
     var _like =
     this.like =
     this.similar = function f_sqlConditionBuilder_sqlConditionBuilder_like($left, $right) {
@@ -251,6 +364,12 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
         return this;
     };
     
+    /**
+     * Some col of the table must be NULL
+     * 
+     * @param sqlCol $val
+     * @result Object this ConditionBuilder
+     */
     var _isNull =
     this.isNull = function f_sqlConditionBuilder_sqlConditionBuilder_isNull($val) {
         
@@ -258,6 +377,12 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
         return this;
     };
     
+    /**
+     * Some col of the table must not be NULL
+     * 
+     * @param sqlCol $val
+     * @result Object this ConditionBuilder
+     */
     var _isNotNull =
     this.isNotNull = function f_sqlConditionBuilder_sqlConditionBuilder_isNotNull($val) {
         
@@ -265,6 +390,13 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
         return this;
     };
     
+    /**
+     * Some col of the table must not be distinct from some other col or value
+     * 
+     * @param mixed $left
+     * @param mixed $right
+     * @result Object this ConditionBuilder
+     */
     var _notDistinct =
     this.notDistinct = function f_sqlConditionBuilder_sqlConditionBuilder_notDistinct($left, $right) {
         
@@ -277,6 +409,7 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
      * 
      * @param sqlCol $col
      * @param boolean $descending //Default: false
+     * @result Object this ConditionBuilder
      */
     var _orderBy =
     this.orderBy = function f_sqlQueryBuilder_orderBy($col, $descending) {
@@ -297,7 +430,7 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
     = mp.hug
     this.hug = function f_sqlConditionBuilder_sqlConditionBuilder_hug($h) {
         
-        return helper.genericHug($h, _mp, function f_sql_hug_hug($hugCount) {
+        return libs.helper.genericHug($h, _mp, function f_sql_hug_hug($hugCount) {
             
             if ($hugCount > 3) {
                 
@@ -307,7 +440,13 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
             return true;
         });
     };
-
+    
+    /**
+     * Execute query
+     * 
+     * @result Promise|Object
+     *   If no sqlQueryBuilder is attached, this sqlConditionBuilder is returned
+     */
     var _execute =
     this.execute = function f_sqlConditionBuilder_sqlConditionBuilder_execute() {
         
@@ -334,7 +473,7 @@ var _hug
 = mp.hug =
 this.hug = function f_sqlConditionBuilder_hug($h) {
     
-    return helper.genericHug($h, mp, function f_sql_hug_hug($hugCount) {
+    return libs.helper.genericHug($h, mp, function f_sql_hug_hug($hugCount) {
         
         if ($hugCount > 3) {
             

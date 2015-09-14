@@ -10,13 +10,7 @@ var optimize = require('./optimize.js');
 var stream = require('stream');
 var util = require('util');
 
-var auth = require('./auth.js');
-var cl = require('./componentLibrary.js');
-var helper = require('./helper.js');
-var sql = require('./sql.js');
-var main = require('./main.js');
-var scheduler = require('./schedule.js');
-var SFFM = require('./SFFM.js');
+var libs = require('./perf.js').commonLibs;
 
 var mp = {
     self: this
@@ -33,7 +27,7 @@ var mp = {
 var _hug 
 = me.hug = function f_file_hug($h) {
     
-    return helper.genericHug($h, mp, function f_file_hug_hug($hugCount) {
+    return libs.helper.genericHug($h, mp, function f_file_hug_hug($hugCount) {
         
         if ($hugCount > 3) {
             
@@ -48,7 +42,7 @@ var _serveFile
 = me.serveFile = function f_file_serveFile($requestState, $name) {
     
     var defer = q.defer();
-    sql.newSQL('default', $requestState).done(function ($sql) {
+    libs.sql.newSQL('default', $requestState).done(function ($sql) {
         
         var tblMT = $sql.openTable('mimeType');
         var tblU = $sql.openTable('upload');
@@ -73,19 +67,19 @@ var _serveFile
             if ($rows.length > 0) {
                 
                 var row = $rows[0];
-                var a = auth.newAuth($requestState);
+                var a = libs.auth.newAuth($requestState);
                 a.hasAccessKeyExt(row.accessKey).done(function ($result) {
                     
                     if ($result.hasAccessKey) {
                         
-                        var fPath = main.getDir(SHPS_DIR_UPLOAD) + row.fileName;
+                        var fPath = libs.main.getDir(SHPS_DIR_UPLOAD) + row.fileName;
                         
                         var fStat = fs.stat(fPath, function ($err, $stats) {
                             
                             if ($err) {
                                 
                                 $requestState.httpStatus = 500;
-                                $requestState.responseBody = main.isDebug() ? $err
+                                $requestState.responseBody = libs.main.isDebug() ? $err
                                                                             : '';
 
                                 defer.resolve();
@@ -98,13 +92,18 @@ var _serveFile
                                 var cd = $requestState.request.headers['Referer'] ? 'attachment'
                                                                                   : 'inline';
                                 
-                                var canGZIP = SFFM.canGZIP($requestState, $stats.size);
+                                var canGZIP = libs.SFFM.canGZIP($requestState, $stats.size);
                                 $requestState.responseHeaders['Content-Type'] = row.mimeType + ';charset=utf-8';
                                 $requestState.responseHeaders['Content-Disposition'] = cd + ';filename="' + row.fileName + '"';
                                 $requestState.responseHeaders['Last-Modified'] = (new Date(row.lastModified).toUTCString());
                                 if (canGZIP && row.compressedSize > 0) {
                                     
-                                    $requestState.responseHeaders['Content-Length'] = row.compressedSize;
+                                     row.compressedSize;
+                                }
+                                else if (canGZIP) {
+                                    
+                                    //TODO: Buffer file and then send it.
+                                    $requestState.responseHeaders['Content-Length'] = 0;
                                 }
                                 else if (row.size > 0) {
                                     
@@ -152,13 +151,14 @@ var _serveFile
                                         });
                                     
                                         $requestState.response.end();
-                                        sql.newSQL('default', $requestState).done(function ($sql) {
+                                        libs.sql.newSQL('default', $requestState).done(function ($sql) {
                                         
                                             tblU = $sql.openTable('upload');
                                             var vals = {
                                             
                                                 hash: md5,
                                                 size: $stats.size,
+                                                compressedSize: compSize,
                                             };
                                         
                                             if (canGZIP) {
@@ -176,7 +176,7 @@ var _serveFile
                                     })
                                 ;
                                 
-                                $requestState.once('headerSent', function () {
+                                $requestState.once('headSent', function () {
                                                                                     
                                     rs.resume();
                                     cs.resume();

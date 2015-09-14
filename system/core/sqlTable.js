@@ -5,11 +5,7 @@ var me = module.exports;
 var q = require('q');
 var async = require('vasync');
 
-var helper = require('./helper.js');
-var sql = require('./sql.js');
-var col = require('./sqlCol.js');
-var row = require('./sqlRow.js');
-var sqb = require('./sqlQueryBuilder.js');
+var libs = require('./perf.js').commonLibs;
 var __log = null;
 __defineGetter__('_log', function () {
     
@@ -48,7 +44,7 @@ var _hug
 = me.hug 
 = mp.hug = function f_main_hug($h) {
     
-    return helper.genericHug($h, mp, function f_main_hug_hug($hugCount) {
+    return libs.helper.genericHug($h, mp, function f_main_hug_hug($hugCount) {
         
         if ($hugCount > 3) {
             
@@ -70,32 +66,60 @@ var _sqlTable = function c_sqlTable($sql, $name) {
     var mp = {
         self: this
     };
-
+    
+    /**
+     * Gets a column of this table
+     * 
+     * @param string $name
+     * @param string $asName
+     *   Alias
+     *   Default: undefined
+     */
     var _col 
     = mp.col =
     this.col = function f_sqlTable_col($name, $asName) {
 
-        return col.newCol(this, $name, $asName);
+        return libs.sqlCol.newCol(this, $name, $asName);
     };
-
+    
+    /**
+     * Returns parent SQL Object
+     * 
+     * @result SQL
+     */
     var _getSQL =
     this.getSQL = function f_sqlTable_getSQL() {
 
         return $sql;
     };
-
+    
+    /**
+     * Gets name of table without prefix
+     * 
+     * @result string
+     */
     var _getName =
     this.getName = function f_sqlTable_getName() {
 
         return $name;
     };
-
+    
+    /**
+     * Gets full name of table with prefix
+     * 
+     * @result string
+     */
     var _getFullName =
     this.getFullName = function f_sqlTable_getFullName() {
 
         return $sql.getPrefix() + $name;
     };
-
+    
+    /**
+     * Gets full name with prefix and with db name in query-conform format
+     * 
+     * @result string
+     */
     var _getAbsoluteName =
     this.getAbsoluteName = function f_sqlTable_getAbsoluteName() {
         
@@ -117,6 +141,11 @@ var _sqlTable = function c_sqlTable($sql, $name) {
         
     };
     
+    /**
+     * Same as getAbsoluteName()
+     * 
+     * @result string
+     */
     var _toString 
     = mp.toString =
     this.toString = function f_sqlTable_toString() {
@@ -127,7 +156,7 @@ var _sqlTable = function c_sqlTable($sql, $name) {
     var _getAllColumns =
     this.getAllColumns = function f_sqlTable_getAllColumns() {
         
-        log.warning('f_sqlTable_getAllColumns not implemented yet!');
+        libs.gLog.warning('f_sqlTable_getAllColumns not implemented yet!');
         return [];
     };
     
@@ -150,6 +179,14 @@ var _sqlTable = function c_sqlTable($sql, $name) {
         
     };
     
+    /**
+     * Reads data from this table
+     * 
+     * @param $cols
+     *   Default: '*'
+     * @result Promise([])
+     *   Rows as array of Objects
+     */
     var _get =
     this.get = function f_sqlTable_sqlTable_get($cols) {
         
@@ -167,7 +204,7 @@ var _sqlTable = function c_sqlTable($sql, $name) {
             i++;
         }
 
-        return sqb.newSQLQueryBuilder($sql)
+        return libs.sqlQueryBuilder.newSQLQueryBuilder($sql)
             .get(cols)
             .execute();
     };
@@ -175,16 +212,16 @@ var _sqlTable = function c_sqlTable($sql, $name) {
     /**
      * Drop table
      * 
-     * @return Q promise
+     * @return Promise
      */
     var _drop =
     this.drop = function f_sqlTable_drop() {
         
-        log.writeNote('Table ' + _getAbsoluteName() + ' will be dropped!');
+        libs.gLog.writeNote('Table ' + _getAbsoluteName() + ' will be dropped!');
         /*let*/var sql;
         $sql.isFree()
             ? sql = $sql
-            : sql = sql.newSQL($sql);
+            : sql = libs.sql.newSQL($sql);
         
         var defer = q.defer();
         sql.query('DROP TABLE ?;', _getAbsoluteName()).done(function ($r) {
@@ -206,7 +243,7 @@ var _sqlTable = function c_sqlTable($sql, $name) {
      * @param $vals
      *  Object or array of objects containing values (1 object / row)
      * 
-     * @return Q promise
+     * @return Promise
      */
     var _insert =
     this.insert = function f_sqlTable_insert($vals) {
@@ -228,7 +265,7 @@ var _sqlTable = function c_sqlTable($sql, $name) {
 
         if (typeof $vals !== 'object') {
 
-            log.error('Wrong parameters in f_sqlTable_insert()!');
+            libs.gLog.error('Wrong parameters in f_sqlTable_insert()!');
             return;
         }
 
@@ -291,15 +328,24 @@ var _sqlTable = function c_sqlTable($sql, $name) {
     var _delete =
     this.delete = function f_sqlTable_delete($conditions) {
     
-        log.warning('f_sqlTable_delete not implemented yet!');
+        libs.gLog.warning('f_sqlTable_delete not implemented yet!');
     };
-
+    
+    /**
+     * Update data in this table
+     * 
+     * @param array of Objects $values
+     * @param string $conditions
+     *   If not set, a sqlConditionBuilder will be returned
+     *   Default: undefined
+     * @result Promise()|sqlConitionBuilder
+     */
     var _update =
     this.update = function f_sqlTable_update($values, $conditions) {
         
         if (!$conditions) {
             
-            return sqb.newSQLQueryBuilder($sql).set(this, $values).fulfilling();
+            return libs.sqlQueryBuilder.newSQLQueryBuilder($sql).set(this, $values).fulfilling();
         }
 
         var vals = [];

@@ -10,15 +10,7 @@ var async = require('vasync');
 var u = require('util');
 var crypt = require('crypto');
 
-var helper = require('./helper.js');
-var session = require('./session.js');
-var SFFM = require('./SFFM.js');
-var sql = require('./sql.js');
-
-var _log = require('./log.js');
-var log = _log.newLog();
-
-var dep = require('./dependency.js');
+var libs = require('./perf.js').commonLibs;
 
 var mp = {
     self: this
@@ -35,7 +27,7 @@ var mp = {
 var _hug 
 = me.hug = function f_auth_hug($h) {
     
-    return helper.genericHug($h, mp, function f_main_hug_hug($hugCount) {
+    return libs.helper.genericHug($h, mp, function f_main_hug_hug($hugCount) {
         
         if ($hugCount > 3) {
             
@@ -51,6 +43,7 @@ var Auth
     
     var _session;
     var self = this;
+    var log = libs.log.newLog($requestState);
 
     this.getSession = function f_auth_getSession() {
 
@@ -59,7 +52,7 @@ var Auth
     
     var _updatePassword = function f_auth_updatePassword($uid, $passwd) {
 
-        sql.newSQL('usermanagement', $requestState).done(function f_auth_updatePassword_newSQL($sql) {
+        libs.sql.newSQL('usermanagement', $requestState).done(function f_auth_updatePassword_newSQL($sql) {
             
             var tbl = $sql.openTable('user');
             $sql.query()
@@ -78,7 +71,7 @@ var Auth
                 tbl.update({
 
                     password: _makeSecurePassword($passwd, $rows[0].salt)
-                }, sql.newConditionBuilder(null)
+                }, libs.sql.newConditionBuilder(null)
                     .eq(tbl.col('ID'), $uid)
                 ).done($sql.free, $sql.free);
             }, $sql.free);
@@ -94,9 +87,9 @@ var Auth
     var _makeSecurePassword = function f_auth_makeSecurePassword($passwd) {
         
         var crypt;
-        if (!(crypt = dep.getSCrypt())) {
+        if (!(crypt = libs.dep.getSCrypt())) {
             
-            crypt = dep.getBCrypt();
+            crypt = libs.dep.getBCrypt();
         }
         
         var defer = q.defer();
@@ -148,7 +141,7 @@ var Auth
 
             if (!$validPasswd) {
                 
-                sql.newSQL('usermanagement', $requestState).done(function f_auth_updatePassword_newSQL($sql) {
+                libs.sql.newSQL('usermanagement', $requestState).done(function f_auth_updatePassword_newSQL($sql) {
                     
                     var tbl = $sql.openTable('user');
                     $sql.query()
@@ -182,9 +175,9 @@ var Auth
             
             defer.promise.done(function ($pw) {
                 
-                if (!(crypt = dep.getSCrypt())) {
+                if (!(crypt = libs.dep.getSCrypt())) {
                     
-                    crypt = dep.getBCrypt();
+                    crypt = libs.dep.getBCrypt();
                 }
                 
                 crypt.compare($passwd, $pw, function ($err, $res) {
@@ -233,9 +226,9 @@ var Auth
         
         _getIDFromAccessKey($key).done(function ($key) {
             
-            _log.newLog($requestState).audit('ACCESS KEY GRANT INITIATED ' + $key + ' for ' + ($isGroup ? 'group' : 'user') + ' ' + $uid + ': ' + new Date($from * 1000).toUTCString() + ' - ' + new Date($to * 1000).toUTCString());
+            log.audit('ACCESS KEY GRANT INITIATED ' + $key + ' for ' + ($isGroup ? 'group' : 'user') + ' ' + $uid + ': ' + new Date($from * 1000).toUTCString() + ' - ' + new Date($to * 1000).toUTCString());
             
-            sql.newSQL('usermanagement', $requestState).done(function ($sql) {
+            libs.sql.newSQL('usermanagement', $requestState).done(function ($sql) {
                 
                 var d = q.defer();
                 if ($isGroup) {
@@ -269,7 +262,7 @@ var Auth
     var _getFieldFromTable = function f_auth_getFieldFromTable($table, $field, $refCol, $refColValue) {
         
         var defer = q.defer();
-        sql.newSQL('usermanagement', $requestState).done(function ($sql) {
+        libs.sql.newSQL('usermanagement', $requestState).done(function ($sql) {
 
             var tbl = $sql.openTable($table);
             $sql.query()
@@ -312,30 +305,70 @@ var Auth
         return _getFieldFromTable($table, 'ID', $refCol, $refColValue);
     };
     
+    /**
+     * Get access key from ID
+     * 
+     * @param $id integer
+     *   ID
+     * @result string
+     *   Access key name
+     */
     var _getAccessKeyFromID =
     this.getAccessKeyFromID = function f_auth_getAccessKeyFromID($id) {
         
         return _getFieldFromTable('accessKey', 'name', 'ID', $id);
     };
-
+    
+    /**
+     * Get ID from access key
+     * 
+     * @param $name string
+     *   Name
+     * @result integer
+     *   ID
+     */
     var _getIDFromAccessKey =
     this.getIDFromAccessKey = function f_auth_getIDFromAccessKey($name) {
         
         return _getIDFromTable('accessKey', 'name', $name);
     };
     
+    /**
+     * Get ID from user
+     * 
+     * @param $name string
+     *   Name
+     * @result integer
+     *   ID
+     */
     var _getIDFromUser =
     this.getIDFromUser = function f_auth_getIDFromUser($name) {
         
         return _getIDFromTable('user', 'user', $name);
     };
     
+    /**
+     * Get ID from group
+     * 
+     * @param $name string
+     *   Name
+     * @result integer
+     *   ID
+     */
     var _getIDFromGroup =
     this.getIDFromGroup = function f_auth_getIDFromGroup($name) {
         
         return _getIDFromTable('group', 'name', $name);
     };
     
+    /**
+     * Get user from ID
+     * 
+     * @param $id integer
+     *   ID
+     * @result string
+     *   Name
+     */
     var _getUserFromID =
     this.getUserFromID = function f_auth_getUserFromID($id) {
         
@@ -367,16 +400,16 @@ var Auth
         
         _getIDFromAccessKey($key).done(function ($key) {
             
-            _log.newLog($requestState).audit('ACCESS KEY REVOKE INITIATED ' + $key + ' for ' + ($isGroup ? 'group' : 'user') + ' ' + $uid + ': ' + new Date($from * 1000).toUTCString() + ' - ' + new Date($to * 1000).toUTCString());
+            log.audit('ACCESS KEY REVOKE INITIATED ' + $key + ' for ' + ($isGroup ? 'group' : 'user') + ' ' + $uid + ': ' + new Date($from * 1000).toUTCString() + ' - ' + new Date($to * 1000).toUTCString());
 
-            sql.newSQL('usermanagement', $requestState).done(function ($sql) {
+            libs.sql.newSQL('usermanagement', $requestState).done(function ($sql) {
 
                 if ($isGroup) {
                     
                     $user = _getIDFromGroup($user);
                     var tblGS = $sql.openTable('groupSecurity');
                     var tblG = $sql.openTable('group');
-                    tblGS.delete(sql.newConditionBuilder(null)
+                    tblGS.delete(libs.sql.newConditionBuilder(null)
                         .eq(tblGS.col('gid'), $user)
                         .eq(tblGS.col('key'), $key)
                     ).done($sql.free, $sql.free);
@@ -386,7 +419,7 @@ var Auth
                     $user = _getIDFromUser($user);
                     var tblGS = $sql.openTable('userSecurity');
                     var tblG = $sql.openTable('user');
-                    tblGS.delete(sql.newConditionBuilder(null)
+                    tblGS.delete(libs.sql.newConditionBuilder(null)
                         .eq(tblGS.col('uid'), $user)
                         .eq(tblGS.col('key'), $key)
                     ).done($sql.free, $sql.free);
@@ -526,7 +559,7 @@ var Auth
         
         uPromise.done(function ($user) {
 
-            sql.newSQL('usermanagement', $requestState).done(function ($sql) {
+            libs.sql.newSQL('usermanagement', $requestState).done(function ($sql) {
                 
                 async.parallel({
                     
@@ -605,7 +638,7 @@ var Auth
             return defer.promise;
         }
 
-        sql.newSQL('usermanagement', $requestState).done(function ($sql) {
+        libs.sql.newSQL('usermanagement', $requestState).done(function ($sql) {
             
             if (typeof $uid === 'number') {
 
@@ -692,7 +725,7 @@ var Auth
         }
         else {
 
-            _log.newLog($requestState).audit('USER NOT LOGGED IN OR LOGGED OUT BY FORCE: ' + $dbRec.ID + ' | ' + $dbRec.user);
+            log.audit('USER NOT LOGGED IN OR LOGGED OUT BY FORCE: ' + $dbRec.ID + ' | ' + $dbRec.user);
         }
 
         return false;
@@ -714,7 +747,7 @@ var Auth
     this.login = function f_auth_login($user, $pw, $autoLogin) {
         $autoLogin = $autoLogin || false;
         
-        _log.newLog($requestState).info('LOGIN TRY: ' + $user + ' from ' + SFFM.getIP($requestState.request));
+        log.info('LOGIN TRY: ' + $user + ' from ' + libs.SFFM.getIP($requestState.request));
 
         var defer = q.defer();
         async.waterfall([
@@ -744,7 +777,7 @@ var Auth
             },
             function ($cb) {
 
-                sql.newSQL('usermanagement', $requestState).done(function ($sql) {
+                libs.sql.newSQL('usermanagement', $requestState).done(function ($sql) {
                 
                     $cb(null, $sql);
                 }, $cb);
@@ -752,7 +785,7 @@ var Auth
             function ($sql, $cb) {
                 
                 var alt = '';
-                if ($autoLogin && SFFM.isHTTPS($requestState.request)) {
+                if ($autoLogin && libs.SFFM.isHTTPS($requestState.request)) {
                     
                     alt = $requestState.COOKIE.getCookie(SHPS_COOKIE_AUTOLOGINTOKEN) || '0';
                 }
@@ -807,12 +840,12 @@ var Auth
                             var newToken = _session.genNewSID();
                             $requestState.COOKIE.setCookie(SHPS_COOKIE_AUTOLOGINTOKEN, newToken, $requestState.config.securityConfig.autoLoginTimeout.value, true);
                             
-                            sql.newSQL('usermanagement', $requestState).done(function ($sql) {
+                            libs.sql.newSQL('usermanagement', $requestState).done(function ($sql) {
                                                     
                                 $sql.openTable('user').update({
                                     
                                     autoLoginToken: newToken,
-                                    lastIP: SFFM.getIP($requestState.request),
+                                    lastIP: libs.SFFM.getIP($requestState.request),
                                     lastActivity: Date.now() / 1000
                                 })
                                 .eq(tblU.col('ID'), ur.ID)
@@ -833,12 +866,12 @@ var Auth
                                 var newToken = _session.genNewSID();
                                 $requestState.COOKIE.setCookie(SHPS_COOKIE_AUTOLOGINTOKEN, newToken, $requestState.config.securityConfig.autoLoginTimeout.value, true);
                                 
-                                sql.newSQL('usermanagement', $requestState).done(function ($sql) {
+                                libs.sql.newSQL('usermanagement', $requestState).done(function ($sql) {
                                     
                                     $sql.openTable('user').update({
                                         
                                         autoLoginToken: newToken,
-                                        lastIP: SFFM.getIP($requestState.request),
+                                        lastIP: libs.SFFM.getIP($requestState.request),
                                         lastActivity: Date.now() / 1000
                                     })
                                     .eq(tblU.col('ID'), ur.ID)
@@ -910,17 +943,17 @@ var Auth
 
 
     // CONSTRUCTOR
-    _session = session.newSession($requestState);
+    _session = libs.session.newSession($requestState);
     $requestState.SESSION = _session.data;
     if ($requestState.SESSION.user) {
 
-        sql.newSQL('usermanagement', $requestState).done(function ($sql) {
+        libs.sql.newSQL('usermanagement', $requestState).done(function ($sql) {
             
             var tblU = $sql.openTable('user');
             tblU.update({
             
                     lastSID: $requestState.SESSION.toString(),
-                    lastIP: SFFM.getIP($requestState.request),
+                    lastIP: libs.SFFM.getIP($requestState.request),
                     lastActivity: Date.now()
                 })
                 .eq(tblU.col('ID'), $requestState.SESSION.ID)

@@ -6,37 +6,11 @@ var mysql = require('mysql');
 var oa = require('object-assign');
 var u = require('util');
 
-var __log = null;
-__defineGetter__('_log', function () {
-    
-    if (!__log) {
-        
-        __log = require('./log.js');
-    }
-    
-    return __log;
-});
-
-var __nLog = null;
-__defineGetter__('log', function () {
-    
-    if (!__nLog) {
-        
-        __nLog = _log.newLog();
-    }
-    
-    return __nLog;
-});
-
-var helper = require('./helper.js');
-var sql = require('./sql.js');
-var scb = require('./sqlConditionBuilder.js');
+var libs = require('./perf.js').commonLibs;
 
 var mp = {
     self: this
 };
-
-//var sqlP = sql.hug(mp).self;
 
 
 var _newSQLQueryBuilder 
@@ -116,7 +90,7 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
     var _hug =
     this.hug = function f_sqlQueryBuilder_hug($h) {
         
-        return helper.genericHug($h, mp, function f_sql_hug_hug($hugCount) {
+        return libs.helper.genericHug($h, mp, function f_sql_hug_hug($hugCount) {
             
             if ($hugCount > 3) {
                 
@@ -126,14 +100,25 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
             return true;
         });
     };
-
+    
+    /**
+     * Reset this builder
+     * The builder is reset whenever a mode-setting method is called
+     */
     var _reset =
     this.reset = function f_sqlQueryBuilder_reset() {
 
         operation = 0;
         buf = [];
     };
-
+    
+    /**
+     * Fetch data from the DB (SELECT Mode)
+     * 
+     * @param array|sqlCol
+     *   There can be infinite sqlCol or array parameters!
+     * @result Object this sqlQueryBuilder
+     */
     var _get =
     this.get = function f_sqlQueryBuilder_get(/* ... */) {
     
@@ -165,7 +150,21 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
 
         return this;
     };
-
+    
+    /**
+     * Upload data to the database
+     * If no conditions are defined, the data will be uploaded as new data (INSERT mode)
+     * Else the data will be uploaded as replacement for existing data (UPDATE mode)
+     * 
+     * @param sqlTable $table
+     * @param $data Object
+     *   For example:
+     *   {
+     *     "col": "value",
+     *     "foo": "bar",
+     *   }
+     * @result Object this sqlQueryBuilder
+     */
     var _set =
     this.set = function f_sqlQueryBuilder_set($table, $data) {
     
@@ -177,7 +176,14 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
 
         return this;
     };
-
+    
+    /**
+     * Delete rows from a table
+     * Must have conditions!
+     * 
+     * @param sqlTable $table
+     * @result sqlQueryBuilder
+     */
     var _delete =
     this.delete = function f_sqlQueryBuilder_delete($table) {
     
@@ -188,18 +194,25 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
 
         return this;
     };
-
+    
+    /**
+     * Finish Mode selection and start condition building
+     * 
+     * @param string
+     *   Optional! If not set, a sqlConditionBuilder will be returned
+     * @return undefined|sqlConditionBuilder
+     */
     var _fulfilling =
     this.fulfilling = function f_sqlQueryBuilder_fulfilling($conditions) {
         
         if (operation === 0) {
             
-            log.error('An action has to be selected before calling `fulfilling` on a queryBuilder!');
+            libs.gLog.error('An action has to be selected before calling `fulfilling` on a queryBuilder!');
         }
         
         if (typeof $conditions === 'undefined') {
             
-            return scb.newSQLConditionBuilder(this);
+            return libs.sqlConditionBuilder.newSQLConditionBuilder(this);
         }
         else {
             
@@ -215,6 +228,7 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
      * 
      * @param sqlCol $col
      * @param boolean $descending //Default: false
+     * @result sqlQueryBuilder this
      */
     var _orderBy =
     this.orderBy = function f_sqlQueryBuilder_orderBy($col, $descending) {
@@ -225,7 +239,12 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
 
         return this;
     };
-
+    
+    /**
+     * Get parent SQL Object
+     * 
+     * @result SQL
+     */
     var _getSQL =
     this.getSQL = function f_sqlQueryBuilder_getSQL() {
     
@@ -312,7 +331,14 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
 
         additionalTables.push($table);
     };
-
+    
+    /**
+     * Execute query
+     * 
+     * @param string $conditions
+     *   Last chance to add conditions to the query
+     * @result Promise|Object
+     */
     var _execute =
     this.execute = function f_sqlQueryBuilder_execute($conditions) {
         
@@ -320,7 +346,7 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
 
             case 0: {
                 
-                log.error('No action selected!');
+                libs.gLog.error('No action selected!');
                 break;
             }
 
@@ -360,7 +386,7 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
 
             default: {
 
-                log.error('UNKNOWN ERROR in SQLQueryBuilder (operation `' + operation + '` has no meaning)!');
+                libs.gLog.error('UNKNOWN ERROR in SQLQueryBuilder (operation `' + operation + '` has no meaning)!');
             }
         }
     };
@@ -376,7 +402,7 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
 var _hug 
 = me.hug = function f_sql_hug($h) {
     
-    return helper.genericHug($h, mp, function f_sql_hug_hug($hugCount) {
+    return libs.helper.genericHug($h, mp, function f_sql_hug_hug($hugCount) {
         
         if ($hugCount > 3) {
             

@@ -5,28 +5,9 @@ var me = module.exports;
 var path = require('path');
 var u = require('util');
 var crypto = require('crypto');
-var __ = null;
-__defineGetter__('_', function () {
-    
-    if (!__) {
-        
-        __ = require('lodash');
-    }
+var _ = require('lodash');
 
-    return __;
-});
-
-
-var _helper = null;
-__defineGetter__('helper', function () {
-    
-    if (!_helper) {
-        
-        _helper = require('./helper.js');
-    }
-    
-    return _helper
-});
+var libs = require('./perf.js').commonLibs;
 
 var mp = {
     self: this
@@ -49,7 +30,7 @@ var _cleanStr
 var _hug 
 = me.hug = function f_SFFM_hug($h) {
     
-    return helper.genericHug($h, mp, function f_SFFM_hug_hug($hugCount) {
+    return libs.helper.genericHug($h, mp, function f_SFFM_hug_hug($hugCount) {
         
         if ($hugCount > 3) {
             
@@ -156,6 +137,10 @@ var _splitQueryString
     if (components.length > 1) {
 
         reqPath = components[1];
+    }
+    else {
+
+        reqPath = components[0];
     }
 
     var reqParams = reqPath.split('&');
@@ -272,7 +257,7 @@ var _isModuleAvailable
 /**
  * Calculate length of a string
  * The problem when using string length or even buffer length is that certain character lengths (especially asian symbols) will be counted in a wrong way for UTF8
- * That leads to too small character counts
+ * This might be a problem (e.g. for SHPS when sending the content-length)
  * This function aims to solve the problem by adding to the count when special characters are detected
  * 
  * @param $str UTF-8 String
@@ -330,6 +315,8 @@ var _stringByteLength
 var _canGZIP
 = me.canGZIP = function ($requestState, $fileSize) {
     $fileSize = $fileSize !== undefined ? $fileSize : $requestState.config.generalConfig.gzipMinSize.value + 1;
+    
+    return false;
 
     //TODO: This is a bad parser :(
     return  $requestState.request.headers['accept-encoding'] &&

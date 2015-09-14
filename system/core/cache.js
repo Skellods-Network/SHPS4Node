@@ -4,7 +4,7 @@ var me = module.exports;
 
 var q = require('q');
 
-var helper = require('./helper.js');
+var libs = require('./perf.js').commonLibs;
 
 var memoryStorage = {};
 var mp = {
@@ -22,7 +22,7 @@ var mp = {
 var _hug 
 = me.hug = function f_make_hug($h) {
     
-    return helper.genericHug($h, mp, function f_helper_log_hug($hugCount) {
+    return libs.helper.genericHug($h, mp, function f_helper_log_hug($hugCount) {
         
         if ($hugCount > 3) {
             

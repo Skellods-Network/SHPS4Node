@@ -7,54 +7,9 @@ var net = require('net');
 var url = require('url');
 var qs = require('querystring');
 var u = require('util');
-
 var q = require('q');
 
-var _cookie = null;
-__defineGetter__('cookie', function () {
-    
-    if (!_cookie) {
-        
-        _cookie = require('./cookie.js');
-    }
-    
-    return _cookie;
-});
-
-var __log = null;
-__defineGetter__('_log', function () {
-    
-    if (!__log) {
-        
-        __log = require('./log.js');
-    }
-    
-    return __log;
-});
-
-var __nLog = null;
-__defineGetter__('log', function () {
-    
-    if (!__nLog) {
-        
-        __nLog = _log.newLog();
-    }
-    
-    return __nLog;
-});
-
-var _request = null;
-__defineGetter__('request', function () {
-    
-    if (!_request) {
-        
-        _request = require('./request.js');
-    }
-    
-    return _request;
-});
-
-var SFFM = require('./SFFM.js');
+var libs = require('./perf.js').commonLibs;
 
 var mp = {
     self: this
@@ -105,7 +60,12 @@ me.requestState = function () {
     
     var self = this;
     var _GET = null;
+    
+    //TODO: Those 2 do not need getters or setters
     var _POST = null;
+    var FILE = null;
+    
+    this.isDataComplete = false;
     
     this._COOKIE = {};
     this._domain = null;
@@ -133,7 +93,7 @@ me.requestState = function () {
         
         if (_GET === null) {
             
-            _GET = SFFM.splitQueryString(self.path);
+            _GET = libs.SFFM.splitQueryString(self.path);
         }
         
         return _GET;

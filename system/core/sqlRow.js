@@ -2,8 +2,7 @@
 
 var me = module.exports;
 
-var helper = require('./helper.js');
-var sqlTable = require('./sqlTable.js');
+var libs = require('./perf.js').commonLibs;
 
 var mp = {
     self: this
@@ -20,7 +19,7 @@ var mp = {
 var _hug 
 = me.hug = function f_main_hug($h) {
     
-    return helper.genericHug($h, mp, function f_main_hug_hug($hugCount) {
+    return libs.helper.genericHug($h, mp, function f_main_hug_hug($hugCount) {
         
         if ($hugCount > 3) {
             
@@ -60,7 +59,7 @@ var _sqlRow = function c_sqlRow($table) {
     var _hug 
     = me.hug = function f_main_hug($h) {
         
-        return helper.genericHug($h, mp, function f_main_hug_hug($hugCount) {
+        return libs.helper.genericHug($h, mp, function f_main_hug_hug($hugCount) {
             
             if ($hugCount > 3) {
                 
@@ -150,7 +149,7 @@ var _sqlRow = function c_sqlRow($table) {
             $table = SQL_NO_TABLE;
         }
         
-        if ($table instanceof sqlTable.hug(mp.self).table) {
+        if ($table instanceof libs.sqlTable.hug(mp.self).table) {
             
             $table = $table.getName();
         }

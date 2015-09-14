@@ -5,8 +5,7 @@ var me = module.exports;
 var crypto = require('crypto');
 var util = require('util');
 
-var helper = require('./helper.js');
-var SFFM = require('./SFFM.js');
+var libs = require('./perf.js').commonLibs;
 
 var mp = {
     self: this
@@ -23,7 +22,7 @@ var mp = {
 var _hug 
 = me.hug = function f_auth_hug($h) {
     
-    return helper.genericHug($h, mp, function f_main_hug_hug($hugCount) {
+    return libs.helper.genericHug($h, mp, function f_main_hug_hug($hugCount) {
         
         if ($hugCount > 3) {
             

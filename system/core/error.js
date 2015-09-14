@@ -1,40 +1,25 @@
 ﻿'use strict';
 
-var __log = null;
-__defineGetter__('_log', function () {
+(function f_error() {
+
+    var libs = require('./perf.js').commonLibs;
     
-    if (!__log) {
+    GLOBAL.SHPS_ERROR_CODE_EXECUTION = 'An error occurred while executing the script! Activate debug mode to receive a more detailed error message!';
+    GLOBAL.SHPS_ERROR_UNKNOWN = 'An unknown error occurred! Activate debug mode to receive a more detailed error message!';
+    
+    
+    process.on('uncaughtException', function ($err) {
         
-        __log = require('./log.js');
-    }
-    
-    return __log;
-});
-
-var __nLog = null;
-__defineGetter__('log', function () {
-    
-    if (!__nLog) {
+        var str = 'Caught uncaught exception: ' + $err;
         
-        __nLog = _log.newLog();
-    }
-    
-    return __nLog;
-});
-
-GLOBAL.SHPS_ERROR_CODE_EXECUTION = 'An error occurred while executing the script! Activate debug mode to receive a more detailed error message!';
-GLOBAL.SHPS_ERROR_UNKNOWN = 'An unknown error occurred! Activate debug mode to receive a more detailed error message!';
-
-
-process.on('uncaughtException', function ($err) {
-        
-    var str = 'Caught uncaught exception: ' + $err;
-    try {
+        try {
             
-        log.writeError(str, true);
-    }
-    catch ($e) {
+            libs.gLog.writeError(str, true);
+        }
+        catch ($e) {
             
-        log.writeError(str + '\n' + $e, false);
-    }
-});
+            console.error(str + '\n' + $e, false);
+            //process.exit();
+        }
+    });
+})();

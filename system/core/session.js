@@ -4,8 +4,7 @@ var me = module.exports;
 
 var crypto = require('crypto');
 
-var helper = require('./helper.js');
-var SFFM = require('./SFFM.js');
+var libs = require('./perf.js').commonLibs;
 
 var mp = {
     self: this
@@ -24,7 +23,7 @@ var _sessionStorage = {};
 var _hug 
 = me.hug = function f_auth_hug($h) {
     
-    return helper.genericHug($h, mp, function f_main_hug_hug($hugCount) {
+    return libs.helper.genericHug($h, mp, function f_main_hug_hug($hugCount) {
         
         if ($hugCount > 3) {
             
@@ -59,7 +58,7 @@ var _newSession
         }
     }
 
-    $requestState.COOKIE.setCookie('SHPSSID', sid, $requestState.config.securityConfig.sessionTimeout.value, true, SFFM.isHTTPS($requestState.request));
+    $requestState.COOKIE.setCookie('SHPSSID', sid, $requestState.config.securityConfig.sessionTimeout.value, true, libs.SFFM.isHTTPS($requestState.request));
     return _sessionStorage[sid];
 };
 
@@ -103,8 +102,8 @@ var Session = function c_Session($requestState) {
             $request.headers['x-forwarded-for'] = 'localhost';
         }
 
-        _sha1.update(SFFM.getIP($requestState.request), 'ascii');
-        _sha1.update(SFFM.randomString(2048), 'ascii');
+        _sha1.update(libs.SFFM.getIP($requestState.request), 'ascii');
+        _sha1.update(libs.SFFM.randomString(2048), 'ascii');
         _sha1.update((new Date).toISOString(), 'ascii');
         _sid = _sha1.digest('base64');
 

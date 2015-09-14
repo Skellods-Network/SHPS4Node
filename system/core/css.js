@@ -2,13 +2,10 @@
 
 var me = module.exports;
 
+var async = require('vasync');
 var q = require('q');
 
-var helper = require('./helper.js');
-var make = require('./make.js');
-var sandbox = require('./sandbox.js');
-var SFFM = require('./SFFM.js');
-var sql = require('./sql.js');
+var libs = require('./perf.js').commonLibs;
 
 var mp = {
     self: this
@@ -25,7 +22,7 @@ var mp = {
 var _hug 
 = me.hug = function f_make_hug($h) {
     
-    return helper.genericHug($h, mp, function f_helper_log_hug($hugCount) {
+    return libs.helper.genericHug($h, mp, function f_helper_log_hug($hugCount) {
         
         if ($hugCount > 3) {
             
@@ -55,7 +52,7 @@ var _CSS
             return defer.promise;
         }
         
-        sql.newSQL('default', $requestState).done(function ($sql) {
+        libs.sql.newSQL('default', $requestState).done(function ($sql) {
             
             var tblCSS = $sql.openTable('css');
             var tblNS = $sql.openTable('namespace');
@@ -82,26 +79,39 @@ var _CSS
                 
                 var i = 0;
                 var row;
-                var sb = sandbox.newSandbox();
+                var sb = libs.sandbox.newSandbox($requestState);
                 var r;
                 var cssFile = '';
-                sb.addFeature.allSHPS($requestState);
-                while (i < l) {
+                sb.addFeature.allSHPS();
+                async.forEachParallel({
                     
-                    row = $rows[i];
-                    r = make.run($requestState, row.content, row.language, sb, false);
-                    if (r.status) {
+                    inputs: $rows,
+                    func: function ($arg, $cb) {
                         
-                        cssFile += row.name + '{' + r.result + '}';
+                        libs.make.run($requestState, $arg.content, $arg.language, sb, false).done(function ($res) {
+                            
+                            if ($res.status) {
+                                
+                                cssFile += $arg.name + '{' + $res.result + '}';
+                            }
+                            
+                            $cb();
+                        }, defer.reject);
                     }
+                }, function ($err, $res) {
                     
-                    i++;
-                }
-                
-                $requestState.httpStatus = 200;
-                $requestState.responseType = 'text/css';
-                $requestState.responseBody = cssFile.replace(/[\r\n ]/gi, '');
-                defer.resolve();
+                    if ($err) {
+
+                        defer.reject(new Error($err));
+                    }
+                    else {
+
+                        $requestState.httpStatus = 200;
+                        $requestState.responseType = 'text/css';
+                        $requestState.responseBody = cssFile.replace(/[\r\n]/gi, '');
+                        defer.resolve();  
+                    }
+                });
 
                 //TODO: Add Mediaqueries
             });

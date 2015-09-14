@@ -2,85 +2,10 @@
 
 var me = module.exports;
 
+var q = require('q');
 var vm = require('vm');
 
-var _auth = null;
-__defineGetter__('auth', function () {
-    
-    if (!_auth) {
-        
-        _auth = require('./auth.js');
-    }
-    
-    return _auth
-});
-
-var _helper = null;
-__defineGetter__('helper', function () {
-    
-    if (!_helper) {
-        
-        _helper = require('./helper.js');
-    }
-    
-    return _helper
-});
-
-var _lang = null;
-__defineGetter__('lang', function () {
-    
-    if (!_lang) {
-        
-        _lang = require('./language.js');
-    }
-    
-    return _lang
-});
-
-var __log = null;
-__defineGetter__('_log', function () {
-    
-    if (!__log) {
-        
-        __log = require('./log.js');
-    }
-    
-    return __log;
-});
-
-var __nLog = null;
-__defineGetter__('log', function () {
-    
-    if (!__nLog) {
-        
-        __nLog = _log.newLog();
-    }
-    
-    return __nLog;
-});
-
-var _cl = null;
-__defineGetter__('complib', function () {
-    
-    if (!_cl) {
-        
-        _cl = require('./componentLibrary.js');
-    }
-    
-    return _cl;
-});
-
-var SFFM = require('./SFFM.js');
-var _sql = null;
-__defineGetter__('sql', function () {
-    
-    if (!_sql) {
-        
-        _sql = require('./sql.js');
-    }
-    
-    return _sql;
-});
+var libs = require('./perf.js').commonLibs;
 
 var mp = {
     self: this
@@ -97,7 +22,7 @@ var mp = {
 var _hug 
 = me.hug = function f_sandbox_hug($h) {
     
-    return helper.genericHug($h, mp, function f_helper_log_hug($hugCount) {
+    return libs.helper.genericHug($h, mp, function f_helper_log_hug($hugCount) {
         
         if ($hugCount > 3) {
             
@@ -109,7 +34,7 @@ var _hug
 };
 
 var _newSandbox 
-= me.newSandbox = function f_sandbox_newSandbox() {
+= me.newSandbox = function f_sandbox_newSandbox($requestState) {
     
     return new (function () {
         
@@ -126,10 +51,10 @@ var _newSandbox
         var _addFeature =
         this.addFeature = {
             
-            all: function f_sandbox_newSandbox_addFeature_all($requestState) {
+            all: function f_sandbox_newSandbox_addFeature_all() {
                 
                 this.allBase();
-                this.allSHPS($requestState);
+                this.allSHPS();
             },
             
             allBase: function f_sandbox_newSandbox_addFeature_allBase() {
@@ -148,7 +73,7 @@ var _newSandbox
                 }
             },
             
-            allSHPS: function f_sandbox_newSandbox_addFeature_allSHPS($requestState) {
+            allSHPS: function f_sandbox_newSandbox_addFeature_allSHPS() {
                 
                 var keys = Object.keys(this);
                 var i = 0;
@@ -208,7 +133,7 @@ var _newSandbox
 
             baseRequire: function f_sandbox_newSandbox_addFeature_baseRequire() {
                 
-                sb.require = require;
+                sb.require = require;//TODO: PROXY!!! And check on e.g. fp so that files cannot be read unautherized
                 rebuildContext = true;
             },
             
@@ -218,31 +143,31 @@ var _newSandbox
                 rebuildContext = true;
             },
             
-            shpsAuth: function f_sandbox_newSandbox_addFeature_shpsAuth($requestState) {
+            shpsAuth: function f_sandbox_newSandbox_addFeature_shpsAuth() {
                 
-                sb.auth = new auth.focus($requestState);
+                sb.auth = new libs.auth.focus($requestState);
                 rebuildContext = true;
             },
             
-            shpsComponentLibrary: function f_sandbox_newSandbox_addFeature_shpsComponentLibrary($requestState) {
+            shpsComponentLibrary: function f_sandbox_newSandbox_addFeature_shpsComponentLibrary() {
 
-                sb.cl = complib.newCL($requestState);
+                sb.cl = libs.cl.newCL($requestState);
                 rebuildContext = true;
             },
             
-            shpsLanguage: function f_sandbox_newSandbox_addFeature_shpsLanguage($requestState) {
+            shpsLanguage: function f_sandbox_newSandbox_addFeature_shpsLanguage() {
 
-                sb.lang = lang.newLang($requestState);
+                sb.lang = libs.language.newLang($requestState);
                 rebuildContext = true;
             },
 
             shpsLog: function f_sandbox_newSandbox_addFeature_shpsLog() {
                 
-                sb.log = log;
+                sb.log = libs.log.newLog($requestState);
                 rebuildContext = true;
             },
             
-            shpsParameters: function f_sandbox_newSandbox_addFeature_shpsParameters($requestState) {
+            shpsParameters: function f_sandbox_newSandbox_addFeature_shpsParameters() {
 
                 sb.GET = $requestState.GET;
                 sb.POST = $requestState.POST;
@@ -258,13 +183,13 @@ var _newSandbox
                 sb.$_SESSION = sb.SESSION;
             },
             
-            shpsRequest: function f_sandbox_newSandbox_addFeature_shpsRequest($requestState) {
+            shpsRequest: function f_sandbox_newSandbox_addFeature_shpsRequest() {
                 
                 sb.request = $requestState.request;
                 rebuildContext = true;
             },
             
-            shpsResponse: function f_sandbox_newSandbox_addFeature_shpsResponse($requestState) {
+            shpsResponse: function f_sandbox_newSandbox_addFeature_shpsResponse() {
                 
                 sb.response = $requestState.response;
                 rebuildContext = true;
@@ -272,13 +197,13 @@ var _newSandbox
 
             shpsSFFM: function f_sandbox_newSandbox_addFeature_shpsSFFM() {
                 
-                sb.SFFM = SFFM;
+                sb.SFFM = libs.SFFM;
                 rebuildContext = true;
             },
 
-            shpsSQL: function f_sandbox_newSandbox_addFeature_shpsSQL($requestState) {
+            shpsSQL: function f_sandbox_newSandbox_addFeature_shpsSQL() {
                 
-                sb.sql = new sql.focus($requestState);
+                sb.sql = new libs.sql.focus($requestState);
                 rebuildContext = true;
             },
 
@@ -297,10 +222,40 @@ var _newSandbox
             sb = {};
             rebuildContext = true;
         };
+        
+        /**
+         * @result
+         *   Promise()
+         */
+        var _flushContext =
+        this.flushContext = function f_sandbox_newSandbox_flushContext() {
+            
+            var defer = q.defer();
+            if (rebuildContext) {
+                
+                libs.plugin.callEvent($requestState, 'onRebuildSandbox', $requestState, sb).done(function () {
+                    
+                    context = vm.createContext(sb);
+                    rebuildContext = false;
+                    defer.resolve();
+                }, defer.reject);
+            }
+            else {
+                
+                defer.resolve();
+            }
 
+            return defer.promise;
+        };
+        
+        /**
+         * @result
+         *   Promise(mixed)
+         */
         var _run =
         this.run = function f_sandbox_newSandbox_run($script, $timeout) {
             
+            var defer = q.defer();
             var options = {
 
                 displayErrors: true
@@ -310,14 +265,13 @@ var _newSandbox
                 
                 options.timeout = $timeout;
             }
+            
+            _flushContext().done(function () {
+                
+                defer.resolve($script.script.runInContext(context, options));
+            }, defer.reject);
 
-            if (rebuildContext) {
-
-                context = vm.createContext(sb);
-                rebuildContext = false;
-            }
-
-            return $script.script.runInContext(context, options);
+            return defer.promise;
         };
     });
 };

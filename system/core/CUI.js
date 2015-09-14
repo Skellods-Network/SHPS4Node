@@ -9,29 +9,7 @@ var me = module.exports;
 var os = require('os');
 var sd = require('string_decoder').StringDecoder;
 
-var main = require('./main.js');
-var SFFM = require('./SFFM.js');
-var _helper = null;
-__defineGetter__('helper', function () {
-    
-    if (!_helper) {
-        
-        _helper = require('./helper.js');
-    }
-    
-    return _helper
-});
-
-var __log = null;
-__defineGetter__('_log', function () {
-    
-    if (!__log) {
-        
-        __log = require('./log.js');
-    }
-    
-    return __log;
-});
+var libs = require('./perf.js').commonLibs;
 
 var mp = {
     self: this
@@ -48,7 +26,7 @@ var mp = {
 var _hug 
 = me.hug = function f_sandbox_hug($h) {
     
-    return helper.genericHug($h, mp, function f_helper_log_hug($hugCount) {
+    return libs.helper.genericHug($h, mp, function f_helper_log_hug($hugCount) {
         
         if ($hugCount > 3) {
             
@@ -69,7 +47,7 @@ var _init
         return;
     }
     
-    if (!main.isDebug()) {
+    if (!libs.main.isDebug()) {
 
         return; // CUI is too unstable atm!
     }

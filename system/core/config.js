@@ -3,56 +3,10 @@
 var me = module.exports;
 
 var fs = require('fs');
-
 var async = require('vasync');
 var q = require('q');
 
-var helper = require('./helper.js');
-var SFFM = require('./SFFM.js');
-var dInit = require('./default.js');
-var __log = null;
-__defineGetter__('_log', function () {
-    
-    if (!__log) {
-        
-        __log = require('./log.js');
-    }
-    
-    return __log;
-});
-
-var __nLog = null;
-__defineGetter__('log', function () {
-    
-    if (!__nLog) {
-        
-        __nLog = _log.newLog();
-    }
-    
-    return __nLog;
-});
-
-var _main = null;
-__defineGetter__('main', function () {
-    
-    if (!_main) {
-        
-        _main = require('./main.js');
-    }
-    
-    return _main;
-});
-
-var _scheduler = null;
-__defineGetter__('scheduler', function () {
-    
-    if (!_scheduler) {
-        
-        _scheduler = require('./schedule.js');
-    }
-    
-    return _scheduler
-});
+var libs = require('./perf.js').commonLibs;
 
 var mp = {
     self: this
@@ -74,7 +28,7 @@ var domain = mp.domain = [];
 var _hug 
 = me.hug = function f_log_hug($h) {
     
-    return helper.genericHug($h, mp, function f_helper_log_hug($hugCount) {
+    return libs.helper.genericHug($h, mp, function f_helper_log_hug($hugCount) {
         
         if ($hugCount > 3) {
             
@@ -124,6 +78,41 @@ var _getHPConfig
 };
 
 /**
+ * Read JSON config file
+ * 
+ * @param string $file
+ * @result
+ *   Promise({})
+ */
+var _readFile 
+= me.readFile = function f_config_readFile($file) {
+
+    var defer = q.defer();
+
+    fs.readFile($file, 'utf8', function ($err, $data) {
+        
+        if ($err) {
+            
+            defer.reject($err);
+        }
+        else {
+            
+            try {
+
+                var config = JSON.parse($data);
+                defer.resolve(config);
+            }
+            catch ($e) {
+
+                defer.reject($e);
+            }
+        }
+    });
+
+    return defer.promise;
+};
+
+/**
  * Read all config files and store them
  *
  * @todo: if no config available: ask user to input config step-by-step and write config file
@@ -131,13 +120,13 @@ var _getHPConfig
  *  Promise()
  */
 var _readConfig 
-= me.readConfig = function f_main_readConfig() {
+= me.readConfig = function f_config_readConfig() {
     
-    log.write('\nDetecting configurations...');
+    libs.gLog.write('\nDetecting configurations...');
     
     var defer = q.defer();
     var dir;
-    if (!(dir = main.getDir(SHPS_DIR_CONFIGS))) {
+    if (!(dir = libs.main.getDir(SHPS_DIR_CONFIGS))) {
         
         defer.reject(new Error("Could not retrive config directory!"));
 
@@ -149,7 +138,7 @@ var _readConfig
         
         if ($err) {
             
-            log.error($err);
+            libs.gLog.error($err);
         }
         
         async.forEachParallel({
@@ -157,100 +146,85 @@ var _readConfig
             'inputs': $files,
             'func': function ($file, $callback) {
                 
-                var validFile = true;
-                async.pipeline({
-                    funcs: [
-                        function ($_p1, $cb) {
+                fs.stat(dir + $file, function ($err, $stat) {
+                    
+                    if ($file.substring($file.length - 5) != '.json') {
                             
-                            fs.stat(dir + $file, function ($err, $stat) {
-                                
-                                if ($stat && $stat.isDirectory()) {
-                                    
-                                    scheduler.sendSignal('onPollution', dir, 'config', $file);
-                                    validFile = false;
-                                }
-                                else {
-                                    
-                                    if ($file.substring($file.length - 5) != '.json') {
-                                        
-                                        scheduler.sendSignal('onFilePollution', dir, 'config', $file);
-                                        validFile = false;
-                                    }
-                                }
-                                
-                                $cb();
-                            });
-                        },
+                        libs.schedule.sendSignal('onFilePollution', dir, 'config', $file);
+                        $callback();
+                    }
+                    else if ($stat && !$stat.isDirectory()) {
+                        
+                        libs.gLog.write('Config file found: ' + $file);
+                        _readFile(dir + $file).done(function ($config) {
+                            
+                            if (!$config.configHeader) {
 
-                        function ($_p1, $cb) {
-                            
-                            if (validFile === false) {
-                                
-                                process.nextTick($cb);
-                                return;
+                                $config.configHeader = {};
                             }
                             
-                            fs.readFile(dir + $file, 'utf8', function ($err, $data) {
-                                
-                                if ($err) {
-                                    
-                                    log.error($err);
-                                }
-                                
-                                log.write('Config file found: ' + $file);
-                                
-                                var c = '';
-                                var status = false;
-                                try {
-                                    
-                                    c = JSON.parse($data);
-                                    switch (c.configHeader.type) {
+                            if (!$config.configHeader.type) {
 
-                                        case 'master': {
-                                            
-                                            log.write('Master file was ' + 'loaded successfully'.green);
-                                            master = c;
-                                            masterFound = true;
-                                            break;
-                                        }
+                                $config.configHeader.type = 'unknown';
+                            }
+                            
+                            var status = true;
+                            switch ($config.configHeader.type) {
 
-                                        case 'hp': {
-                                            
-                                            var cName = helper.SHPS_domain(c.generalConfig.URL.value, true).host;
-                                            config[cName] = c;
-                                            log.write('Config file `' + $file + '` was ' + ('loaded successfully (' + cName + ')').green);
-                                            break;
-                                        }
-                                    }
+                                case 'master': {
                                     
-                                    status = true;
+                                    libs.gLog.write('Master file was ' + 'loaded successfully'.green);
+                                    master = $config;
+                                    masterFound = true;
+                                    break;
                                 }
-                                catch ($e) {
+
+                                case 'hp': {
                                     
-                                    log.write('Config file `' + $file + '` was ' + 'invalid'.red.bold + '! ' + 'SKIPPED'.red.bold);
-                                    log.write($e.toString().red.bold);
+                                    //TODO: join result with default config (template)
+                                    var cName = libs.helper.SHPS_domain($config.generalConfig.URL.value, true).host;
+                                    config[cName] = $config;
+                                    libs.gLog.write('Config file `' + $file + '` was ' + ('loaded successfully (' + cName + ')').green);
+                                    break;
                                 }
-                                finally {
-                                    
-                                    scheduler.sendSignal('onConfigLoaded', $file, status, c);
-                                    $cb();
+
+                                default: {
+
+                                    libs.gLog.write('Config file `' + $file + '` is of ' + ('UNKNOWN TYPE').yellow);
+                                    status = false;
                                 }
-                            });
-                        }
-                    ]
-                }, $callback);
+                            }
+
+                            libs.schedule.sendSignal('onConfigLoaded', $file, status, $config);
+
+                            $callback();
+                        }, function ($err) {
+                                                
+                            libs.gLog.write('Config file `' + $file + '` was ' + 'invalid'.red.bold + '! ' + 'SKIPPED'.red.bold);
+                            libs.gLog.write($err.toString().red.bold);
+                            
+                            libs.schedule.sendSignal('onConfigLoaded', $file, false, null);
+
+                            $callback($err);     
+                        });
+                    }
+                    else {
+
+                        $callback();
+                    }
+                });
             }
         }, function ($err) {
             
             if (!masterFound) {
                 
-                master = dInit.master;
-                scheduler.sendSignal('onFileNotFound', 'master.json', dir, 'Default configuration loaded!');
+                master = libs.default.master;
+                libs.schedule.sendSignal('onFileNotFound', 'master.json', dir, 'Default configuration loaded!');
             }
             
             if (Object.keys(config).length == 0) {
                 
-                scheduler.sendSignal('onFileNotFound', '*.config.json', dir, 'Nothing will be served without configuration files!');
+                libs.schedule.sendSignal('onFileNotFound', '*.config.json', dir, 'Nothing will be served without configuration files!');
             }
             
             defer.resolve();
