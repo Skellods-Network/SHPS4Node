@@ -4,7 +4,7 @@ var me = module.exports;
 
 var events = require('events');
 
-var helper = require('./helper.js');
+var libs = require('./perf.js').commonLibs;
 
 var dSlots = [];
 var eventEmitter = new events.EventEmitter();
@@ -76,7 +76,7 @@ var _addDuplexSlot
 var _hug 
 = me.hug = function f_schedule_hug($h) {
     
-    return helper.genericHug($h, mp, function f_schedule_hug_hug($hugCount) {
+    return libs.helper.genericHug($h, mp, function f_schedule_hug_hug($hugCount) {
         
         if ($hugCount > 3) {
             

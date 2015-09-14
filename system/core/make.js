@@ -1,42 +1,15 @@
 ﻿'use strict';
 
+//TODO: bundle this to c_Make class and cache c_Auth object. Or maybe cache c_Auth object inside requestState.cache?
+//Maybe also cache sandboxes in there?
+
 var me = module.exports;
 
 var async = require('vasync');
 var q = require('q');
 var _ = require('lodash');
 
-var auth = require('./auth.js');
-var cache = require('./cache.js');
-var cl = require('./componentLibrary.js');
-var helper = require('./helper.js');
-var __log = null;
-__defineGetter__('_log', function () {
-    
-    if (!__log) {
-        
-        __log = require('./log.js');
-    }
-    
-    return __log;
-});
-
-var main = require('./main.js');
-var __nLog = null;
-__defineGetter__('log', function () {
-    
-    if (!__nLog) {
-        
-        __nLog = _log.newLog();
-    }
-    
-    return __nLog;
-});
-
-var sandbox = require('./sandbox.js');
-var schedule = require('./schedule.js');
-var SFFM = require('./SFFM.js');
-var sql = require('./sql.js');
+var libs = require('./perf.js').commonLibs;
 
 var mp = {
     self: this
@@ -53,7 +26,7 @@ var mp = {
 var _hug 
 = me.hug = function f_make_hug($h) {
     
-    return helper.genericHug($h, mp, function f_helper_log_hug($hugCount) {
+    return libs.helper.genericHug($h, mp, function f_helper_log_hug($hugCount) {
         
         if ($hugCount > 3) {
             
@@ -71,8 +44,8 @@ var _preparePartialSB = function ($requestState, $ext) {
         
         if (!$requestState.cache.makePartialSBExt) {
             
-            $requestState.cache.makePartialSBExt = sandbox.newSandbox();
-            $requestState.cache.makePartialSBExt.addFeature.all($requestState);
+            $requestState.cache.makePartialSBExt = libs.sandbox.newSandbox($requestState);
+            $requestState.cache.makePartialSBExt.addFeature.all();
         }
         
         return $requestState.cache.makePartialSBExt;
@@ -81,8 +54,8 @@ var _preparePartialSB = function ($requestState, $ext) {
         
         if (!$requestState.cache.makePartialSB) {
             
-            $requestState.cache.makePartialSB = sandbox.newSandbox();
-            $requestState.cache.makePartialSB.addFeature.allSHPS($requestState);
+            $requestState.cache.makePartialSB = libs.sandbox.newSandbox($requestState);
+            $requestState.cache.makePartialSB.addFeature.allSHPS();
         }
         
         return $requestState.cache.makePartialSB;
@@ -100,12 +73,13 @@ var _preparePartialSB = function ($requestState, $ext) {
  * @param $extSB Boolean OPTIONAL
  *   If no sandbox was given, should the created sandbox be extended?
  *   Default: false
- * @return Object(status, result)
+ * @return Promise({status, result})
  *   Status can be true or false, depending on if the script executed successfully
  */
 var _run 
 = me.run = function f_make_run($requestState, $code, $lang, $sb, $extSB) {
-
+    
+    var defer = q.defer();
     var r = {
         
         status: false,
@@ -118,7 +92,7 @@ var _run
         case null:
         case 0: {// No script
             r.status = true;
-            r.result = $code;
+            defer.resolve($code);
 
             break;
         }
@@ -127,7 +101,7 @@ var _run
             
             if (typeof $code === 'string') {
                 
-                $code = sandbox.newScript($code);
+                $code = libs.sandbox.newScript($code);
             }
             
             if (!$sb) {
@@ -136,12 +110,15 @@ var _run
             }
 
             try {
-                r.result = $sb.run($code, $requestState.config.generalConfig.templateTimeout.value);
-                r.status = true;
+                $sb.run($code, $requestState.config.generalConfig.templateTimeout.value).done(function ($res) {
+                    
+                    defer.resolve($res);
+                    r.status = true;
+                }, defer.reject);
             }
             catch ($e) {
                 
-                if (main.isDebug()) {
+                if (libs.main.isDebug()) {
 
                     r.result = $e;
                 }
@@ -160,44 +137,40 @@ var _run
                 
                 $sb = _preparePartialSB($requestState, $extSB);
             }
-
-            var tmp = _.template($code, {
-                
-                imports: $sb.getGlobals()
-            });
             
-            if (typeof tmp === 'function') {
+            $sb.flushContext().done(function () {
                 
-                try {
-                    r.result = tmp(); //TODO: Put this in a sandbox!
-                    r.status = true;
-                }
-                catch ($e) {
+                var tmp = _.template($code, {
                     
-                    if (main.isDebug()) {
-                        
-                        r.result = $e;
+                    imports: $sb.getGlobals(),
+                });
+                
+                if (typeof tmp === 'function') {
+                    
+                    try {
+                        defer.resolve(tmp()); //TODO: Put this in a sandbox!
+                        r.status = true;
                     }
-                    else {
+                    catch ($e) {
                         
-                        r.result = SHPS_ERROR_CODE_EXECUTION;
+                        defer.reject($e);
                     }
                 }
-            }
+            });
             
             break;
         }
 
         default: {// Call Plugins
 
-            var results = schedule.sendDuplexSignal('onScriptExecuteUnknownLanguage', $requestState, $code, $lang, $sb, $extSB);
+            var results = libs.schedule.sendDuplexSignal('onScriptExecuteUnknownLanguage', $requestState, $code, $lang, $sb, $extSB);
             var i = 0;
             var l = results.length;
             while (i < l) {
                 
                 if (results[i]) {
                     
-                    r.result = results[i];
+                    defer.resolve(results[i]);
                     break;
                 }
 
@@ -206,13 +179,21 @@ var _run
         }
     }
 
-    return r;
+    return defer.promise.then(function ($res) {
+        
+        var defer = q.defer();
+        
+        r.result = $res;
+        defer.resolve(r);
+
+        return defer.promise;
+    });
 };
 
 var _getContent = function f_make_getContent($requestState, $contentName, $namespace) {
     
     var defer = q.defer();
-    sql.newSQL('default', $requestState).done(function ($sql) {
+    libs.sql.newSQL('default', $requestState).done(function ($sql) {
         
         var tblNS = $sql.openTable('namespace');
         var tblCon = $sql.openTable('content');
@@ -242,9 +223,9 @@ var _getContent = function f_make_getContent($requestState, $contentName, $names
             }
             
             var row = $rows[0];
-            if (row.tls && !SFFM.isHTTPS($requestState.request)) {
+            if (row.tls && !libs.SFFM.isHTTPS($requestState.request)) {
                 
-                $requestState.responseHeaders['Location'] = cl.newCL($requestState).getURL(null, null, true, null).url;
+                $requestState.responseHeaders['Location'] = libs.cl.newCL($requestState).getURL(null, null, true, null).url;
                 defer.reject({
                     
                     status: 301,
@@ -254,7 +235,7 @@ var _getContent = function f_make_getContent($requestState, $contentName, $names
                 return;
             }
 
-            var a = auth.newAuth($requestState);
+            var a = libs.auth.newAuth($requestState);
             a.hasAccessKeyExt(row.accessKey).done(function ($akExt) {
                 
                 if (!$akExt.hasAccessKey) {
@@ -272,20 +253,15 @@ var _getContent = function f_make_getContent($requestState, $contentName, $names
                     status = tmp.status;
                     body = tmp.result;
                 }
-                else {
 
-                    status = 500;
-                    body = '<error>' + tmp.result + '</error>';
-                }
+                if (q.isPromise(tmp)) {
 
-                if (body.then) {
-
-                    body.done(function ($body) {
+                    tmp.done(function ($body) {
                                             
                         defer.resolve({
 
-                            body: $body,
-                            status: status,
+                            body: $body.result,
+                            status: $body.status,
                         });              
                     });
                 }
@@ -339,7 +315,7 @@ var _getPartial = function f_make_getPartial($requestState, $partialName, $names
             $requestState.cache.partials[$namespace] = [];
         }
         
-        sql.newSQL('default', $requestState).then(function ($sql) {
+        libs.sql.newSQL('default', $requestState).then(function ($sql) {
             
             var tblNS = $sql.openTable('namespace');
             var tblPar = $sql.openTable('partial');
@@ -371,7 +347,7 @@ var _getPartial = function f_make_getPartial($requestState, $partialName, $names
                 }
                 
                 var httpStatus = 200;
-                var a = auth.newAuth($requestState);
+                var a = libs.auth.newAuth($requestState);
                 async.forEachPipeline({
                     
                     inputs: $rows,
@@ -418,7 +394,7 @@ var _getPartial = function f_make_getPartial($requestState, $partialName, $names
                     
                     if ($err) {
                         
-                        if (main.isDebug()) {
+                        if (libs.main.isDebug()) {
 
                             defer.reject($err);
                         }
@@ -445,6 +421,10 @@ var _getPartial = function f_make_getPartial($requestState, $partialName, $names
     return defer.promise;
 };
 
+/**
+ * @result
+ *   Promise({result: string, status: boolean})
+ */
 var _executeBody = function ($requestState, $nfo, $params) {
     
     var body = $nfo.body.replace(/\$([0-9]+)/g , function ($var) {
@@ -459,12 +439,13 @@ var _executeBody = function ($requestState, $nfo, $params) {
         }
     });
     
-    body = _run($requestState, body, $nfo.lang, null, $nfo.extSB).result;
+    body = _run($requestState, body, $nfo.lang, null, $nfo.extSB);
 
     return body;
 };
 
-var _parseTemplate = function f_make_parseTemplate($requestState, $template) {
+var _parseTemplate = 
+this.parseTemplate = function f_make_parseTemplate($requestState, $template) {
     
     var defer = q.defer();
     
@@ -499,8 +480,9 @@ var _parseTemplate = function f_make_parseTemplate($requestState, $template) {
             .split(',');
     }
     
-    var tmp = $template.substring(0, offset - 1);
-
+    var tmp = $template.substring(0, offset);
+    var conlib = libs.cl.newCL($requestState);
+    var basicURL = conlib.buildURL();
     switch (name) {
 
         case 'body': {
@@ -509,13 +491,7 @@ var _parseTemplate = function f_make_parseTemplate($requestState, $template) {
                 ? $requestState.site
                 : $requestState.config.generalConfig.indexContent.value;
             
-            _getContent($requestState, name, namespace).done(function ($res) {
-                
-                defer.resolve({
-                    body: tmp + _executeBody($requestState, $res, params),
-                    status: $res.status,
-                });
-            }, function ($err) {
+            var errFun = function ($err) {
                 
                 if ($err.status && $err.body) {
                     
@@ -529,8 +505,129 @@ var _parseTemplate = function f_make_parseTemplate($requestState, $template) {
                     tmpE.body = tmp + $err;
                     defer.reject(tmpE);
                 }
-            });
+            };
             
+            var status = 500;
+            _getContent($requestState, name, namespace).then(function ($res) {
+                
+                status = $res.status;
+                return _executeBody($requestState, $res, params);
+            }, errFun)
+            .done(function ($body) {
+                
+                defer.resolve({
+                    body: tmp + $body.result,
+                    status: status,
+                });
+            }, errFun);
+            
+            break;
+        }
+
+        case 'css': {
+            
+            libs.sql.newSQL('default', $requestState).done(function ($sql) {
+                
+                var tblInclude = $sql.openTable('include');
+                var tblFT = $sql.openTable('filetype');
+                var tblUp = $sql.openTable('upload');
+                $sql.query()
+                    .get([
+                        tblUp.col('name', 'file'),
+                        tblInclude.col('namespace'),
+                        tblUp.col('accesskey'),
+                    ])
+                    .fulfilling()
+                    .eq(tblInclude.col('filetype'), tblFT.col('ID'))
+                    .eq(tblFT.col('name'), 'css')
+                    .eq(tblInclude.col('namespace'), $requestState.namespace)
+                    .eq(tblInclude.col('file'), tblUp.col('ID'))
+                    .execute()
+                    .done(function ($rows) {
+                    //TODO: accesskey
+                    $sql.free();
+                    
+                    var r = '';
+                    var i = 0;
+                    var l = $rows.length;
+                    while (i < l) {
+                        
+                        r += '<link rel="stylesheet" href="' + conlib.getFileURL($rows[i].file).url + '">';
+                        i++;
+                    }
+                    
+                    defer.resolve({
+                        body: tmp + r + '<link rel="stylesheet" href="' + basicURL.url + basicURL.paramChar + 'css=' + $requestState.site + '">',
+                        status: 200,
+                    });
+                }, function ($e) {
+                    
+                    $sql.free();
+                    if (libs.main.isDebug()) {
+                        
+                        tmp += $e;
+                    }
+
+                    defer.reject({
+                        body: tmp,
+                        status: 500,
+                    });
+                });
+            });
+
+            break;
+        }
+
+        case 'js': {
+            
+            libs.sql.newSQL('default', $requestState).done(function ($sql) {
+                
+                var tblInclude = $sql.openTable('include');
+                var tblFT = $sql.openTable('filetype');
+                var tblUp = $sql.openTable('upload');
+                $sql.query()
+                    .get([
+                        tblUp.col('name', 'file'),
+                        tblUp.col('accesskey'),
+                    ])
+                    .fulfilling()
+                    .eq(tblInclude.col('file'), tblUp.col('ID'))
+                    .eq(tblInclude.col('filetype'), tblFT.col('ID'))
+                    .eq(tblFT.col('name'), 'js')
+                    .eq(tblInclude.col('namespace'), $requestState.namespace)
+                    .execute()
+                    .done(function ($rows) {
+                    //TODO: accesskey
+                    $sql.free();
+                    
+                    var r = '';
+                    var i = 0;
+                    var l = $rows.length;
+                    while (i < l) {
+
+                        r += '<script src="' + conlib.getFileURL($rows[i].file).url +'"></script>';
+                        i++;
+                    }
+                    
+                    defer.resolve({
+                        body: tmp + r,
+                        status: 200,
+                    });
+                }, function ($e) {
+                    
+                    $sql.free();
+                    if (libs.main.isDebug()) {
+
+                        tmp += $e;
+                    }
+
+                    defer.reject({
+                        body: tmp,
+                        status: 500,
+                    });
+                });
+            });
+
             break;
         }
 
@@ -538,11 +635,18 @@ var _parseTemplate = function f_make_parseTemplate($requestState, $template) {
 
         default: {
             
-            _getPartial($requestState, name, namespace).done(function ($res) {
+            var res = null;
+            _getPartial($requestState, name, namespace)
+            .then(function ($res) {
+                
+                res = $res;
+                return _executeBody($requestState, $res.body, params);
+            }, defer.reject)
+            .done(function ($res) {
                 
                 defer.resolve({
-                    body: tmp + _executeBody($requestState, $res.body, params),
-                    status: $res.status,
+                    body: tmp + $res.result,
+                    status: res.status,
                 });
             }, defer.reject);
         }
@@ -571,20 +675,33 @@ var _siteResponse
     $siteName = typeof $siteName === 'string' && $siteName !== '' ? $siteName : 'index';
     
     var defer = q.defer();
-    _getPartial($requestState, $requestState.config.generalConfig.rootTemplate.value, $namespace).done(function ($res) {
+    _getPartial($requestState, $requestState.config.generalConfig.rootTemplate.value, $namespace).then(function ($res) {
         
-        _parseTemplate($requestState, _executeBody($requestState, $res)).done(function ($fRes) {
+        return _executeBody($requestState, $res);
+    }, defer.reject)
+    .then(function ($res) {
+        
+        return _parseTemplate($requestState, $res.result);//TODO: Check status
+    }, defer.reject)
+    .then(function ($res) {
+    
+        if (q.isPromise($res.body)) {
             
-            if ($res.status > $fRes.status) {
-
-                $fRes.status = $res.status;
-            }
-
-            $requestState.httpStatus = $fRes.status;
-            $requestState.responseType = 'text/html';
-            $requestState.responseBody = $fRes.body;
-            defer.resolve($fRes);
-        }, defer.reject);
+            return $res.body;
+        }
+        else {
+            
+            var defer = q.defer();
+            defer.resolve($res);
+            return defer.promise;
+        }
+    }, defer.reject)
+    .done(function ($res) {
+    
+        $requestState.httpStatus = $res.status;
+        $requestState.responseType = 'text/html';
+        $requestState.responseBody = $res.body;
+        defer.resolve($res);
     }, defer.reject);
     
     return defer.promise;
@@ -595,13 +712,14 @@ var _requestResponse
     $namespace = $namespace || 'default';
     
     var defer = q.defer();
-    sql.newSQL('default', $requestState).done(function ($sql) {
+    libs.sql.newSQL('default', $requestState).done(function ($sql) {
         
         var tblReq = $sql.openTable('request');
         var tblNS = $sql.openTable('namespace');
         $sql.query()
             .get([
                 tblReq.col('script'),
+                tblReq.col('language'),
                 tblReq.col('accessKey'),
                 tblReq.col('tls'),
                 tblReq.col('extSB'),
@@ -629,7 +747,7 @@ var _requestResponse
             }
             
             var row = $rows[0];
-            if (row.tls > 0 && !SFFM.isHTTPS($requestState.request)) {
+            if (row.tls > 0 && !libs.SFFM.isHTTPS($requestState.request)) {
                 
                 $requestState.httpStatus = 403;
                 $requestState.responseBody = JSON.stringify({
@@ -643,7 +761,7 @@ var _requestResponse
                 return;
             }
             
-            var a = auth.newAuth($requestState);
+            var a = libs.auth.newAuth($requestState);
 
             a.hasAccessKeyExt(row.accessKey).done(function ($akExt) {
                 
@@ -663,83 +781,65 @@ var _requestResponse
                 else {
                     
                     $requestState.httpStatus = 200;
-                    if (row.extSB > 0) {
+                    var errorFun = function ($e) {
                         
-                        var extSb = sandbox.newSandbox();
-                        extSb.reset();
-                        extSb.addFeature.all($requestState);
-                        
-                        try {
-
-                            var r = extSb.run(sandbox.newScript(row.script));
-                        }
-                        catch ($e) {
-
-                            $requestState.responseBody = JSON.stringify({
-                                
-                                status: 'error',
-                                result: $e,
-                            });
+                        $requestState.responseBody = JSON.stringify({
                             
-                            defer.resolve();
-                        }
+                            status: 'error',
+                            message: $e.toString(),//TODO: Don't give away error
+                        });
                         
-                        if (typeof r === 'object' && r.done !== undefined) {
+                        defer.resolve();
+                    };
+                    
+                    var handleFun = function ($result) {
+                        
+                        if (q.isPromise($result)) {
                             
-                            var rFun;
-                            if (r.done !== undefined) {
-
-                                rFun = r.done.bind(r);
-                            }
-                            else {
-
-                                rFun = r.then.bind(r);
-                            }
-
-                            rFun(function ($result) {
-                                
-                                $requestState.responseBody = JSON.stringify({
-                                    
-                                    status: 'ok',
-                                    result: $result,
-                                });
-                                
-                                defer.resolve();
-                            }, function ($e) {
-                                                    
-                                $requestState.responseBody = JSON.stringify({
-                                    
-                                    status: 'error',
-                                    message: $e,
-                                });
-
-                                defer.resolve();
-                            });
+                            $result.done(handleFun, errorFun);
                         }
                         else {
                             
                             $requestState.responseBody = JSON.stringify({
                                 
                                 status: 'ok',
-                                result: r,
+                                result: $result,
                             });
                             
                             defer.resolve();
                         }
-                    }
-                    else {
+                    };
+                    
+                    _run($requestState, row.script, row.language, null, row.extSB).done(function ($res) {
                         
-                        var sb = sandbox.newSandbox();
-                        sb.reset();
-                        sb.addFeature.allSHPS($requestState);
+                        if ($res.status) {
+
+                            $requestState.responseBody = JSON.stringify({
+                                
+                                status: 'ok',
+                                result: $res.result,
+                            });
+                        }
+                        else {
+
+                            $requestState.responseBody = JSON.stringify({
+                                
+                                status: 'error',
+                                message: $res.result,
+                            });
+                        }
+
+                        defer.resolve();
+                    }, function ($err) {
+                                            
                         $requestState.responseBody = JSON.stringify({
                             
-                            status: 'ok',
-                            result: sb.run(sandbox.newScript(row.script)),
+                            status: 'error',
+                            message: $err,
                         });
-                        
+
                         defer.resolve();
-                    }
+                    });
                 }
             }, defer.reject);
         }, defer.reject);

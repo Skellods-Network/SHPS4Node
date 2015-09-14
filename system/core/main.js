@@ -48,105 +48,11 @@ var http = require('http');
 var path = require('path');
 var os = require('os');
 var vm = require('vm');
-
 var q = require('q');
 
-var dInit = require('./default.js');
 var servers = [];
 
-var _config = null;
-__defineGetter__('config', function () {
-    
-    if (!_config) {
-        
-        _config = require('./config.js');
-    }
-    
-    return _config;
-});
-
-var _cookie = null;
-__defineGetter__('cookie', function () {
-    
-    if (!_cookie) {
-        
-        _cookie = require('./cookie.js');
-    }
-    
-    return _cookie;
-});
-
-var _scheduler = null;
-__defineGetter__('scheduler', function () {
-    
-    if (!_scheduler) {
-        
-        _scheduler = require('./schedule.js');
-    }
-    
-    return _scheduler
-});
-
-var optimize = require('./optimize.js');
-var _helper = null;
-__defineGetter__('helper', function () {
-    
-    if (!_helper) {
-        
-        _helper = require('./helper.js');
-    }
-    
-    return _helper
-});
-
-var __log = null;
-__defineGetter__('_log', function () {
-    
-    if (!__log) {
-        
-        __log = require('./log.js');
-    }
-    
-    return __log;
-});
-
-var __nLog = null;
-__defineGetter__('log', function () {
-    
-    if (!__nLog) {
-        
-        __nLog = _log.newLog();
-    }
-    
-    return __nLog;
-});
-
-var _request = null;
-__defineGetter__('request', function () {
-    
-    if (!_request) {
-        
-        _request = require('./request.js');
-    }
-    
-    return _request;
-});
-
-var _parallel = null;
-__defineGetter__('parallel', function () {
-    
-    if (!_parallel) {
-        
-        _parallel = require('./parallelize.js');
-    }
-    
-    return _parallel;
-});
-
-
-var sql = require('./sql.js');
-var plugin = require('./plugin.js');
-var cl = require('./commandline.js');
+var libs = require('./perf.js').commonLibs;
 
 var dep;
 
@@ -158,7 +64,7 @@ var mp = {
 };
 
 
-scheduler.addSlot('fatalError', function () {
+libs.schedule.addSlot('fatalError', function () {
 
     process.abort();
 });
@@ -206,7 +112,7 @@ var _getVersionText
 var _printVersion 
 = me.printVersion = function f_main_printVersion() {
 
-    log.write(_getVersionText());
+    libs.gLog.write(_getVersionText());
 };
 
 /**
@@ -219,7 +125,7 @@ var _printVersion
 var _checkFS 
 = me.checkFS = function f_main_checkFS() {
 
-    log.write('\nChecking filesystem...');
+    libs.gLog.write('\nChecking filesystem...');
     
     var defer = q.defer();
     var root = _getDir(SHPS_DIR_ROOT);
@@ -234,14 +140,14 @@ var _checkFS
 
             if ($stat.isDirectory()) {
                 
-                if (Object.keys(dInit.fileTree).indexOf(entry) < 0) {
+                if (Object.keys(libs.default.fileTree).indexOf(entry) < 0) {
 
-                    scheduler.sendSignal('onPollution', root, 'SHPS root', entry);
+                    libs.schedule.sendSignal('onPollution', root, 'SHPS root', entry);
                 }
             }
-            else if (dInit.fileTree._files.indexOf(entry) < 0) {
+            else if (libs.default.fileTree._files.indexOf(entry) < 0) {
 
-                scheduler.sendSignal('onFilePollution', root, 'SHPS root', entry);
+                libs.schedule.sendSignal('onFilePollution', root, 'SHPS root', entry);
             }
 
             i++;
@@ -276,7 +182,7 @@ var _init
     if (typeof _init.initialized !== 'undefined') return;
     
     _init.initialized = true;
-    log.write('Please wait while we initialize SHPS for you... it won\'t take long ;)');
+    libs.gLog.write('Please wait while we initialize SHPS for you... it won\'t take long ;)');
 
     process.title = 'SHPS Terminal';
 
@@ -284,22 +190,27 @@ var _init
         
         'funcs': [
             //update  //log.write('Checking for new versions...');
-            function f_init_checkUpdate($_p1, $_p2) { _checkUpdate().done($_p2, $_p2); }
+            function f_init_prepare($_p1, $_p2) {
+                
+                libs.optimize;
+                $_p2();
+            }
+            , function f_init_checkUpdate($_p1, $_p2) { _checkUpdate().done($_p2, $_p2); }
             , function f_init_checkFS($_p1, $_p2) { _checkFS().done($_p2, $_p2); }
-            , function f_init_readConfig($_p1, $_p2) { config.readConfig().done($_p2, $_p2); }
+            , function f_init_readConfig($_p1, $_p2) { libs.config.readConfig().done($_p2, $_p2); }
             , function f_init_parallelize($_p1, $_p2) {
                 
-                var wc = config.getHPConfig('config', 'workers');
+                var wc = libs.config.getHPConfig('config', 'workers');
                 if (wc > 0 || wc === -1) {
 
-                    parallel.handle().done($_p2, $_p2);
+                    libs.parallelize.handle().done($_p2, $_p2);
                 }
                 else {
                     
                     process.nextTick($_p2);
                 }
             }
-            , function f_init_loadPlugins($_p1, $_p2) { plugin.loadPlugins().done($_p2, $_p2); }
+            , function f_init_loadPlugins($_p1, $_p2) { libs.plugin.loadPlugins().done($_p2, $_p2); }
             , function f_init_listen($_p1, $_p2) {
                 
                 _listen();
@@ -307,21 +218,21 @@ var _init
             }
             , function f_init_event($_p1, $_p2) {
                 
-                log.write('');
+                libs.gLog.write('');
                 dep = require('./dependency.js');
                 process.on('exit', function ($code) {
 
                     _killAllServers();
                 });
 
-                scheduler.sendSignal('onMainInit', $_p1);
+                libs.schedule.sendSignal('onMainInit', $_p1);
                 process.nextTick($_p2);
             }
         ]
     }, function func_init_done ($err) {
         
-        log.write('\nWe done here! SHPS at your service - what can we do for you?'.bold);
-        cl.handleRequest();
+        libs.gLog.write('\nWe done here! SHPS at your service - what can we do for you?'.bold);
+        libs.coml.handleRequest();
     });
 }
 
@@ -329,13 +240,13 @@ var _checkUpdate = function f_main_checkUpdate() {
 
     var defer = q.defer();
 
-    log.write('\nChecking for updates...', false);
+    libs.gLog.write('\nChecking for updates...', false);
 
-    scheduler.sendSignal('onCheckForUpdate', false);
+    libs.schedule.sendSignal('onCheckForUpdate', false);
     
     // Do the check here...
 
-    log.append(' OK'.green.bold);
+    libs.gLog.append(' OK'.green.bold);
     defer.resolve();
 
     return defer.promise;
@@ -372,13 +283,13 @@ var _parallelize = function ($cb) {
 
                 if ($msg.cmd && $msg.cmd == 'workerOptimizeRequest') {
 
-                    optimize.handleWorkerMessage($msg.data.event, $msg.data.params);
+                    libs.optimize.handleWorkerMessage($msg.data.event, $msg.data.params);
                 }
             });
 
             cluster.on('online', function ($worker) {
             
-                log.write('Worker ' + $worker.id + ' is now ' + 'online'.green);
+                libs.gLog.write('Worker ' + $worker.id + ' is now ' + 'online'.green);
             });
         }
 
@@ -409,25 +320,25 @@ var _isDebug
 var _listen 
 = me.listen = function () {
     
-    log.write('\nStarting servers...');
+    libs.gLog.write('\nStarting servers...');
     
     var port = [];
     var defer = q.defer();
     var httpResponse = function ($req, $res) {
         
-        var rs = new helper.requestState();
-        rs._domain = new helper.SHPS_domain($req.headers.host, true);
+        var rs = new libs.helper.requestState();
+        rs._domain = new libs.helper.SHPS_domain($req.headers.host, true);
         rs.uri = rs._domain.href;
-        rs.config = config.getConfig(rs._domain.hostname);
+        rs.config = libs.config.getConfig(rs._domain.hostname);
         rs.path = $req.url;
         rs.request = $req;
         rs.response = $res;
-        rs.COOKIE = cookie.newCookieJar(rs);
+        rs.COOKIE = libs.cookie.newCookieJar(rs);
 
-        request.handleRequest(rs);
+        libs.request.handleRequest(rs);
     };
     
-    var configHug = config.hug(mp);
+    var configHug = libs.config.hug(mp);
     var server;
     for (var $c in configHug.config) {
         
@@ -440,9 +351,9 @@ var _listen
                 server.listen(p);
                 servers.push(server);
                 
-                log.write('HTTP/1.1 port opened on ' + (p + '').green);
+                libs.gLog.write('HTTP/1.1 port opened on ' + (p + '').green);
                 port += p;
-                scheduler.sendSignal('onListenStart', 'HTTP/1.1', p);
+                libs.schedule.sendSignal('onListenStart', 'HTTP/1.1', p);
             }
         }
         
@@ -489,14 +400,14 @@ var _listen
                 server.listen(p);
                 servers.push(server);
                 
-                log.write('HTTP/2 port opened on ' + (p + '').green);
+                libs.gLog.write('HTTP/2 port opened on ' + (p + '').green);
                 port += p;
-                scheduler.sendSignal('onListenStart', 'HTTP/2', p);
+                libs.schedule.sendSignal('onListenStart', 'HTTP/2', p);
             }
         }
     }
     
-    scheduler.sendSignal('onServerStart', port);
+    libs.schedule.sendSignal('onServerStart', port);
 };
 
 var _killAllServers 
@@ -543,7 +454,7 @@ var _setDebug
     $onOff = typeof $onOff !== 'undefined' ? $onOff : true;
 
     debug = $onOff;
-    scheduler.sendSignal('onDebugChange', $onOff);
+    libs.schedule.sendSignal('onDebugChange', $onOff);
 }
 
 /**
@@ -556,7 +467,7 @@ var _setDebug
 var _hug 
 = me.hug = function f_main_hug($h) {
     
-    return helper.genericHug($h, mp, function f_main_hug_hug($hugCount) {
+    return libs.helper.genericHug($h, mp, function f_main_hug_hug($hugCount) {
         
         if ($hugCount > 3) {
             
@@ -577,7 +488,7 @@ var _focus
 = me.focus = function f_main_focus($requestState) {
     if (typeof $requestState !== 'undefined') {
         
-        log.error('Cannot focus undefined requestState!');
+        libs.gLog.error('Cannot focus undefined requestState!');
     }
     
     

@@ -9,26 +9,139 @@ var q = require('q');
 var crypt = require('crypto');
 var streams = require('stream');
 
-var css = require('./css.js');
-var main = require('./main.js');
-var file = require('./file.js');
-var optimize = require('./optimize.js');
-var plugin = require('./plugin.js');
-var helper = require('./helper.js');
-var cookie = require('./cookie.js');
-var make = require('./make.js');
-var SFFM = require('./SFFM.js');
-var scheduler = require('./schedule.js');
-var lang = require('./language.js');
+var libs = require('./perf.js').commonLibs;
 
-var self = this;
+var mp = {
+    self: this
+};
 
 
+/**
+ * Parses the request body and fills POST
+ * 
+ * @param Object $requestState
+ */
+var _parseRequestBody 
+= me.parseRequestBody = function f_request_parseRequestBody($requestState) {
+    
+    var cl = $requestState.request.headers['content-length'];
+    if (!cl || cl < 0) {
+        
+        $requestState.isDataComplete = true;
+        return;
+    }
+
+    var body = ''; //new Buffer($requestState.request.headers['content-length'] * 1);
+    $requestState.request.on('data', function ($chunk) {
+    
+        //body.fill($chunk.toString(), offset, offset + $chunk.length);
+        //offset += $chunk.length;
+        body += $chunk;
+    });
+
+    $requestState.request.once('end', function () {
+        
+        var ct = $requestState.request.headers['content-type'];
+        switch (ct) {
+
+            case 'application/x-www-form-urlencoded': {
+
+                $requestState.POST = libs.SFFM.splitQueryString(body);
+                break;
+            }
+
+            default: {
+
+                var regexFD = /^multipart\/form-data\s*;\s*boundary=(.+)$/i;
+                var match = regexFD.exec(ct);
+                if (!match) {
+                    
+                    $requestState.POST = libs.SFFM.splitQueryString(body);
+                    break;
+                }
+                
+                var boundary = '--' + match[1];
+                var offset = 0;
+                var l = boundary.length;
+                var dhStartIndex = 0;
+                var dhStopIndex = 0;
+                var index = body.indexOf(boundary, offset);
+                var data = '';
+                var nlL = 1;
+                var regexCD = /Content\-Disposition\s*\:\s*(.+)?\n/i;
+                var regexCDT = /^([\w-]+)\s*?\;?/i;
+                var regexCDN = /name[^;=\n]*=\"?([^;\n"]+)/i;
+                var regexCDFN = /filename[^;=\n]*=\"?([^;\n"]+)/i
+                var dh = '';
+                var cd = '';
+                var cdType = '';
+                var cdName = '';
+                var cdFilename = '';
+                while (index >= 0) {
+
+                    index += l;
+                    if (body.substr(index, 2) === '--') {
+
+                        break;
+                    }
+
+                    offset = index;
+                    dhStartIndex = index + 1;
+                    dhStopIndex = body.indexOf('\n\n', dhStartIndex) + 2;
+                    if (dhStopIndex <= 1) {
+                        
+                        dhStopIndex = body.indexOf('\r\n\r\n', dhStartIndex) + 4;
+                        nlL = 2;
+                    }
+
+                    index = body.indexOf(boundary, offset);
+                    dh = body.substring(dhStartIndex, dhStopIndex);
+                    data = new Buffer(body.substring(dhStopIndex, index - nlL));
+
+                    cd = regexCD.exec(dh);
+                    if (cd === undefined) {
+
+                        break;
+                    }
+
+                    cdType = regexCDT.exec(cd);
+                    cdName = regexCDN.exec(cd)[1];
+                    cdFilename = regexCDFN.exec(cd)[1];
+                    
+                    if (cdFilename === undefined) {
+
+                        $requestState.POST[cdName] = data;
+                    }
+                    else {
+
+                        $requestState.FILE[cdName] = {
+
+                            filename: cdFilename,
+                            filetype: cdType,
+                        }
+                    }
+                    
+                    //TODO: Handle multiple boundary names
+                }
+            }
+        }
+
+        $requestState.isDataComplete = true;
+    });
+};
+
+/**
+ * Handles the HTTP request from a client
+ * 
+ * @param Object $requestState
+ */
 var _handleRequest 
-= me.handleRequest = function handleRequest($requestState) {
+= me.handleRequest = function f_request_handleRequest($requestState) {
     
     $requestState.httpStatus = 501;
-    $requestState.POST;
+    _parseRequestBody($requestState);
+    
+    var log = libs.log.newLog($requestState);
 
     var unblock;
     if (typeof $requestState.config === 'undefined') {
@@ -66,14 +179,14 @@ var _handleRequest
         else if (typeof $requestState.GET['request'] !== 'undefined') {
             
             // handle request
-            unblock = make.requestResponse($requestState, $requestState.GET['request'], typeof $requestState.GET['ns'] !== 'undefined' ? $requestState.GET['ns'] : 'default');
+            unblock = libs.make.requestResponse($requestState, $requestState.GET['request'], typeof $requestState.GET['ns'] !== 'undefined' ? $requestState.GET['ns'] : 'default');
         }
         else if (typeof $requestState.GET['plugin'] !== 'undefined') {
             
             // call plugin
-            if (plugin.pluginExists($requestState.GET['plugin'])) {
+            if (libs.plugin.pluginExists($requestState.GET['plugin'])) {
                 
-                unblock = plugin.callPluginEvent($requestState, 'onDirectCall', $requestState.GET['plugin'], $requestState);
+                unblock = libs.plugin.callPluginEvent($requestState, 'onDirectCall', $requestState.GET['plugin'], $requestState);
             }
             else {
                 
@@ -83,7 +196,7 @@ var _handleRequest
         else if (typeof $requestState.GET['file'] !== 'undefined') {
             
             // serve file
-            unblock = file.serveFile($requestState, $requestState.GET['file']);
+            unblock = libs.file.serveFile($requestState, $requestState.GET['file']);
         }
         else if (typeof $requestState.GET['js'] !== 'undefined') {
 
@@ -91,16 +204,16 @@ var _handleRequest
         }
         else if (typeof $requestState.GET['css'] !== 'undefined') {
             
-            var tmp = css.newCSS($requestState);
+            var tmp = libs.css.newCSS($requestState);
             unblock = tmp.handle();
         }
         else if (typeof $requestState.GET['site'] !== 'undefined') {
             
             // transmit site
-            unblock = make.siteResponse($requestState, $requestState.GET['site'], $requestState.GET['ns']).then(siteHandler);
+            unblock = libs.make.siteResponse($requestState, $requestState.GET['site'], $requestState.GET['ns']).then(siteHandler);
             
         }
-        else if (typeof $requestState.GET['HTCPCP'] !== 'undefined' && main.getHPConfig('eastereggs')) {
+        else if (typeof $requestState.GET['HTCPCP'] !== 'undefined' && libs.main.getHPConfig('eastereggs')) {
             
             $requestState.httpStatus = 418;
             $requestState.responseType = 'text/plain';
@@ -110,7 +223,7 @@ var _handleRequest
             
             // if they don't know what they want, they should just get the index site...
             $requestState.GET['site'] = $requestState.site;
-            unblock = make.siteResponse($requestState, $requestState.GET['site'], $requestState.GET['ns']).then(siteHandler, siteHandler);
+            unblock = libs.make.siteResponse($requestState, $requestState.GET['site'], $requestState.GET['ns']).then(siteHandler, siteHandler);
         }
     }
     
@@ -150,7 +263,7 @@ var _handleRequest
 
         if ($requestState.resultPending) {
             
-            $requestState.responseBody = optimize.compressStream($requestState, $requestState.responseBody, Buffer.byteLength($requestState.responseBody, 'utf8'));
+            $requestState.responseBody = libs.optimize.compressStream($requestState, $requestState.responseBody, Buffer.byteLength($requestState.responseBody, 'utf8'));
         }
         
         var headers = {
@@ -176,7 +289,7 @@ var _handleRequest
             // 'Etag': <-- insert cache token here (change token whenever the cache was rebuilt)
         };
         
-        if (main.isDebug()) {
+        if (libs.main.isDebug()) {
 
             trailerHeaders['X-Powered-By'] = 'SHPS4Node/' + SHPS_VERSION + SHPS_BUILD;
             trailerHeaders['X-Version'] = SHPS_VERSION;
@@ -202,7 +315,7 @@ var _handleRequest
             headers = oa(headers, trailerHeaders);
         }
         
-        if (SFFM.isHTTPS($requestState.request)) {
+        if (libs.SFFM.isHTTPS($requestState.request)) {
             
             // ASVS V2 3.15
             headers['Strict-Transport-Security'] = 'max-age=' + $requestState.config.securityConfig.STSTimeout.value;
@@ -215,6 +328,7 @@ var _handleRequest
             if ($requestState.config.TLSConfig.keypin.value != '') {
                 
                 //TODO: calculate the keypin with openssl
+                //Don't use keypin for self-made certificates!
                 headers['Public-Key-Pins'] = 'pin-sha256="' + $requestState.config.TLSConfig.keypin.value + '";max-age=2592000';
                 if ($requestState.config.securityConfig.HPKPIncludeSubDomains.value) {
                     
@@ -223,49 +337,83 @@ var _handleRequest
             }
         }
         
+        var errfun = function ($err) {
+
+            log.writeError($err);
+        };
+
         var respFun = function ($lang) {
-                
+            
+            var defer = q.defer();
             if ($requestState.resultPending && typeof $requestState.responseBody === 'string') {
+                
+                defer.resolve();
+                headers['Content-Length'] = libs.SFFM.stringByteLength($requestState.responseBody);
+            }
+            else if ($requestState.resultPending && $requestState.responseBody && $requestState.responseBody.on) {
+                
+                var tmp = '';
+                var tmpS = new streams.PassThrough();
+                $requestState.responseBody.on('data', function ($chunk) {
                     
-                headers['Content-Length'] = SFFM.stringByteLength($requestState.responseBody);
+                    tmp += $chunk;
+                    tmpS.write($chunk);
+                });
+
+                $requestState.responseBody.once('end', function () {
+                    
+                    //$requestState.responseBody = tmp;
+                    $requestState.responseBody = tmpS;
+                    headers['Content-Length'] = tmp.length;
+                    defer.resolve();
+                });
+            }
+            else {
+
+                defer.resolve();
             }
                 
             headers['Content-Encoding'] = $requestState.responseEncoding;
             headers['Content-Language'] = $lang;
+            
+            defer.promise.done(function () {
                 
-            if ($requestState.headerPending) {
-
-                $requestState.response.writeHead($requestState.httpStatus, headers);
-                $requestState.emit('headerSent');
-            }
-                
-            if ($requestState.resultPending) {
-                
-                if (typeof $requestState.responseBody.pipe === 'function') {
-
-                    $requestState.responseBody.pipe($requestState.response);
-                }
-                else {
-
-                    $requestState.response.write($requestState.responseBody, $requestState.isResponseBinary ? 'binary'
-                                                                                                            : 'utf8');
+                if ($requestState.headerPending) {
+                    
+                    $requestState.response.writeHead($requestState.httpStatus, headers);
+                    //$requestState.response.flushHeaders();
+                    $requestState.emit('headSent');
                 }
 
-                $requestState.emit('bodySent');
-            }
+                if ($requestState.resultPending) {
+                    
+                    if (typeof $requestState.responseBody.pipe === 'function') {
+                        
+                        $requestState.responseBody.pipe($requestState.response);
+                        $requestState.resultPending = false;
+                    }
+                    else {
+                        
+                        $requestState.response.write($requestState.responseBody, $requestState.isResponseBinary ? 'binary'
+                                                                                                                : 'utf8');
+                    }
+                    
+                    $requestState.emit('bodySent');
+                }
                 
-            if (useTrailers) {
-                  
-                $requestState.response.addTrailers(trailerHeaders);
-            }
+                if (useTrailers) {
+                    
+                    $requestState.response.addTrailers(trailerHeaders);
+                }
                 
-            if ($requestState.resultPending) {
-                  
-                $requestState.response.end();
-            }
+                if ($requestState.resultPending) {
+                    
+                    $requestState.response.end();
+                }
+            }, errfun);
         };
 
-        lang.newLang($requestState).getLanguage().done(respFun, function ($err) {
+        libs.language.newLang($requestState).getLanguage().done(respFun, function ($err) {
                         
             respFun('na');        
         });
@@ -297,7 +445,7 @@ var _focus
 var _hug 
 = me.hug = function f_request_hug($h) {
     
-    return helper.genericHug($h, self, function f_request_hug_hug($hugCount) {
+    return libs.helper.genericHug($h, mp, function f_request_hug_hug($hugCount) {
         
         if ($hugCount > 3) {
             

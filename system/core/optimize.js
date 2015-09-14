@@ -5,42 +5,7 @@ var me = module.exports;
 var os = require('os');
 var zlib = require('zlib');
 
-var scheduler = require('./schedule.js');
-var _config = null;
-__defineGetter__('config', function () {
-    
-    if (!_config) {
-        
-        _config = require('./config.js');
-    }
-    
-    return _config;
-});
-
-var __log = null;
-__defineGetter__('_log', function () {
-    
-    if (!__log) {
-        
-        __log = require('./log.js');
-    }
-    
-    return __log;
-});
-
-var __nLog = null;
-__defineGetter__('log', function () {
-    
-    if (!__nLog) {
-        
-        __nLog = _log.newLog();
-    }
-    
-    return __nLog;
-});
-
-var main = require('./main.js');
-var SFFM = require('./SFFM.js');
+var libs = require('./perf.js').commonLibs;
 
 var self = this;
 
@@ -78,16 +43,19 @@ var _dangerCount
 var _compressStream
 = me.compressStream = function ($requestState, $inStream, $inSize) {
     
-    if (SFFM.canGZIP($requestState, $inSize)) {
+    if (libs.SFFM.canGZIP($requestState, $inSize)) {
         
         $requestState.responseEncoding = 'gzip';
+        //$requestState.isResponseBinary = true;
         if (typeof $inStream.pipe === 'function') {
 
             return $inStream.pipe(zlib.createGzip());
         }
         else {
-
-            return zlib.createGzip().write($inStream);
+            
+            var zs = zlib.createGzip();
+            zs.end($inStream);
+            return zs;
         }
     }
     else {
@@ -152,18 +120,18 @@ var _checkConfigForRisks
             var numCPUs = os.cpus().length;
             if ($config.config.workers.value != -1 && $config.config.workers.value > numCPUs) {
                 
-                log.writeHint('Consider reducing the number of workers in ' + $file + ' to ' + numCPUs + ' (logical CPU core count) or setting it to -1 for smart handling.');
+                libs.gLog.writeHint('Consider reducing the number of workers in ' + $file + ' to ' + numCPUs + ' (logical CPU core count) or setting it to -1 for smart handling.');
             }
             else if ($config.config.workers.value != -1 && $config.config.workers.value < numCPUs) {
                 
-                log.writeHint('Consider increasing the number of workers in ' + $file + ' to ' + numCPUs + ' (logical CPU core count) or setting it to -1 for smart handling.');
+                libs.gLog.writeHint('Consider increasing the number of workers in ' + $file + ' to ' + numCPUs + ' (logical CPU core count) or setting it to -1 for smart handling.');
             }
             
-            if (config.getHPConfig('eastereggs')) {
+            if (libs.config.getHPConfig('eastereggs')) {
                 
                 // Eastereggs are fun for intranet applications, but could reveal too much information about the SHPS version in use
-                log.writeWarning('Public eastereggs are enabled for in ' + $file + '!');
-                log.writeHint('Consider setting `config->eastereggs->value` in ' + $file + ' to `false`.');
+                libs.gLog.writeWarning('Public eastereggs are enabled for in ' + $file + '!');
+                libs.gLog.writeHint('Consider setting `config->eastereggs->value` in ' + $file + ' to `false`.');
                 
                 _vulnerabilities.eastereggs = true;
             }
@@ -172,7 +140,7 @@ var _checkConfigForRisks
                 
                 // This is very important, but I guess there might always be that one person...
                 // TODO: Check if the SWMGUI is reachable from the internet and disable it until that port is blocked or changed for a blocked one.
-                log.writeHint('SWMGUI is active. Make sure it is unreachable from the internet!');
+                libs.gLog.writeHint('SWMGUI is active. Make sure it is unreachable from the internet!');
             }
             
             break;
@@ -183,8 +151,8 @@ var _checkConfigForRisks
             if ($config.generalConfig.uploadQuota.value <= 0) {
                 
                 // No upload quota is a possible risk as users can fill up the disk and break the system (DoS attack)
-                log.writeWarning('No upload quota set in ' + $file + '!');
-                log.writeHint('Consider setting `config->generalConfig->uploadQuota->value` to a value greater 0 in ' + $file + '.');
+                libs.gLog.writeWarning('No upload quota set in ' + $file + '!');
+                libs.gLog.writeHint('Consider setting `config->generalConfig->uploadQuota->value` to a value greater 0 in ' + $file + '.');
 
                 _vulnerabilities.quota = true;
             }
@@ -196,8 +164,8 @@ var _checkConfigForRisks
             if ($config.generalConfig.displayStats.value) {
                 
                 // Stats will tell visitors detailed version info about SHPS making it easy for attackers to select
-                log.writeWarning('Stats are set to visible in ' + $file + '!');
-                log.writeHint('Consider setting `config->generalConfig->displayStats->value` to false in ' + $file + '.');
+                libs.gLog.writeWarning('Stats are set to visible in ' + $file + '!');
+                libs.gLog.writeHint('Consider setting `config->generalConfig->displayStats->value` to false in ' + $file + '.');
 
                 _vulnerabilities.stats = true;
             }
@@ -209,8 +177,8 @@ var _checkConfigForRisks
             if ($config.generalConfig.useHTTP1.value) {
                 
                 // HTTP/1.x is legacy and SHPS does not support encryption for that particular module (HTTP/2 is encrypted and supports a protocol-downgrade to HTTP/1.1 if necessary)
-                log.writeWarning('HTTP/1.1 activated in ' + $file + '!');
-                log.writeHint('Consider setting `config->generalConfig->useHTTP1->value` to false in ' + $file + '. Use HTTP/2, which supports TLS and protocol-downgrade, instead.');
+                libs.gLog.writeWarning('HTTP/1.1 activated in ' + $file + '!');
+                libs.gLog.writeHint('Consider setting `config->generalConfig->useHTTP1->value` to false in ' + $file + '. Use HTTP/2, which supports TLS and protocol-downgrade, instead.');
                 
                 _vulnerabilities.protocol = true;
             }
@@ -222,8 +190,8 @@ var _checkConfigForRisks
             if ($config.securityConfig.loginDelay.value <= 0) {
                 
                 // A delay of a second or more will prevent vertical passwort bruteforcing
-                log.writeWarning('The login delay contains a possibly dangerous value in ' + $file + '!');
-                log.writeHint('Consider setting `config->generalConfig->loginDelay->value` to a value greater 0 in ' + $file + '.');
+                libs.gLog.writeWarning('The login delay contains a possibly dangerous value in ' + $file + '!');
+                libs.gLog.writeHint('Consider setting `config->generalConfig->loginDelay->value` to a value greater 0 in ' + $file + '.');
                 
                 _vulnerabilities.loginDelay = true;
             }
@@ -238,7 +206,7 @@ var _checkConfigForRisks
         default: {
             
             // Possibly a faulty or too old/new configuration file. The system might not act as expected.
-            log.writeWarning('Configuration ' + $file + ' uses an unknown type (`' + $config.configHeader.type + '`) in its header part!');
+            libs.gLog.writeWarning('Configuration ' + $file + ' uses an unknown type (`' + $config.configHeader.type + '`) in its header part!');
             _unknownDangersCount++;
         }
     }
@@ -247,12 +215,12 @@ var _checkConfigForRisks
 };
 
 
-scheduler.addSlot('onListenStart', function ($protocol, $port) {
+libs.schedule.addSlot('onListenStart', function ($protocol, $port) {
 
     if ($protocol.match(/HTTP\/1.[0,1]/i)) {
 
-        log.writeWarning('The ' + $protocol + ' connection on port ' + $port + ' is not encrypted. Anyone can spy on data in transit!');
-        log.writeHint('Consider switching all homepages to HTTP/2.0 by setting `generalConfig->useHTTP2->value` to `true` and `generalConfig->useHTTP1->value` to `false` in all configuration files.');
+        libs.gLog.writeWarning('The ' + $protocol + ' connection on port ' + $port + ' is not encrypted. Anyone can spy on data in transit!');
+        libs.gLog.writeHint('Consider switching all homepages to HTTP/2.0 by setting `generalConfig->useHTTP2->value` to `true` and `generalConfig->useHTTP1->value` to `false` in all configuration files.');
 
         _vulnerabilities.protocol = {
         
@@ -262,39 +230,39 @@ scheduler.addSlot('onListenStart', function ($protocol, $port) {
     }
 });
 
-scheduler.addSlot('onMainInit', function () {
+libs.schedule.addSlot('onMainInit', function () {
     
-    if (SFFM.isIOJS()) {
+    if (libs.SFFM.isIOJS()) {
 
-        log.write('SHPS detected IOJS and will make use of Harmony features!'.green);
+        libs.gLog.write('SHPS detected IOJS and will make use of Harmony features!'.green);
     }
-    else if (SFFM.isHarmonyActivated()) {
+    else if (libs.SFFM.isHarmonyActivated()) {
 
-        log.write('SHPS detected that Harmony features are activated and will make use of them!'.green);
+        libs.gLog.write('SHPS detected that Harmony features are activated and will make use of them!'.green);
     }
 
     if (global.gc) {
 
-        log.write('SHPS will optimize garbage collection!'.green);
+        libs.gLog.write('SHPS will optimize garbage collection!'.green);
     }
     else {
     
-        log.writeHint('Consider using the node commandline parameter `--expose_gc`.');
+        libs.gLog.writeHint('Consider using the node commandline parameter `--expose_gc`.');
     }
     
     var dCount = _dangerCount();
     if (dCount > 0) {
 
-        log.writeWarning('System is not secure (' + dCount + ' problems seen so far)!');
-        log.writeHint('Follow hints to remove warnings. Fewer warnings mean better security and stability.');
+        libs.gLog.writeWarning('System is not secure (' + dCount + ' problems seen so far)!');
+        libs.gLog.writeHint('Follow hints to remove warnings. Fewer warnings mean better security and stability.');
     }
     else {
 
-        log.write('System looks secure so far!'.green);
+        libs.gLog.write('System looks secure so far!'.green);
     }
 });
 
-scheduler.addSlot('onConfigLoaded', function ($file, $successful, $config) {
+libs.schedule.addSlot('onConfigLoaded', function ($file, $successful, $config) {
 
     if ($successful) {
         
@@ -302,38 +270,38 @@ scheduler.addSlot('onConfigLoaded', function ($file, $successful, $config) {
     }
 });
 
-scheduler.addSlot('onFilePollution', function ($dir, $dirDescription, $file) {
+libs.schedule.addSlot('onFilePollution', function ($dir, $dirDescription, $file) {
 
-    log.writeHint('File `' + $file + '` is polluting the ' + $dirDescription + ' directory (' + $dir + ')! Consider deleting it.');
+    libs.gLog.writeHint('File `' + $file + '` is polluting the ' + $dirDescription + ' directory (' + $dir + ')! Consider deleting it.');
 });
 
-scheduler.addSlot('onPollution', function ($dir, $dirDescription, $file) {
+libs.schedule.addSlot('onPollution', function ($dir, $dirDescription, $file) {
     
-    log.writeHint('`' + $file + '` is polluting the ' + $dirDescription + ' directory (' + $dir + ')! Consider deleting it.');
+    libs.gLog.writeHint('`' + $file + '` is polluting the ' + $dirDescription + ' directory (' + $dir + ')! Consider deleting it.');
 });
 
-scheduler.addSlot('onFileNotFound', function ($file, $dir, $description) {
+libs.schedule.addSlot('onFileNotFound', function ($file, $dir, $description) {
     $description = typeof $description === 'undefined' ? '' : ' ' + $description;
     
-    log.writeHint('`' + $file + '` could not be found in ' + $dir + '!' + $description + ' Consider loading the admin-GUI plugin which is able to repair your installation.');
+    libs.gLog.writeHint('`' + $file + '` could not be found in ' + $dir + '!' + $description + ' Consider loading the admin-GUI plugin which is able to repair your installation.');
 });
 
-scheduler.addSlot('onPreferredModuleMissing', function ($preferredModule, $alternative, $text) {
+libs.schedule.addSlot('onPreferredModuleMissing', function ($preferredModule, $alternative, $text) {
     $text = typeof $text !== 'undefined' ? '\n' + $text : '';
 
-    log.writeHint('The module `' + $preferredModule + '` could not be loaded. `' + $alternative + '` will be used instead.' + $text + '\nConsider installing `' + $preferredModule + '`.');
+    libs.gLog.writeHint('The module `' + $preferredModule + '` could not be loaded. `' + $alternative + '` will be used instead.' + $text + '\nConsider installing `' + $preferredModule + '`.');
 });
 
-scheduler.addSlot('onDependencyMissing', function ($module) {
+libs.schedule.addSlot('onDependencyMissing', function ($module) {
     
     var msg = 'The module `' + $module + '` could not be loaded. It is a hard-dependency, though. SHPS cannot start without it. Please follow the installation guide!';
-    log.writeFatal(msg);
+    libs.gLog.writeFatal(msg);
     throw msg;
 });
 
-scheduler.addSlot('onOptionalModuleMissing', function ($module, $text) {
+libs.schedule.addSlot('onOptionalModuleMissing', function ($module, $text) {
     $text = typeof $text !== 'undefined' ? '\n' + $text : '';
 
     var msg = 'The module `' + $module + '` could not be loaded. It is an optional dependency, though. SHPS can start without it.' + $text + '\nConsider installing `' + $module + '`.';
-    log.writeHint(msg);
+    libs.gLog.writeHint(msg);
 });

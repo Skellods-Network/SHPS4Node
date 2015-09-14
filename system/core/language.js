@@ -4,8 +4,7 @@ var me = module.exports;
 
 var q = require('q');
 
-var helper = require('./helper.js');
-var sql = require('./sql.js');
+var libs = require('./perf.js').commonLibs;
 
 var mp = {
     self: this
@@ -22,7 +21,7 @@ var mp = {
 var _hug 
 = me.hug = function f_log_hug($h) {
     
-    return helper.genericHug($h, mp, function f_helper_log_hug($hugCount) {
+    return libs.helper.genericHug($h, mp, function f_helper_log_hug($hugCount) {
         
         if ($hugCount > 3) {
             
@@ -39,7 +38,6 @@ var _Language
     /**
      * Get language to use
      * 
-     * @param Object $requestState
      * @return promise
      */
     var _getLanguage =
@@ -52,7 +50,7 @@ var _Language
         }
         else {
             
-            sql.newSQL('default', $requestState).done(function ($sql) {
+            libs.sql.newSQL('default', $requestState).done(function ($sql) {
                 
                 var tblLang = $sql.openTable('language');
                 $sql.query()
@@ -123,10 +121,9 @@ var _Language
      * Get enumerator over languages
      * Languages are sorted by quality. Important languages come first.
      * 
-     * @param Object $requestState
      * @return [[]] Array of arrays with 2 values
      * 0: language name
-     * 1: langauge quality
+     * 1: language quality
      */
     var _getAcceptLanguageList =
     this.getAcceptLanguageList = function f_language_getAcceptLanguageList() {
@@ -209,7 +206,6 @@ var _Language
      * Get enumerator over languages
      * Languages are sorted by quality. Important languages come first.
      * 
-     * @param Object $requestState
      * @return Object Enumerator with next() and currentLanguage and currentQuality
      */
     var _getAcceptLanguageEnumerator =
@@ -252,7 +248,7 @@ var _Language
         var defer = q.defer();
         _getLanguage($requestState).done(function ($lang) {
             
-            sql.newSQL('default', $requestState).done(function ($sql) {
+            libs.sql.newSQL('default', $requestState).done(function ($sql) {
                 
                 var tblLang = $sql.openTable('language');
                 var tblString = $sql.openTable('string');
@@ -345,7 +341,7 @@ var _Language
         
         _getLanguage($requestState).done(function ($lang) {
             
-            sql.newSQL('default', $requestState).done(function ($sql) {
+            libs.sql.newSQL('default', $requestState).done(function ($sql) {
                 
                 var tblLang = $sql.openTable('language');
                 var tblString = $sql.openTable('string');
@@ -383,7 +379,14 @@ var _Language
 
                                 if ($rows[i].lang === $lang) {
 
-                                    defer.resolve($rows[i].value);
+                                    libs.make.parseTemplate($requestState, $rows[i].value).done(function ($res) {
+                                        
+                                        defer.resolve($res.body);
+                                    }, function ($res) {
+                                        
+                                        defer.resolve($rows[i].value);
+                                    });
+
                                     found = true;
                                 }
                                 i++;
@@ -424,8 +427,14 @@ var _Language
                                 defer.resolve(r);
                             }
                             else {
-
-                                defer.resolve($rows[0].value);
+                                
+                                libs.make.parseTemplate($requestState, $rows[0].value).done(function ($res) {
+                                    
+                                    defer.resolve($res.body);
+                                }, function ($res) {
+                                    
+                                    defer.resolve($rows[0].value);
+                                });
                             }
                         }
                     }

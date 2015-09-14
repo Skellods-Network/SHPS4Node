@@ -16,47 +16,7 @@ var pooling = require('generic-pool');
 var async = require('vasync');
 var q = require('q');
 
-var main = require('./main.js');
-var _config = null;
-__defineGetter__('config', function () {
-    
-    if (!_config) {
-        
-        _config = require('./config.js');
-    }
-    
-    return _config;
-});
-
-var __log = null;
-__defineGetter__('_log', function () {
-    
-    if (!__log) {
-        
-        __log = require('./log.js');
-    }
-    
-    return __log;
-});
-
-var __nLog = null;
-__defineGetter__('log', function () {
-    
-    if (!__nLog) {
-        
-        __nLog = _log.newLog();
-    }
-    
-    return __nLog;
-});
-
-var helper = require('./helper.js');
-var sffm = require('./SFFM.js');
-var row = require('./sqlRow.js');
-var col = require('./sqlCol.js');
-var table = require('./sqlTable.js');
-var SQLQueryBuilder = require('./sqlQueryBuilder.js');
-var SQLConditionBuilder = require('./sqlConditionBuilder.js');
+var libs = require('./perf.js').commonLibs;
 
 var _sqlConnectionPool = {};
 var mp = {
@@ -107,16 +67,16 @@ var _memcached = null;
 var _conditionbuilder = null;
 
 var _newCol 
-= me.newCol = col.newCol;
+= me.newCol = libs.sqlCol.newCol;
 
 var _newRow 
-= me.newRow = row.newRow;
+= me.newRow = libs.sqlRow.newRow;
 
 var _newTable 
-= me.newTable = table.newTable;
+= me.newTable = libs.sqlTable.newTable;
 
 var _newConditionBuilder 
-= me.newConditionBuilder = SQLConditionBuilder.newSQLConditionBuilder;
+= me.newConditionBuilder = libs.sqlConditionBuilder.newSQLConditionBuilder;
 
 /**
  * Grouphuggable
@@ -129,7 +89,7 @@ var _hug
 = mp.hug
 = me.hug = function f_sql_hug($h) {
     
-    return helper.genericHug($h, mp, function f_sql_hug_hug($hugCount) {
+    return libs.helper.genericHug($h, mp, function f_sql_hug_hug($hugCount) {
         
         if ($hugCount > 3) {
             
@@ -156,12 +116,12 @@ var _SQL
     
     if (typeof $dbConfig === 'undefined') {
         
-        log.error('Cannot work with undefined dbConfig!');
+        libs.gLog.error('Cannot work with undefined dbConfig!');
     }
     
     if (typeof $connection === 'undefined' || $connection === null) {
         
-        log.error('Cannot work without connection!');
+        libs.gLog.error('Cannot work without connection!');
         return;
     }
     
@@ -278,7 +238,7 @@ var _SQL
     var _hug 
     = mp.hug = function f_sql_hug($h) {
         
-        return helper.genericHug($h, mp, function f_sql_hug_hug($hugCount) {
+        return libs.helper.genericHug($h, mp, function f_sql_hug_hug($hugCount) {
             
             if ($hugCount > 3) {
                 
@@ -307,7 +267,7 @@ var _SQL
         
         if (typeof $param !== 'undefined') {
             
-            $query = mysql.format($query, $param, true, config.getHPConfig('generalConfig', 'timezone', $domain));
+            $query = mysql.format($query, $param, true, libs.config.getHPConfig('generalConfig', 'timezone', $domain));
             mysql.createQuery($query, cb);
         }
         
@@ -339,7 +299,7 @@ var _SQL
             return defer.promise;
         }
         
-        return SQLQueryBuilder.newSQLQueryBuilder(this);
+        return libs.sqlQueryBuilder.newSQLQueryBuilder(this);
     }
     
     /**
@@ -357,7 +317,7 @@ var _SQL
             && $var.substring(0, 1) !== s 
             && $var.substring(-1) !== e) {
             
-            $var = s + sffm.cleanStr($var) + e;
+            $var = s + libs.SFFM.cleanStr($var) + e;
         }
         
         return $var;
@@ -372,7 +332,7 @@ var _SQL
     var _standardizeString 
     = this.standardizeString = function ($str) {
         
-        $str = sffm.cleanStr($str);
+        $str = libs.SFFM.cleanStr($str);
         /*let*/var s = _stringdeterminator[_dbType];
         if ($str.substring(0, 1) != s 
             && $str.substring(-1) != s) {
@@ -439,7 +399,7 @@ var _SQL
     var _createTable 
     = this.createTable = function ($name, $cols, $ifNotExists/* = true*/, $temp/* = false*/) {
         
-        log.error('Not implemented yet');
+        libs.gLog.error('Not implemented yet');
     }
     
     /**
@@ -462,7 +422,7 @@ var _SQL
     var _openTable 
     = this.openTable = function ($name) {
         
-        return table.newTable(this, $name);
+        return libs.sqlTable.newTable(this, $name);
     }
     
     /**
@@ -647,15 +607,31 @@ var _makePoolName = function f_sql_makePoolName($dbConfig) {
 var _newSQL 
 = me.newSQL = function f_sql_newSQL($alias, $requestState) {
     $alias = (typeof $alias !== 'undefined' ? $alias : 'default');
-    if (typeof $requestState === 'undefined') {
-        
-        log.error('Cannot connect with undefined requestState!');
-    }
     
     var defer = q.defer();
+    if (typeof $requestState === 'undefined') {
+        
+        var str = 'Cannot connect with undefined requestState!';
+        libs.gLog.error(str);
+        defer.reject(str);
+
+        return defer.promise;
+    }
+
+    
+    if (!$requestState.config.databaseConfig[$alias]) {
+
+        var str = 'Cannot connect with undefined alias `' + $alias + '`!';
+        libs.gLog.error(str);
+        defer.reject(str);
+        
+        return defer.promise;
+    }
+
     var config = $requestState.config;
     var dbConfig = config.databaseConfig[$alias];
     var poolName = _makePoolName(dbConfig);
+    var log = libs.log.newLog($requestState);
 
     var nPool = _sqlConnectionPool[poolName];
     if (typeof nPool === 'undefined') {
@@ -796,7 +772,6 @@ var _newSQL
                 break;
             }
         }
-        
     }
 
     return defer.promise;
@@ -811,7 +786,7 @@ var _newSQL
 var sql_colspec = function f_sql_sql_colspec($table, $col) {
     if (typeof $table !== typeof sql_table || typeof $col !== 'string') {
         
-        log.error('Wrong parameters: ' + typeof $table + ' / ' + typeof $col + '!');
+        libs.gLog.error('Wrong parameters: ' + typeof $table + ' / ' + typeof $col + '!');
         return;
     }
     
@@ -869,7 +844,7 @@ var _focus
 = me.focus = function c_sql_focus($requestState) {
     if (typeof $requestState !== 'undefined') {
 
-        log.error('Cannot focus undefined requestState!');
+        libs.gLog.error('Cannot focus undefined requestState!');
     }
 
     /**

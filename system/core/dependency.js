@@ -5,34 +5,19 @@
 
 var cp = require('child_process');
 
-var schedule = require('./schedule.js');
-var SFFM = require('./SFFM.js');
-var __log = null;
-__defineGetter__('_log', function () {
-    
-    if (!__log) {
-        
-        __log = require('./log.js');
-    }
-    
-    return __log;
-});
-
-var __nLog = null;
-__defineGetter__('log', function () {
-    
-    if (!__nLog) {
-        
-        __nLog = _log.newLog();
-    }
-    
-    return __nLog;
-});
+var libs = require('./perf.js').commonLibs;
 
 var me = module.exports;
 var bcryptModule = undefined;
 var scryptModule = undefined;
+var versions = {};
 
+
+var _getVersions 
+= me.getVersions = function f_dependency_getVersions() {
+
+    return versions;
+};
 
 var _getBCrypt 
 = me.getBCrypt = function f_dependency_getBCrypt() {
@@ -64,16 +49,16 @@ var description = undefined;
 /**
  * Handlers
  */
-schedule.addSlot('onDependencyError', function ($depName, $depVer, $error) {
+libs.schedule.addSlot('onDependencyError', function ($depName, $depVer, $error) {
 
-    log.writeFatal('The dependency `' + $depName + '` (ver.' + $depVer + ') is missing or does not work as expected.\n' + $error);
+    libs.gLog.writeFatal('The dependency `' + $depName + '` (ver.' + $depVer + ') is missing or does not work as expected.\n' + $error);
 
-    schedule.sendSignal('fatalError');
+    libs.schedule.sendSignal('fatalError');
 });
 
-schedule.addSlot('onDependencyWarning', function ($depName, $warning) {
+libs.schedule.addSlot('onDependencyWarning', function ($depName, $warning) {
     
-    log.writeWarning('The dependency `' + $depName + '` has thrown a warning:\n' + $warning);
+    libs.gLog.writeWarning('The dependency `' + $depName + '` has thrown a warning:\n' + $warning);
 });
 
 
@@ -92,25 +77,37 @@ cp.exec('openssl version', function ($error, $stdout, $stderr) {
     
     if ($error !== null) {
         
-        schedule.sendSignal('onDependencyError', 'openssl', '>=1.0.2', $error);
+        libs.schedule.sendSignal('onDependencyError', 'openssl', '>=1.0.1', $error);
     }
 
     if ($stderr !== "") {
         
         if (/^WARNING/.test($stderr)) {
 
-            schedule.sendSignal('onDependencyWarning', 'openssl', $stderr);
+            libs.schedule.sendSignal('onDependencyWarning', 'openssl', $stderr);
         }
         else {
 
-            schedule.sendSignal('onDependencyError', 'openssl', '>=1.0.2', $stderr);
+            libs.schedule.sendSignal('onDependencyError', 'openssl', '>=1.0.1', $stderr);
         }
     }
 
     //ex. OpenSSL 1.0.2a 19 Mar 2015
-    if (!/1\.0\.[12]/.test($stdout)) {
+    var fork = 'openssl';
+    var forkMinVer = /1\.0\.[12]/;
+    forkMinVer.asString = '1.0.1';
+
+    if ($stdout.indexOf('Libre') >= 0) {
+
+        fork = 'libressl';
+        forkMinVer = /2\.[1-9][0-9]?\.\d/;
+        forkMinVer.asString = '2.1.0';
+    }
+
+    versions[fork] = $stdout.match(/\S+\s+([\S.]+)\s.*/)[1];
+    if (!forkMinVer.test($stdout)) {
         
-        schedule.sendSignal('onDependencyError', 'openssl', '>=1.0.1', 'Wrong version: ' + $stdout);
+        libs.schedule.sendSignal('onDependencyError', fork, '>=' + forkMinVer.asString, 'Wrong version: ' + $stdout);
     }
 });
 
@@ -132,7 +129,7 @@ cp.exec('openssl version', function ($error, $stdout, $stderr) {
  */
 preferredModule = 'bcrypt';
 preferredModuleName = 'node-bcrypt';
-if (SFFM.isModuleAvailable(preferredModule)) {
+if (libs.SFFM.isModuleAvailable(preferredModule)) {
     
     bcryptModule = preferredModule;
 }
@@ -145,7 +142,7 @@ else {
 // TODO: Make this more generic
 if (bcryptModule !== preferredModule) {
 
-    schedule.sendSignal('onPreferredModuleMissing', preferredModuleName, bcryptModule, description);
+    libs.schedule.sendSignal('onPreferredModuleMissing', preferredModuleName, bcryptModule, description);
 }
 
 description = undefined;
@@ -164,7 +161,7 @@ description = undefined;
  */
 preferredModule = 'scrypt';
 preferredModuleName = 'node-scrypt';
-if (SFFM.isModuleAvailable(preferredModule)) {
+if (libs.SFFM.isModuleAvailable(preferredModule)) {
     
     bcryptModule = preferredModule;
 }
@@ -172,7 +169,7 @@ else {
     
     preferredModule = 'node-' + preferredModule;
     description = 'The module increases security of stored password hashes.';
-    schedule.sendSignal('onOptionalModuleMissing', preferredModuleName, description);
+    libs.schedule.sendSignal('onOptionalModuleMissing', preferredModuleName, description);
 }
 
 description = undefined;

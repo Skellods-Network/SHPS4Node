@@ -2,7 +2,7 @@
 
 var me = module.exports;
 
-var helper = require('./helper.js');
+var libs = require('./perf.js').commonLibs;
 
 var mp = {
     self: this
@@ -29,7 +29,7 @@ var _CL
     var _getContentURL =
     this.getContentURL = function ($content, $namespace, $ssl) {
 
-        return _getURL($content, $namespace, $ssl, false);
+        return _getURL($content, $namespace, $ssl, false, true);
     };
     
     /**
@@ -50,7 +50,7 @@ var _CL
     this.getFileURL =
     this.getResourceURL = function ($resource, $namespace, $ssl) {
 
-        return _getURL($resource, $namespace, $ssl, true);
+        return _getURL($resource, $namespace, $ssl, true, true);
     };
     
     /**
@@ -71,10 +71,13 @@ var _CL
      *   True for files, false for content
      *   null works like false, except it will automatically determine the URL, but only if $name was also set to null
      *   Default: null
+     * @param boolean $minimal
+     *   If activated, the result URL might be cut very very short in certain cases
+     *   Default: false
      * @return Object(url, paramChar)
      */
     var _getURL =
-    this.getURL = function ($name, $namespace, $tls, $resource) {
+    this.getURL = function ($name, $namespace, $tls, $resource, $minimal) {
         
         if ($name === null || $name === undefined) {
 
@@ -96,7 +99,7 @@ var _CL
             }
         }
 
-        var rawURL = _buildURL($namespace, $tls, $resource);
+        var rawURL = _buildURL($namespace, $tls, $resource, $minimal);
         if (!$resource && $name !== $requestState.config.generalConfig.URL.value) {
             
             rawURL.url += rawURL.paramChar + 'site=' + $name;
@@ -156,7 +159,7 @@ var _CL
         }
         else {
             
-            url = _getURL($ref, $namespace, $ssl, false).url;
+            url = _getURL($ref, $namespace, $ssl, false, true).url;
         }
         
         if ($basicAttributes !== null) {
@@ -174,7 +177,7 @@ var _CL
     
     /**
      * Get raw URL<br>
-     * This is handy, if just lang and sessID etc. is needed which will not
+     * This is handy, if just lang and the like etc. is needed which will not
      * change the site
      * 
      * @param string|null $namespace
@@ -183,49 +186,55 @@ var _CL
      *   Should SSL be used? If null, the current protocol will be used //Default: null
      * @param boolean $resourceURL
      *   Should the static resource URL be used? //Default: false
+     * @param boolean $minimal
+     *   If activated, the result URL might be cut very very short in certain cases
+     *   Default: false
      * @return Object(url, paramChar, toString()->url)
      */
     var _buildURL =
-    this.buildURL = function f_componentLibrary_buildURL($namespace, $ssl, $resourceURL) {
+    this.buildURL = function f_componentLibrary_buildURL($namespace, $ssl, $resourceURL, $minimal) {
         $namespace = typeof $namespace !== 'undefined' ? $namespace : null;
         $ssl = typeof $ssl !== 'undefined' ? $ssl : null;
         $resourceURL = typeof $resourceURL !== 'undefined' ? $resourceURL : false;
         
-        var url;
+        var url = '';
         var pc = '/?';
-        if ($ssl === null) {
-            
-            url = '//';
-        }
-        else if ($ssl) {
-            
-            url = 'https://';
-        }
-        else {
-            
-            url = 'http://';
-        }
-        
-        if ($resourceURL) {
-            
-            url += $requestState.config.generalConfig.staticResourcesURL.value;
-        }
-        else {
-            
-            url += $requestState.config.generalConfig.URL.value;
-        }
-        
-        if ($ssl === null && $requestState._domain.port) {
-            
-            url += ':' + $requestState._domain.port
-        }
-        else if ($ssl && $requestState.config.generalConfig.HTTP2Port.value !== 443) {
+        if (($resourceURL && $requestState.config.generalConfig.staticResourcesURL.value !== $requestState.config.generalConfig.URL.value) || $ssl !== null || !$minimal) {
 
-            url += ':' + $requestState.config.generalConfig.HTTP2Port.value;
-        }
-        else if ($requestState.config.generalConfig.HTTP1Port.value !== 80) {
+            if ($ssl === null) {
+            
+                url = '//';
+            }
+            else if ($ssl) {
+            
+                url = 'https://';
+            }
+            else {
+            
+                url = 'http://';
+            }
+        
+            if ($resourceURL) {
+            
+                url += $requestState.config.generalConfig.staticResourcesURL.value;
+            }
+            else {
+            
+                url += $requestState.config.generalConfig.URL.value;
+            }
+        
+            if ($ssl === null && $requestState._domain.port) {
+            
+                url += ':' + $requestState._domain.port
+            }
+            else if ($ssl && $requestState.config.generalConfig.HTTP2Port.value !== 443) {
 
-            url += ':' + $requestState.config.generalConfig.HTTP1Port.value;
+                url += ':' + $requestState.config.generalConfig.HTTP2Port.value;
+            }
+            else if ($requestState.config.generalConfig.HTTP1Port.value !== 80) {
+
+                url += ':' + $requestState.config.generalConfig.HTTP1Port.value;
+            }
         }
         
         if (typeof $requestState.GET['lang'] !== 'undefined') {
@@ -269,7 +278,7 @@ var _CL
     var _makeLangLink =
     this.makeLangLink = function ($lang, $description, $basicAttributes) {
 
-        var rawUrl = _buildURL();
+        var rawUrl = _buildURL(null, null, false, true);
         var url = rawUrl.url + rawUrl.paramChar + 'lang=' + $lang;
         rawUrl.paramChar = '&';
 
@@ -287,7 +296,7 @@ var _CL
     var _hug =
     this.hug = function f_componentlibrary_hug($h) {
         
-        return helper.genericHug($h, mp, function f_componentlibrary_hug_hug($hugCount) {
+        return libs.helper.genericHug($h, mp, function f_componentlibrary_hug_hug($hugCount) {
             
             if ($hugCount > 3) {
                 

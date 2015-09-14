@@ -4,33 +4,9 @@ var me = module.exports;
 
 var fs = require('fs');
 var q = require('q');
+var async = require('vasync');
 
-var __log = null;
-__defineGetter__('_log', function () {
-    
-    if (!__log) {
-        
-        __log = require('./log.js');
-    }
-    
-    return __log;
-});
-
-var __nLog = null;
-__defineGetter__('log', function () {
-    
-    if (!__nLog) {
-        
-        __nLog = _log.newLog();
-    }
-    
-    return __nLog;
-});
-
-var main = require('./main.js');
-var schedule = require('./schedule.js');
-var helper = require('./helper.js');
-var sql = require('./sql.js');
+var libs = require('./perf.js').commonLibs;
 
 var _plugins = {};
 var mp = {
@@ -52,10 +28,10 @@ var _loadPlugins
 = me.loadPlugins = function f_plugin_loadPlugins() {
     
     var defer = q.defer();
-    var dir = main.getDir(SHPS_DIR_PLUGINS);
+    var dir = libs.main.getDir(SHPS_DIR_PLUGINS);
     fs.readdir(dir, function ($err, $files) {
         
-        log.write('\nDetecting plugins...');
+        libs.gLog.write('\nDetecting plugins...');
         
         if ($err) {
 
@@ -72,13 +48,13 @@ var _loadPlugins
                 if (file.substring(file.length - 3) != '.js') {
                     
                     i++;
-                    schedule.sendSignal('onFilePollution', dir, 'plugin', file);
+                    libs.schedule.sendSignal('onFilePollution', dir, 'plugin', file);
                     continue;
                 }
 
                 var pname = file.substring(0, file.length - 3);
                 
-                log.write('Plugin found: ' + pname);
+                libs.gLog.write('Plugin found: ' + pname);
                 _plugins[pname] = require(dir + file);
                 
                 var loadOK = true;
@@ -90,14 +66,14 @@ var _loadPlugins
                 if (loadOK) {
                     
                     var piname = _plugins[pname].info.name;
-                    log.write('Plugin `' + piname + '` was ' + 'loaded successfully'.green);
+                    libs.gLog.write('Plugin `' + piname + '` was ' + 'loaded successfully'.green);
                 }
                 else {
                     
-                    log.write('Plugin `' + pname + '` ' + 'encountered problems'.red);
+                    libs.gLog.write('Plugin `' + pname + '` ' + 'encountered problems'.red);
                 }
                 
-                schedule.sendSignal('onPluginLoaded', pname, loadOK);
+                libs.schedule.sendSignal('onPluginLoaded', pname, loadOK);
             }
             
             i++;
@@ -114,33 +90,53 @@ var _loadPlugins
  * 
  * @param $requestState Object
  * @param $plugin string
- * @result Promise(boolean)
+ * @result Promise({isActive: boolean, name: string})
  */
 var _isActive 
 = me.isActive = function f_plugin_isActive($requestState, $plugin) {
     
     var defer = q.defer();
-    sql.newSQL('default', $requestState).done(function ($sql) {
-        
-        var tblPln = $sql.openTable('plugin');
+    if (typeof $requestState === 'undefined' || $requestState.dummy) {
 
-        $sql.query()
+        defer.resolve({
+        
+            isActive: true,
+            name: $plugin,
+        });
+    }
+    else {
+
+        libs.sql.newSQL('default', $requestState).done(function ($sql) {
+            
+            var tblPln = $sql.openTable('plugin');
+            
+            $sql.query()
             .get([tblPln.col('status')])
             .fulfilling()
             .eq(tblPln.col('name'), $plugin)
             .execute()
             .done(function ($rows) {
-            
-            $sql.free();
-            if ($rows.length <= 0) {
+                
+                $sql.free();
+                if ($rows.length <= 0) {
+                    
+                    defer.resolve({
+                        
+                        isActive: false,
+                        name: $plugin,
+                    });
 
-                defer.resolve(false);
-                return;
-            }
-
-            defer.resolve($rows[0].status === SHPS_PLUGIN_ACTIVE);
+                    return;
+                }
+                
+                defer.resolve({
+                    
+                    isActive: $rows[0].status === SHPS_PLUGIN_ACTIVE,
+                    name: $plugin,
+                });
+            }, defer.reject);
         }, defer.reject);
-    }, defer.reject);
+    }
 
     return defer.promise;
 };
@@ -151,14 +147,17 @@ var _pluginExists
     return typeof _plugins[$plugin] !== 'undefined';
 };
 
+/**
+ * DUPLEX EVENT
+ * -> Get sth back :D
+ */
 var _callPluginEvent 
 = me.callPluginEvent = function ($requestState, $event, $plugin /*, ...*/) {
     
-    var defer = q.defer();
     var args = arguments
-    return _isActive($requestState, $plugin).then(function ($isActive) {
+    return _isActive($requestState, $plugin).then(function ($pInfo) {
         
-        if (!$isActive || typeof _plugins[$plugin] === 'undefined') {
+        if (!$pInfo.isActive || typeof _plugins[$plugin] === 'undefined') {
             
             var tmp = q.defer();
             $requestState.responseBody = JSON.stringify({
@@ -179,6 +178,11 @@ var _callPluginEvent
             argList.push(args[i]);
             i++;
         }
+        
+        if (!_plugins[$plugin][$event]) {
+
+            return;
+        }
 
         return _plugins[$plugin][$event].apply(_plugins[$plugin], argList);
     });
@@ -187,20 +191,58 @@ var _callPluginEvent
 var _callEvent 
 = me.callEvent = function ($requestState, $event /*, ...*/) {
     
-    var i = 0;
+    var i = 2;
+    var l = arguments.length;
     var keys = Object.keys(_plugins);
-    while (i < keys.length) {
-        
-        _isActive($requestState, keys[i]).done(function ($isActive) {
-        
-            if ($isActive) {
-
-                _plugins[keys[i]][$event].apply(_plugins[keys[i]], arguments.slice(2));
-            }
-        });
-        
+    var defer = q.defer();
+    var args = [];
+    while (i < l) {
+    
+        args.push(arguments[i]);
         i++;
     }
+
+    async.forEachParallel({
+    
+        inputs: keys,
+        func: function ($arg, $cb) {
+
+            _isActive($requestState, $arg).done(function ($pInfo) {
+                
+                var needCB = true;
+                if ($pInfo.isActive) {
+                    
+                    if (_plugins[$pInfo.name][$event]) {
+                        
+                        var res = _plugins[$pInfo.name][$event].apply(_plugins[$pInfo.name], args);
+                        if (q.isPromise(res)) {
+                            
+                            needCB = false;
+                            res.done($cb, $cb);
+                        }
+                    }
+                }
+                
+                if (needCB) {
+
+                    $cb();
+                }
+            });
+        }
+
+    }, function ($err, $res) {
+        
+        if ($err) {
+
+            defer.reject(new Error($err));
+        }
+        else {
+
+            defer.resolve();
+        }
+    });
+
+    return defer.promise;
 };
 
 var _callCommand 
