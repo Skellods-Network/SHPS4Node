@@ -29,7 +29,7 @@
         "win32"
     ],
     "scripts": {
-        "start": "node --expose-gc SHPS.js"
+        "start": "node --expose-gc --harmony_proxies SHPS.js"
     },
     "preferGlobal":  true,
     "dependencies": {
@@ -43,6 +43,11 @@
         "lodash": ">=3.0.0",
         "q": ">=1.2.0",
         "bcrypt-nodejs": ">=0.0.3",
-        "object-assign":  ">=2.0.0"
+        "object-assign": ">=2.0.0",
+        "request-ip": ">=1.1.4",
+        "node-mb-string-size": ">=1.0.0",
+        "node-mod-load": ">=2.0.0",
+        "cookie-session": "=1.2.0",
+        "logrotate-stream": ">=0.2.0"
     }
 }

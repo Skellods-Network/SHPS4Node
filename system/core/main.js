@@ -18,8 +18,6 @@
  * Performance array vs object: http://stackoverflow.com/questions/8423493/what-is-the-performance-of-objects-arrays-in-javascript-specifically-for-googl
  */
 
-require('./error.js');
-
 var me = module.exports;
 
 GLOBAL.SHPS_ = 1;
@@ -52,7 +50,8 @@ var q = require('q');
 
 var servers = [];
 
-var libs = require('./perf.js').commonLibs;
+var libs = require('node-mod-load').libs;
+libs.error;
 
 var dep;
 
@@ -112,7 +111,7 @@ var _getVersionText
 var _printVersion 
 = me.printVersion = function f_main_printVersion() {
 
-    libs.gLog.write(_getVersionText());
+    libs.coml.write(_getVersionText());
 };
 
 /**
@@ -125,7 +124,7 @@ var _printVersion
 var _checkFS 
 = me.checkFS = function f_main_checkFS() {
 
-    libs.gLog.write('\nChecking filesystem...');
+    var task = libs.coml.newTask('Checking Filesystem');
     
     var defer = q.defer();
     var root = _getDir(SHPS_DIR_ROOT);
@@ -152,7 +151,8 @@ var _checkFS
 
             i++;
         }
-
+        
+        task.end(SHPS_COML_TASK_RESULT_OK);
         defer.resolve();
     });
 
@@ -182,14 +182,14 @@ var _init
     if (typeof _init.initialized !== 'undefined') return;
     
     _init.initialized = true;
-    libs.gLog.write('Please wait while we initialize SHPS for you... it won\'t take long ;)');
+    libs.coml.write('Please wait while we initialize SHPS for you... it won\'t take long ;)');
 
     process.title = 'SHPS Terminal';
 
     async.pipeline({
         
         'funcs': [
-            //update  //log.write('Checking for new versions...');
+            
             function f_init_prepare($_p1, $_p2) {
                 
                 libs.optimize;
@@ -218,8 +218,8 @@ var _init
             }
             , function f_init_event($_p1, $_p2) {
                 
-                libs.gLog.write('');
-                dep = require('./dependency.js');
+                libs.coml.write('');
+                dep = libs.dep;
                 process.on('exit', function ($code) {
 
                     _killAllServers();
@@ -231,7 +231,7 @@ var _init
         ]
     }, function func_init_done ($err) {
         
-        libs.gLog.write('\nWe done here! SHPS at your service - what can we do for you?'.bold);
+        libs.coml.write('\nWe done here! SHPS at your service - what can we do for you?'.bold);
         libs.coml.handleRequest();
     });
 }
@@ -240,13 +240,13 @@ var _checkUpdate = function f_main_checkUpdate() {
 
     var defer = q.defer();
 
-    libs.gLog.write('\nChecking for updates...', false);
+    libs.coml.write('\nChecking for Updates...', false);
 
     libs.schedule.sendSignal('onCheckForUpdate', false);
     
     // Do the check here...
 
-    libs.gLog.append(' OK'.green.bold);
+    libs.coml.append(' not implemented yet'.yellow);
     defer.resolve();
 
     return defer.promise;
@@ -289,7 +289,7 @@ var _parallelize = function ($cb) {
 
             cluster.on('online', function ($worker) {
             
-                libs.gLog.write('Worker ' + $worker.id + ' is now ' + 'online'.green);
+                libs.coml.write('Worker ' + $worker.id + ' is now ' + 'online'.green);
             });
         }
 
@@ -320,7 +320,7 @@ var _isDebug
 var _listen 
 = me.listen = function () {
     
-    libs.gLog.write('\nStarting servers...');
+    var task = libs.coml.newTask('Starting Servers');
     
     var port = [];
     var defer = q.defer();
@@ -336,6 +336,9 @@ var _listen
         rs.COOKIE = libs.cookie.newCookieJar(rs);
 
         libs.request.handleRequest(rs);
+
+        //TODO: somehow clean up rs to remove memory leak
+        //      -> Content Pipelines, cache and reuse RS's cache, better multi-process approach for disposable workers
     };
     
     var configHug = libs.config.hug(mp);
@@ -351,9 +354,9 @@ var _listen
                 server.listen(p);
                 servers.push(server);
                 
-                libs.gLog.write('HTTP/1.1 port opened on ' + (p + '').green);
+                task.interim(SHPS_COML_TASK_RESULT_OK, 'HTTP/1.1 port opened on ' + (p + '').green);
                 port += p;
-                libs.schedule.sendSignal('onListenStart', 'HTTP/1.1', p);
+                libs.schedule.sendSignal('onListenStart', 'HTTP/1.1', p, server);
             }
         }
         
@@ -363,11 +366,12 @@ var _listen
             if (port.indexOf(p) == -1) {
                 
                 //TODO: implement TLS Tickets, OCSP stapling, SNI
+                //TODO: check why http2 crashes without error
                 var options =  {
                     
                     secureProtocol: 'SSLv23_method',
                     secureOptions: constants.SSL_OP_NO_SSLv3 | constants.SSL_OP_NO_SSLv2,
-                    ciphers: 'AES256+EECDH:AES256+EDH:!aNULL',
+                    ciphers: 'ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS -AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:CAMELLIA:DES-CBC3-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA',
                     honorCipherOrder: true,
                 };
                 
@@ -400,14 +404,15 @@ var _listen
                 server.listen(p);
                 servers.push(server);
                 
-                libs.gLog.write('HTTP/2 port opened on ' + (p + '').green);
+                task.interim(SHPS_COML_TASK_RESULT_OK, 'HTTP/2 port opened on ' + (p + '').green);
                 port += p;
-                libs.schedule.sendSignal('onListenStart', 'HTTP/2', p);
+                libs.schedule.sendSignal('onListenStart', 'HTTP/2', p, server);
             }
         }
     }
     
     libs.schedule.sendSignal('onServerStart', port);
+    task.end(SHPS_COML_TASK_RESULT_OK);
 };
 
 var _killAllServers 
@@ -488,7 +493,7 @@ var _focus
 = me.focus = function f_main_focus($requestState) {
     if (typeof $requestState !== 'undefined') {
         
-        libs.gLog.error('Cannot focus undefined requestState!');
+        libs.coml.error('Cannot focus undefined requestState!');
     }
     
     

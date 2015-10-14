@@ -1,0 +1,7 @@
+﻿{
+    "name": "auth",
+    "version": "0.1.0",
+    "description": "Authentication used by SHPS",
+    "author": "Marco Alka <me@marco-alka.de>",
+    "main": "index-auth.js"
+}

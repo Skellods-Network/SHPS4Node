@@ -1,0 +1,7 @@
+﻿{
+    "name": "log",
+    "version": "0.1.0",
+    "description": "Logging Tool used by SHPS",
+    "author": "Marco Alka <me@marco-alka.de>",
+    "main": "index-log.js"
+}

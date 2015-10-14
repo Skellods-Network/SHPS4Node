@@ -3,87 +3,103 @@
 (function f_SHPS() {
     
     var cluster = require('cluster');
-
-    var libs = require('./system/core/perf.js').commonLibs;
+    var path = require('path');
     
-
-    ////// ONLY FOR DEVELOPMENT PURPOSES \\\\\\
-    // This will start SHPS as if it was starting without debug - but it will not reconfigure the start parameters
-    // This is important for debugging purposes as I cannot use breakpoints in a child process...
-    GLOBAL.__debug__ = false;
-    ////// ONLY FOR DEVELOPMENT PURPOSES \\\\\\
-    
+    var modLoad = require('node-mod-load');
+    var libs = modLoad.libs;
     
     /**
-     * Will start SHPS with exposed garbage collector
+     * Add all modules to load-path
      */
-    var app = function f_app($debug) {// I'm so childish for laughing about this  :D
-        $debug = typeof $debug !== 'undefined' ? $debug : false;
+    modLoad.addDir(__dirname + path.sep + 'system' + path.sep + 'core').then(function () {
         
-        if (global.gc || $debug || __debug__) {// Running the script in a child process destroys the possibility to debug
+        modLoad.addMeta('dep', libs.dependency);
+        modLoad.addMeta('coml', libs.commandline);
+        modLoad.addMeta('cl', libs.componentLibrary);
 
-            if (cluster.isMaster) {
+
+        ////// ONLY FOR DEVELOPMENT PURPOSES \\\\\\
+        // This will start SHPS as if it was starting without debug - but it will not reconfigure the start parameters
+        // This is important for debugging purposes as I cannot use breakpoints in a child process...
+        GLOBAL.__debug__ = true;
+        ////// ONLY FOR DEVELOPMENT PURPOSES \\\\\\
+        
+        
+        /**
+         * Will start SHPS with exposed garbage collector
+         */
+        var app = function f_app($debug) {// I'm so childish for laughing about this  :D
+            $debug = typeof $debug !== 'undefined' ? $debug : false;
+            
+            if (global.gc || $debug || __debug__) {// Running the script in a child process destroys the possibility to debug
                 
-                libs.gLog.cls();
-            }
-            
-            libs.gLog.writeWelcome();
-            
-            if ($debug) {
+                if (cluster.isMaster) {
+                    
+                    libs.coml.cls();
+                }
                 
-                libs.main.setDebug($debug);
-            }
-            
-            libs.main.init();
-        }
-        else {
-            
-            var cp = require('child_process');
-            var SFFM = require('./system/core/SFFM.js');
-            var param = ['--expose-gc', '--harmony_proxies'];
-            if (SFFM.isHarmonyActivated()) {
+                libs.coml.writeWelcome();
                 
-                param.push('--harmony');
+                if ($debug) {
+                    
+                    libs.main.setDebug($debug);
+                }
+                
+                libs.main.init();
             }
-            
-            param.push('./SHPS.js');
-            var bin = SFFM.isIOJS() ? 'iojs'
+            else {
+                
+                var cp = require('child_process');
+                var SFFM = require('./system/core/SFFM.js');
+                var param = ['--expose-gc', '--harmony_proxies'];
+                if (SFFM.isHarmonyActivated()) {
+                    
+                    param.push('--harmony');
+                }
+                
+                param.push('./SHPS.js');
+                var bin = SFFM.isIOJS() ? 'iojs'
                                     : 'node';
-            
-            var x = cp.spawn(bin, param, { stdio: 'inherit' });
-            libs.gLog.write('Reconfiguring start parameters...');
-        }
-    };
-    
-    if (process.argv.length > 1) {
-        
-        var i = 1;
-        var l = process.argv.length;
-        var debug = false;
-        while (i < l) {
-            
-            if (process.argv[i] === '-debug') {
                 
-                debug = true;
-                break;
+                var x = cp.spawn(bin, param, { stdio: 'inherit' });
+                libs.coml.write('Reconfiguring start parameters...');
+            }
+        };
+        
+        if (process.argv.length > 1) {
+            
+            var i = 1;
+            var l = process.argv.length;
+            var debug = false;
+            while (i < l) {
+                
+                if (process.argv[i] === '-debug') {
+                    
+                    debug = true;
+                    break;
+                }
+                
+                i++;
             }
             
-            i++;
-        }
-        
-        if (debug || __debug__) {
-            
-            // Timeout needed because VS2013 is too slow.
-            // It won 't connect to the debugger in time for all of the startup-action otherwise :/
-            libs.gLog.write('Starting wait for debugger...');
-            setTimeout(function () {
+            if (debug || __debug__) {
                 
-                app(debug);
-            }, 1000);
+                // Timeout needed because VS2013 is too slow.
+                // It won 't connect to the debugger in time for all of the startup-action otherwise :/
+                libs.coml.write('Starting wait for debugger...');
+                setTimeout(function () {
+                    
+                    app(debug);
+                }, 1000);
+            }
+            else {
+                
+                process.nextTick(app);
+            }
         }
-        else {
-            
-            process.nextTick(app);
-        }
-    }
+    }, function ($err) {
+        
+        process.stdout.write('[ERROR] ' + $err + '\n');
+        throw $err;
+    });
 })();

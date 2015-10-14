@@ -6,7 +6,7 @@ var mysql = require('mysql');
 var oa = require('object-assign');
 var u = require('util');
 
-var libs = require('./perf.js').commonLibs;
+var libs = require('node-mod-load').libs;
 
 var mp = {
     self: this
@@ -207,7 +207,7 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
         
         if (operation === 0) {
             
-            libs.gLog.error('An action has to be selected before calling `fulfilling` on a queryBuilder!');
+            throw ('An action has to be selected before calling `fulfilling` on a queryBuilder!');
         }
         
         if (typeof $conditions === 'undefined') {
@@ -346,7 +346,7 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
 
             case 0: {
                 
-                libs.gLog.error('No action selected!');
+                throw ('No action selected!');
                 break;
             }
 
@@ -386,7 +386,7 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
 
             default: {
 
-                libs.gLog.error('UNKNOWN ERROR in SQLQueryBuilder (operation `' + operation + '` has no meaning)!');
+                throw ('UNKNOWN ERROR in SQLQueryBuilder (operation `' + operation + '` has no meaning)!');
             }
         }
     };

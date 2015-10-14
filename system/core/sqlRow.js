@@ -2,7 +2,7 @@
 
 var me = module.exports;
 
-var libs = require('./perf.js').commonLibs;
+var libs = require('node-mod-load').libs;
 
 var mp = {
     self: this

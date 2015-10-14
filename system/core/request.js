@@ -9,7 +9,7 @@ var q = require('q');
 var crypt = require('crypto');
 var streams = require('stream');
 
-var libs = require('./perf.js').commonLibs;
+var libs = require('node-mod-load').libs;
 
 var mp = {
     self: this
@@ -378,7 +378,7 @@ var _handleRequest
             
             defer.promise.done(function () {
                 
-                if ($requestState.headerPending) {
+                if ($requestState.headerPending && !$requestState.response.headersSent) {
                     
                     $requestState.response.writeHead($requestState.httpStatus, headers);
                     //$requestState.response.flushHeaders();

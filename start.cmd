@@ -1,2 +1,2 @@
-node --expose_gc --harmony-proxies SHPS.js
+node --expose_gc --harmony_proxies SHPS.js
 PAUSE

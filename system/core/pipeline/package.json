@@ -1,0 +1,7 @@
+﻿{
+    "name": "pipeline",
+    "version": "0.1.0",
+    "description": "Output Transformation Pipeline used by SHPS",
+    "author": "Marco Alka <me@marco-alka.de>",
+    "main": "index-pipeline.js"
+}

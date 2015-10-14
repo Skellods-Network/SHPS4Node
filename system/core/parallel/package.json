@@ -1,0 +1,7 @@
+﻿{
+    "name": "parallel",
+    "version": "0.1.0",
+    "description": "Sub-Process Manager used by SHPS",
+    "author": "Marco Alka <me@marco-alka.de>",
+    "main": "index-parallel.js"
+}

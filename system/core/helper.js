@@ -9,7 +9,7 @@ var qs = require('querystring');
 var u = require('util');
 var q = require('q');
 
-var libs = require('./perf.js').commonLibs;
+var libs = require('node-mod-load').libs;
 
 var mp = {
     self: this
