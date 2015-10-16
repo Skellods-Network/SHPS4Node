@@ -23,10 +23,10 @@ Build your site with SHPS and see if it fits your needs. If your project is non-
 ## TODO List until release of version 4 (and start of SemVer)
 
 - make sure that authentication mechanisms actually work
-- replace custom SESSION/COOKIE modules with FOSS modules from npm (`cookie-session`)
 - replace custom body parser with FOSS modules from npm (`busboy`)
-- log to DB (custom implementation)
-- ~~remove dumb plugin-loading in favor of meta-files in module-packages~~ DONE
+- implement file upload
+- log to DB
+- remove dumb plugin-loading in favor of meta-files in module-packages
 
 
 ## TODO List after release

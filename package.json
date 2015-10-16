@@ -45,8 +45,7 @@
         "object-assign": "^2.0.0",
         "request-ip": "^1.1.4",
         "node-mb-string-size": "^1.0.0",
-        "node-mod-load": "^2.0.0",
-        "cookie-session": "^1.2.0",
+        "node-mod-load": "^2.1.0",
         "logrotate-stream": "0.2.0",
         "promise-defer": "^1.0.0"
     }
