@@ -3,11 +3,15 @@
 var me = module.exports;
 
 var fs = require('fs');
+var path = require('path');
 var q = require('q');
 var async = require('vasync');
 
-var libs = require('node-mod-load').libs;
+var nml = require('node-mod-load');
+var libs = nml.libs;
+var promDef = require('promise-defer');
 
+var _loadable = {};
 var _plugins = {};
 var mp = {
     self: this
@@ -27,11 +31,11 @@ GLOBAL.SHPS_PLUGIN_ACTIVE = 3;
 var _loadPlugins 
 = me.loadPlugins = function f_plugin_loadPlugins() {
     
-    var defer = q.defer();
+    var task = libs.coml.newTask('Detecting Plugins');
+
+    var defer = promDef();
     var dir = libs.main.getDir(SHPS_DIR_PLUGINS);
     fs.readdir(dir, function ($err, $files) {
-        
-        var task = libs.coml.newTask('Detecting Plugins');
         
         if ($err) {
             
@@ -41,9 +45,44 @@ var _loadPlugins
         }
 
         var i = 0;
-        while (i < $files.length) {
+        var l = $files.length;
+        var proms = [];
+        while (i < l) {
             
-            var file = $files[i];
+            let file = $files[i];
+            let lp = promDef();
+            proms.push(lp.promise);
+            fs.stat(dir + path.sep + file, function ($err, $stat) {
+    
+                if ($err) {
+                    
+                    task.end(SHPS_COML_TASK_RESULT_ERROR);
+                    lp.reject(new Error($err));
+                    return;
+                }
+
+                if ($stat.isFile()) {
+
+                    libs.schedule.sendSignal('onFilePollution', dir, 'plugin', file);
+                    lp.resolve();
+                    return;
+                }
+
+                nml.getPackageInfo(dir + path.sep + file)
+                .then(function ($config) {
+                                
+                    task.interim(SHPS_COML_TASK_RESULT_OK, 'Plugin found: ' + $config.name);
+                    _loadable[$config.name]
+                    lp.resolve();
+                })
+                .catch(function ($err) {
+                                
+                    libs.schedule.sendSignal('onPollution', dir, 'plugin', file);
+                    lp.resolve();
+                });
+            });
+            
+            /*
             if (fs.statSync(dir + file).isFile()) {
                 
                 if (file.substring(file.length - 3) != '.js') {
@@ -76,12 +115,21 @@ var _loadPlugins
                 
                 libs.schedule.sendSignal('onPluginLoaded', pname, loadOK);
             }
-            
+            */
+
             i++;
         }
         
-        task.end(SHPS_COML_TASK_RESULT_OK);
-        defer.resolve();
+        Promise.all(proms).then(function ($v) {
+            
+            defer.resolve();
+            task.end(SHPS_COML_TASK_RESULT_OK);
+        }, function ($v) {
+            
+            defer.reject($v);
+            task.end(SHPS_COML_TASK_RESULT_ERROR);
+        });
+        
     });
 
     return defer.promise;

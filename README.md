@@ -26,14 +26,14 @@ Build your site with SHPS and see if it fits your needs. If your project is non-
 - replace custom SESSION/COOKIE modules with FOSS modules from npm (`cookie-session`)
 - replace custom body parser with FOSS modules from npm (`busboy`)
 - log to DB (custom implementation)
-- remove dumb plugin-loading in favor of meta-files in module-packages
+- ~~remove dumb plugin-loading in favor of meta-files in module-packages~~ DONE
 
 
 ## TODO List after release
 
 - GUI. Let's be honest, a GUI is a game-changer and will make SHPS accessible for more people and especially beginners
 - work on feature list
-- extend querystring parser with FOSS modules from npm (`qs`)
+- improve querystring parser with FOSS modules from npm (`qs`)
 - add log to disk with FOSS modules from npm (`logrotate-stream`)
 - add timeout for sandboxes
 - replace default.js with template files
@@ -54,3 +54,5 @@ Build your site with SHPS and see if it fits your needs. If your project is non-
 - improve commandline
 - cache requestState cached structures
 - re-enable gzip compression
+- remove Q and use native promisses instead (bundled with `promise-defer` for easy rewrite)
+- separate module-interface and code by moving all implementation code away from index files

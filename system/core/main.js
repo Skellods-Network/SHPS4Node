@@ -203,14 +203,14 @@ var _init
                 var wc = libs.config.getHPConfig('config', 'workers');
                 if (wc > 0 || wc === -1) {
 
-                    libs.parallelize.handle().done($_p2, $_p2);
+                    libs.parallel.handle().done($_p2, $_p2);
                 }
                 else {
                     
                     process.nextTick($_p2);
                 }
             }
-            , function f_init_loadPlugins($_p1, $_p2) { libs.plugin.loadPlugins().done($_p2, $_p2); }
+            , function f_init_loadPlugins($_p1, $_p2) { libs.plugin.loadPlugins().then($_p2, $_p2); }
             , function f_init_listen($_p1, $_p2) {
                 
                 _listen();
@@ -229,10 +229,17 @@ var _init
                 process.nextTick($_p2);
             }
         ]
-    }, function func_init_done ($err) {
+    }, function func_init_done ($err, $res) {
         
-        libs.coml.write('\nWe done here! SHPS at your service - what can we do for you?'.bold);
-        libs.coml.handleRequest();
+        if ($err) {
+
+            libs.coml.writeEmergency('\nCould not fully initialize SHPS!\nError: ' + $err);
+        }
+        else {
+
+            libs.coml.write('\nWe done here! SHPS at your service - what can we do for you?'.bold);
+            libs.coml.handleRequest();
+        }
     });
 }
 

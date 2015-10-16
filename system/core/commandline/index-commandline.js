@@ -9,7 +9,7 @@
     var u = require('util');
     var libs = require('node-mod-load').libs;
     
-    var mecha = require('./commandline-mechanism.js');
+    var task = require('./task.js');
     
     var rl = {};
     var _isInitialized = false;
@@ -19,9 +19,10 @@
     
     var sb = null;
     var fixedCursorMemory = false;
+    var lastMark = null;
     
     // Expose submodule methods
-    me.newTask = mecha.newTask;
+    me.newTask = task.newTask;
 
     
     /**
@@ -145,9 +146,16 @@
         return rl;
     };
     
+    var _stillCurrent 
+    = me.stillCurrent = function f_commandline_stillCurrent($mark) {
+
+        return $mark === lastMark;
+    };
+
     var _write 
-    = me.write = function f_commandline_write($str /*,... */) {
+    = me.write = function f_commandline_write($str, $mark) {
         
+        lastMark = $mark;
         if (cluster.isWorker) {
             
             process.send({
@@ -370,7 +378,7 @@
                     
                     _isInitialized = false;
                     rl.close();
-                    libs.parallelize.killAll();
+                    libs.parallel.killAll();
                     libs.main.killAllServers();
                     process.exit(0); //todo: nice shutdown
                     break;
