@@ -9,7 +9,7 @@ var qs = require('querystring');
 var u = require('util');
 var q = require('q');
 
-var libs = require('./perf.js').commonLibs;
+var libs = require('node-mod-load').libs;
 
 var mp = {
     self: this
@@ -69,6 +69,7 @@ me.requestState = function () {
     
     this._COOKIE = {};
     this._domain = null;
+    this._auth = null;
     this.cache = {};
     this.locked = false;
     this.uri = '';
@@ -89,6 +90,16 @@ me.requestState = function () {
     this.resultPending = true;
     this.headerPending = true;
     
+    this.cache.__defineGetter__('auth', function () {
+
+        if (!self._auth) {
+
+            self._auth = libs.auth.newAuth(self);
+        }
+
+        return self._auth;
+    });
+
     this.__defineGetter__('GET', function () {
         
         if (_GET === null) {
@@ -151,102 +162,3 @@ me.requestState = function () {
 };
 
 u.inherits(me.requestState, events.EventEmitter);
-
-/**
- * Grouphuggable
- * https://github.com/php-fig/fig-standards/blob/master/proposed/psr-8-hug/psr-8-hug.md
- * Breaks after when $breakCondition returns false
- * 
- * @param $hug object
- *  Huggable caller
- *  
- * @param $self object
- *  Hugged object
- *  
- * @param $breakCondition function(int)
- *  break condition (returns false on break)
- *  Takes number of preceded hugs from specific partner as first parameter
- */
-var _genericHug 
-= me.genericHug = function f_helper_genericHug($h, $self, $breakCondition) {
-    
-    var self = $self.self;
-    if (typeof self.hug === 'undefined') {
-        
-        self.hug = {};
-    }
-
-    if (typeof self.hug.lastPartner === 'undefined') {
-        
-        self.hug.lastPartner = [];
-    }
-    
-    if (typeof self.hug.lastPartner[self] === 'undefined') {
-        
-        self.hug.lastPartner[self] = $h;
-    }
-    
-    if (typeof self.hug.count === 'undefined') {
-        
-        self.hug.count = [];
-    }
-    
-    if (self.hug.lastPartner[self] != $h) {
-        
-        self.hug.lastPartner[self] = $h;
-        self.hug.count[self] = [];
-    }
-    
-    if (typeof self.hug.count[self] === 'undefined') {
-        
-        self.hug.count[self] = [];
-    }
-    
-    if (!u.isArray($h)) {
-        
-        $h = [$h];
-    }
-    
-    var i = 0;
-    var l = $h.length;
-    while (i < l) {
-        
-        if (!self.hug.count[self][$h[i]]) {
-            
-            self.hug.count[self][$h[i]] = 0;
-        }
-        
-        self.hug.count[self][$h[i]]++;
-        if (!$breakCondition(self.hug.count[self][$h[i]])) {
-            
-            i++;
-            continue;
-        }
-        
-        $h[i].self.hug($self);
-        i++;
-    }
-    
-    return $self;
-};
-
-/**
- * Grouphuggable
- * Breaks after 3 hugs per partner
- * 
- * @param $hug
- *  Huggable caller
- */
-var _hug 
-= me.hug = function f_helper_hug($h) {
-    
-    return helper.genericHug($h, mp, function f_helper_hug_hug($hugCount) {
-        
-        if ($hugCount > 3) {
-            
-            return false;
-        }
-        
-        return true;
-    });
-};

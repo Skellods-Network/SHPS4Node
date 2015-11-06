@@ -1,0 +1,7 @@
+﻿{
+    "name": "cui",
+    "version": "0.1.0",
+    "description": "Console User Interface for ANSI Consoles used by SHPS",
+    "author": "Marco Alka <me@marco-alka.de>",
+    "main": "index-cui.js"
+}

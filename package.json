@@ -29,20 +29,24 @@
         "win32"
     ],
     "scripts": {
-        "start": "node --expose-gc SHPS.js"
+        "start": "node --expose-gc --harmony_proxies SHPS.js"
     },
     "preferGlobal":  true,
     "dependencies": {
-        "vasync": ">=1.6.0",
-        "colors": ">=0.6.0",
-        "generic-pool": ">=2.1.0",
-        "mysql": ">=2.4.0",
-		"mssql": ">=1.3.0",
-        "http2": ">=2.7.0",
-        "cli-table": ">=0.3.0",
-        "lodash": ">=3.0.0",
-        "q": ">=1.2.0",
-        "bcrypt-nodejs": ">=0.0.3",
-        "object-assign":  ">=2.0.0"
+        "vasync": "^1.6.0",
+        "colors": ">=0.6.0 < 2",
+        "generic-pool": "^2.1.0",
+        "mysql": "^2.4.0",
+		"mssql": "^1.3.0",
+        "http2": "^2.7.0",
+        "lodash": "^3.0.0",
+        "q": "^1.2.0",
+        "bcrypt-nodejs": "0.0.3",
+        "object-assign": "^2.0.0",
+        "request-ip": "^1.1.4",
+        "node-mb-string-size": "^1.0.0",
+        "node-mod-load": "^2.1.0",
+        "logrotate-stream": "0.2.0",
+        "promise-defer": "^1.0.0"
     }
 }

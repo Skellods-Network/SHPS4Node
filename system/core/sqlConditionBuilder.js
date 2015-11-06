@@ -2,7 +2,7 @@
 
 var me = module.exports;
 
-var libs = require('./perf.js').commonLibs;
+var libs = require('node-mod-load').libs;
 
 var mp = {
     self: this,
@@ -70,21 +70,36 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
      * @param mixed $value
      * @return string
      */
-    var _prepare 
-    = mp.prepare = function f_sqlConditionBuilder_sqlConditionBuilder_prepare($value) {
-    
-        if (typeof $value == 'string') {
-
-            $value = $sqb.getSQL().standardizeString($value);
-        }
-        else if ($value.toString !== 'undefined') {
-
-            $value = $value.toString();
-        }
-        else {
+    var _prepare = function f_sqlConditionBuilder_sqlConditionBuilder_prepare($value) {
+        
+        var errorFun = function () {
 
             $value = 'NULL';
-            libs.gLog.error('Value Type mismatch in sqlConditionsBuilder_prepare!');
+            throw ('Value Type mismatch in sqlConditionsBuilder_prepare!');
+        }
+        
+        if (typeof $value === 'undefined') {
+            
+            errorFun();
+        }
+        else {
+            
+            if (typeof $value === 'string') {
+                
+                $value = $sqb.getSQL().standardizeString($value);
+            }
+            else if (typeof $value === 'number') {
+
+                // Do nothing. I really have to think about a better solution for this...
+            }
+            else if ($value.toString !== 'undefined') {
+                
+                $value = $value.toString();
+            }
+            else {
+
+                errorFun();
+            }
         }
 
         return $value;
@@ -129,7 +144,7 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
         }
         else {
 
-            libs.gLog.error('Value Type mismatch in sqlConditionsBuilder_and!');
+            throw ('Value Type mismatch in sqlConditionsBuilder_and!');
         }
 
         return this;
@@ -174,7 +189,7 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
         }
         else {
             
-            libs.gLog.error('Value Type mismatch in sqlConditionsBuilder_and!');
+            throw ('Value Type mismatch in sqlConditionsBuilder_and!');
         }
         
         return this;
@@ -200,8 +215,18 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
             
             $sqb.addTable($right.getTable());
         }
+        
+        if ($left !== 'NULL') {
+            
+            $left = _prepare($left);
+        }
 
-        _conditions += _prepare($left) + $operator + _prepare($right);
+        if ($right !== 'NULL') {
+
+            $right = _prepare($right);
+        }
+
+        _conditions += $left + $operator + $right;
     };
     
     /**
@@ -373,7 +398,7 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
     var _isNull =
     this.isNull = function f_sqlConditionBuilder_sqlConditionBuilder_isNull($val) {
         
-        _comparison($left, ' IS ', { toString: function () { return 'NULL'; } });
+        _comparison($val, ' IS ', 'NULL');
         return this;
     };
     
@@ -386,7 +411,7 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
     var _isNotNull =
     this.isNotNull = function f_sqlConditionBuilder_sqlConditionBuilder_isNotNull($val) {
         
-        _comparison($left, ' IS NOT ', { toString: function () { return 'NULL'; } });
+        _comparison($val, ' IS NOT ', 'NULL');
         return this;
     };
     
@@ -418,28 +443,6 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
 
         return this;
     };
-
-    /**
-     * Grouphuggable
-     * Breaks after 3 hugs per partner
-     * 
-     * @param $hug
-     *  Huggable caller
-     */
-    var _hug
-    = mp.hug
-    this.hug = function f_sqlConditionBuilder_sqlConditionBuilder_hug($h) {
-        
-        return libs.helper.genericHug($h, _mp, function f_sql_hug_hug($hugCount) {
-            
-            if ($hugCount > 3) {
-                
-                return false;
-            }
-            
-            return true;
-        });
-    };
     
     /**
      * Execute query
@@ -459,27 +462,4 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
             return this;
         }
     };
-};
-
-/**
- * Grouphuggable
- * Breaks after 3 hugs per partner
- * 
- * @param $hug
- *  Huggable caller
- */
-var _hug 
-= me.hug
-= mp.hug =
-this.hug = function f_sqlConditionBuilder_hug($h) {
-    
-    return libs.helper.genericHug($h, mp, function f_sql_hug_hug($hugCount) {
-        
-        if ($hugCount > 3) {
-            
-            return false;
-        }
-        
-        return true;
-    });
 };

@@ -5,7 +5,7 @@ var me = module.exports;
 var q = require('q');
 var async = require('vasync');
 
-var libs = require('./perf.js').commonLibs;
+var libs = require('node-mod-load').libs;
 var __log = null;
 __defineGetter__('_log', function () {
     
@@ -28,32 +28,6 @@ __defineGetter__('log', function () {
     return __nLog;
 });
 
-var mp = {
-    self: this
-};
-
-
-/**
- * Grouphuggable
- * Breaks after 3 hugs per partner
- * 
- * @param $hug
- *  Huggable caller
- */
-var _hug 
-= me.hug 
-= mp.hug = function f_main_hug($h) {
-    
-    return libs.helper.genericHug($h, mp, function f_main_hug_hug($hugCount) {
-        
-        if ($hugCount > 3) {
-            
-            return false;
-        }
-        
-        return true;
-    });
-};
 
 var _newTable 
 = me.newTable = function f_sqlTable_newTable($sql, $name) {
@@ -76,7 +50,6 @@ var _sqlTable = function c_sqlTable($sql, $name) {
      *   Default: undefined
      */
     var _col 
-    = mp.col =
     this.col = function f_sqlTable_col($name, $asName) {
 
         return libs.sqlCol.newCol(this, $name, $asName);
@@ -147,7 +120,6 @@ var _sqlTable = function c_sqlTable($sql, $name) {
      * @result string
      */
     var _toString 
-    = mp.toString =
     this.toString = function f_sqlTable_toString() {
     
         return _getAbsoluteName();
@@ -156,7 +128,6 @@ var _sqlTable = function c_sqlTable($sql, $name) {
     var _getAllColumns =
     this.getAllColumns = function f_sqlTable_getAllColumns() {
         
-        libs.gLog.warning('f_sqlTable_getAllColumns not implemented yet!');
         return [];
     };
     
@@ -217,7 +188,6 @@ var _sqlTable = function c_sqlTable($sql, $name) {
     var _drop =
     this.drop = function f_sqlTable_drop() {
         
-        libs.gLog.writeNote('Table ' + _getAbsoluteName() + ' will be dropped!');
         /*let*/var sql;
         $sql.isFree()
             ? sql = $sql
@@ -265,7 +235,7 @@ var _sqlTable = function c_sqlTable($sql, $name) {
 
         if (typeof $vals !== 'object') {
 
-            libs.gLog.error('Wrong parameters in f_sqlTable_insert()!');
+            throw ('Wrong parameters in f_sqlTable_insert()!');
             return;
         }
 
@@ -328,7 +298,12 @@ var _sqlTable = function c_sqlTable($sql, $name) {
     var _delete =
     this.delete = function f_sqlTable_delete($conditions) {
     
-        libs.gLog.warning('f_sqlTable_delete not implemented yet!');
+        if (!$conditions) {
+            
+            return libs.sqlQueryBuilder.newSQLQueryBuilder($sql).delete(this).fulfilling();
+        }
+
+        $sql.query('DELETE FROM ' + _getAbsoluteName() + ' WHERE ' + $conditions.toString());
     };
     
     /**
