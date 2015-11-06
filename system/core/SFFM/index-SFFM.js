@@ -11,37 +11,12 @@ var strSize = require('node-mb-string-size');
 
 var libs = require('node-mod-load').libs;
 
-var mp = {
-    self: this
-};
-
 
 var _cleanStr
 = me.cleanStr = function ($dirty) {
 
     return $dirty;
 }
-
-/**
- * Grouphuggable
- * Breaks after 3 hugs per partner
- * 
- * @param $hug
- *  Huggable caller
- */
-var _hug 
-= me.hug = function f_SFFM_hug($h) {
-    
-    return libs.helper.genericHug($h, mp, function f_SFFM_hug_hug($hugCount) {
-        
-        if ($hugCount > 3) {
-            
-            return false;
-        }
-        
-        return true;
-    });
-};
 
 /**
  * Tries to determine if SHPS is running on io.js or node.js
@@ -113,7 +88,12 @@ var _getIP
     if (!ip) {
 
         ip = 'localhost';
-    }    
+    }
+
+    if (ip.substr(0, 7) === '::ffff:') {
+
+        ip = ip.substr(7);
+    }
     
     $request.ip = ip;
     return ip;
@@ -199,8 +179,7 @@ var _randomString
     var cl = $chars.length;
     var r = '';
     var i = 0;
-    var l = $length - 1;
-    while (i < l) {
+    while (i < $length) {
         
         r += $chars[rand[i] % cl];
         i++;

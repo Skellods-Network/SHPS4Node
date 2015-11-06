@@ -4,61 +4,11 @@ var me = module.exports;
 
 var libs = require('node-mod-load').libs;
 
-var mp = {
-    self: this
-};
-
-
-/**
- * Grouphuggable
- * Breaks after 3 hugs per partner
- * 
- * @param $hug
- *  Huggable caller
- */
-var _hug 
-= me.hug = function f_sqlCol_hug($h) {
-    
-    return libs.helper.genericHug($h, mp, function f_main_hug_hug($hugCount) {
-        
-        if ($hugCount > 3) {
-            
-            return false;
-        }
-        
-        return true;
-    });
-};
 
 var _sqlCol = function c_sqlCol($table, $name, $returnAs) {
-    
-    var mp = {
-        self: this
-    };
-    
+
     var distinct = false;
-    
-    /**
-     * Grouphuggable
-     * Breaks after 3 hugs per partner
-     * 
-     * @param $hug
-     *  Huggable caller
-     */
-    var _hug 
-    = mp.hug =
-    this.hug = function f_sqlCol_hug($h) {
-        
-        return libs.helper.genericHug($h, mp, function f_main_hug_hug($hugCount) {
-            
-            if ($hugCount > 3) {
-                
-                return false;
-            }
-            
-            return true;
-        });
-    };
+
     
     /**
      * In a query, the results will be distinct for this column
@@ -66,7 +16,6 @@ var _sqlCol = function c_sqlCol($table, $name, $returnAs) {
      * @result Object this sqlCol
      */
     var _distinct 
-    = mp.distinct =
     this.distinct = function f_sqlCol_distinct() {
 
         distinct = true;
@@ -79,7 +28,6 @@ var _sqlCol = function c_sqlCol($table, $name, $returnAs) {
      * @result Object this sqlCol
      */
     var _as 
-    = mp.as =
     this.as = function f_sqlCol_as($alias) {
 
         $returnAs = $alias;
@@ -97,7 +45,6 @@ var _sqlCol = function c_sqlCol($table, $name, $returnAs) {
      * @result string
      */
     var _toString 
-    = mp.toString =
     this.toString = function f_sqlCol_toString($alias) {
         
         var r = '';
@@ -126,7 +73,6 @@ var _sqlCol = function c_sqlCol($table, $name, $returnAs) {
      * @result Object sqlTable
      */
     var _getTable 
-    = mp.getTable =
     this.getTable = function f_sqlCol_getTable() {
 
         return $table;

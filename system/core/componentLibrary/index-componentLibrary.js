@@ -284,28 +284,6 @@ var _CL
 
         return '<a href="' + url + '"' + ($basicAttributes !== null ? ' ' + $basicAttributes.toString() : '') + '>' + $description + '</a>';
     };
-    
-    /**
-     * Grouphuggable
-     * https://github.com/php-fig/fig-standards/blob/master/proposed/psr-8-hug/psr-8-hug.md
-     * Breaks after 3 hugs per partner
-     * 
-     * @param $hug
-     *  Huggable caller
-     */
-    var _hug =
-    this.hug = function f_componentlibrary_hug($h) {
-        
-        return libs.helper.genericHug($h, mp, function f_componentlibrary_hug_hug($hugCount) {
-            
-            if ($hugCount > 3) {
-                
-                return false;
-            }
-            
-            return true;
-        });
-    };
 };
 
 var _newCL 

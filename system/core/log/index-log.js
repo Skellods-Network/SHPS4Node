@@ -174,26 +174,5 @@
             libs.coml.writeCritical($str);
             _dbLog(SHPS_LOG_LVL_CRITICAL, $str);
         };
-        
-        /**
-         * Grouphuggable
-         * Breaks after 3 hugs per partner
-         * 
-         * @param $hug
-         *  Huggable caller
-         */
-        var _hug 
-        = this.hug = function f_log_hug($h) {
-            
-            return libs.helper.genericHug($h, mp, function f_helper_log_hug($hugCount) {
-                
-                if ($hugCount > 3) {
-                    
-                    return false;
-                }
-                
-                return true;
-            });
-        };
     };
 })();

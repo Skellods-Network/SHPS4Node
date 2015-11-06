@@ -11,7 +11,7 @@ var self = this;
 
 
 var _vulnerabilities = {
-    
+
     protocol: null,
     eastereggs: null
 };
@@ -87,27 +87,6 @@ var _handleWorkerMessage
             hme[$params]
         }
     }
-};
-
-/**
- * Grouphuggable
- * Breaks after 3 hugs per partner
- * 
- * @param $hug
- *  Huggable caller
- */
-var _hug 
-= me.hug = function f_optimize_hug($h) {
-    
-    return helper.genericHug($h, self, function f_optimize_hug_hug($hugCount) {
-        
-        if ($hugCount > 3) {
-            
-            return false;
-        }
-        
-        return true;
-    });
 };
 
 var _checkConfigForRisks 
@@ -214,94 +193,97 @@ var _checkConfigForRisks
     return _vulnerabilities;
 };
 
+var _init =
+    me.init = function f_optimize_init() {
 
-libs.schedule.addSlot('onListenStart', function ($protocol, $port) {
+        libs.schedule.addSlot('onListenStart', function ($protocol, $port) {
 
-    if ($protocol.match(/HTTP\/1.[0,1]/i)) {
+            if ($protocol.match(/HTTP\/1.[0,1]/i)) {
 
-        libs.coml.writeWarning('The ' + $protocol + ' connection on port ' + $port + ' is not encrypted. Anyone can spy on data in transit!');
-        libs.coml.writeHint('Consider switching all homepages to HTTP/2 by setting `generalConfig->useHTTP2->value` to `true` and `generalConfig->useHTTP1->value` to `false` in all configuration files.');
+                libs.coml.writeWarning('The ' + $protocol + ' connection on port ' + $port + ' is not encrypted. Anyone can spy on data in transit!');
+                libs.coml.writeHint('Consider switching all homepages to HTTP/2 by setting `generalConfig->useHTTP2->value` to `true` and `generalConfig->useHTTP1->value` to `false` in all configuration files.');
 
-        _vulnerabilities.protocol = {
-        
-            version: $protocol,
-            port: $port
-        };
-    }
-});
+                _vulnerabilities.protocol = {
 
-libs.schedule.addSlot('onMainInit', function () {
-    
-    if (libs.SFFM.isIOJS()) {
+                    version: $protocol,
+                    port: $port
+                };
+            }
+        });
 
-        libs.coml.write('SHPS detected IOJS and will make use of Harmony features!'.green);
-    }
-    else if (libs.SFFM.isHarmonyActivated()) {
+        libs.schedule.addSlot('onMainInit', function () {
 
-        libs.coml.write('SHPS detected that Harmony features are activated and will make use of them!'.green);
-    }
+            if (libs.SFFM.isIOJS()) {
 
-    if (global.gc) {
+                libs.coml.write('SHPS detected IOJS and will make use of Harmony features!'.green);
+            }
+            else if (libs.SFFM.isHarmonyActivated()) {
 
-        libs.coml.write('SHPS will optimize garbage collection!'.green);
-    }
-    else {
-    
-        libs.coml.writeHint('Consider using the node commandline parameter `--expose_gc`.');
-    }
-    
-    var dCount = _dangerCount();
-    if (dCount > 0) {
+                libs.coml.write('SHPS detected that Harmony features are activated and will make use of them!'.green);
+            }
 
-        libs.coml.writeWarning('System is not secure (' + dCount + ' problems seen so far)!');
-        libs.coml.writeHint('Follow hints to remove warnings. Fewer warnings mean better security and stability.');
-    }
-    else {
+            if (global.gc) {
 
-        libs.coml.write('System looks secure so far!'.green);
-    }
-});
+                libs.coml.write('SHPS will optimize garbage collection!'.green);
+            }
+            else {
 
-libs.schedule.addSlot('onConfigLoaded', function ($file, $successful, $config) {
+                libs.coml.writeHint('Consider using the node commandline parameter `--expose_gc`.');
+            }
 
-    if ($successful) {
-        
-        _checkConfigForRisks($file, $config);
-    }
-});
+            var dCount = _dangerCount();
+            if (dCount > 0) {
 
-libs.schedule.addSlot('onFilePollution', function ($dir, $dirDescription, $file) {
+                libs.coml.writeWarning('System is not secure (' + dCount + ' problems seen so far)!');
+                libs.coml.writeHint('Follow hints to remove warnings. Fewer warnings mean better security and stability.');
+            }
+            else {
 
-    libs.coml.writeHint('File `' + $file + '` is polluting the ' + $dirDescription + ' directory (' + $dir + ')! Consider deleting it.');
-});
+                libs.coml.write('System looks secure so far!'.green);
+            }
+        });
 
-libs.schedule.addSlot('onPollution', function ($dir, $dirDescription, $file) {
-    
-    libs.coml.writeHint('`' + $file + '` is polluting the ' + $dirDescription + ' directory (' + $dir + ')! Consider deleting it.');
-});
+        libs.schedule.addSlot('onConfigLoaded', function ($file, $successful, $config) {
 
-libs.schedule.addSlot('onFileNotFound', function ($file, $dir, $description) {
-    $description = typeof $description === 'undefined' ? '' : ' ' + $description;
-    
-    libs.coml.writeHint('`' + $file + '` could not be found in ' + $dir + '!' + $description + ' Consider loading the admin-GUI plugin which is able to repair your installation.');
-});
+            if ($successful) {
 
-libs.schedule.addSlot('onPreferredModuleMissing', function ($preferredModule, $alternative, $text) {
-    $text = typeof $text !== 'undefined' ? '\n' + $text : '';
+                _checkConfigForRisks($file, $config);
+            }
+        });
 
-    libs.coml.writeHint('The module `' + $preferredModule + '` could not be loaded. `' + $alternative + '` will be used instead.' + $text + '\nConsider installing `' + $preferredModule + '`.');
-});
+        libs.schedule.addSlot('onFilePollution', function ($dir, $dirDescription, $file) {
 
-libs.schedule.addSlot('onDependencyMissing', function ($module) {
-    
-    var msg = 'The module `' + $module + '` could not be loaded. It is a hard-dependency, though. SHPS cannot start without it. Please follow the installation guide!';
-    libs.coml.writeFatal(msg);
-    throw msg;
-});
+            libs.coml.writeHint('File `' + $file + '` is polluting the ' + $dirDescription + ' directory (' + $dir + ')! Consider deleting it.');
+        });
 
-libs.schedule.addSlot('onOptionalModuleMissing', function ($module, $text) {
-    $text = typeof $text !== 'undefined' ? '\n' + $text : '';
+        libs.schedule.addSlot('onPollution', function ($dir, $dirDescription, $file) {
 
-    var msg = 'The module `' + $module + '` could not be loaded. It is an optional dependency, though. SHPS can start without it.' + $text + '\nConsider installing `' + $module + '`.';
-    libs.coml.writeHint(msg);
-});
+            libs.coml.writeHint('`' + $file + '` is polluting the ' + $dirDescription + ' directory (' + $dir + ')! Consider deleting it.');
+        });
+
+        libs.schedule.addSlot('onFileNotFound', function ($file, $dir, $description) {
+            $description = typeof $description === 'undefined' ? '' : ' ' + $description;
+
+            libs.coml.writeHint('`' + $file + '` could not be found in ' + $dir + '!' + $description + ' Consider loading the admin-GUI plugin which is able to repair your installation.');
+        });
+
+        libs.schedule.addSlot('onPreferredModuleMissing', function ($preferredModule, $alternative, $text) {
+            $text = typeof $text !== 'undefined' ? '\n' + $text : '';
+
+            libs.coml.writeHint('The module `' + $preferredModule + '` could not be loaded. `' + $alternative + '` will be used instead.' + $text + '\nConsider installing `' + $preferredModule + '`.');
+        });
+
+        libs.schedule.addSlot('onDependencyMissing', function ($module) {
+
+            var msg = 'The module `' + $module + '` could not be loaded. It is a hard-dependency, though. SHPS cannot start without it. Please follow the installation guide!';
+            libs.coml.writeFatal(msg);
+            throw msg;
+        });
+
+        libs.schedule.addSlot('onOptionalModuleMissing', function ($module, $text) {
+            $text = typeof $text !== 'undefined' ? '\n' + $text : '';
+
+            var msg = 'The module `' + $module + '` could not be loaded. It is an optional dependency, though. SHPS can start without it.' + $text + '\nConsider installing `' + $module + '`.';
+            libs.coml.writeHint(msg);
+        });
+    };

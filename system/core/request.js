@@ -254,6 +254,12 @@ var _handleRequest
         $requestState.response.end($err.toString());//TODO: don't send error info -> might be sensitive data
     };
 
+    // This is just here to ease the transition from using Q to using native Promises
+    if (!unblock.done) {
+
+        unblock.done = unblock.then;
+    }
+
     unblock.done(function () {
         
         if (!$requestState.resultPending && !$requestState.headerPending) {
@@ -433,25 +439,4 @@ var _focus
         
         _handleRequest($requestState);
     };
-};
-
-/**
- * Grouphuggable
- * Breaks after 3 hugs per partner
- * 
- * @param $hug
- *  Huggable caller
- */
-var _hug 
-= me.hug = function f_request_hug($h) {
-    
-    return libs.helper.genericHug($h, mp, function f_request_hug_hug($hugCount) {
-        
-        if ($hugCount > 3) {
-            
-            return false;
-        }
-        
-        return true;
-    });
 };

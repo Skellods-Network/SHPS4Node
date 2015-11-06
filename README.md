@@ -22,17 +22,24 @@ Build your site with SHPS and see if it fits your needs. If your project is non-
 
 ## TODO List until release of version 4 (and start of SemVer)
 
-- make sure that authentication mechanisms actually work
-- replace custom body parser with FOSS modules from npm (`busboy`)
-- implement file upload
-- log to DB
-- remove dumb plugin-loading in favor of meta-files in module-packages
+- make sure that authentication mechanisms actually work (not necessary for RC status)
+- replace custom body parser with FOSS modules from npm (`busboy`) (not necessary for RC status)
+- ~~ implement file upload ~~ Will be implemented later (content pipelines)
+- log to DB (not necessary for RC status)
+- ~~ remove dumb plugin-loading in favor of meta-files in module-packages ~~ (loading needs more work later on and a more modular version of `node-mod-load`)
+- ~~ read files from subdirectories in `/upload` ~~
+- ~~ remove hugging ~~
 
 
 ## TODO List after release
 
+- move TODO list to github's open issues (make branches/forks and a resulting pull request for each issue)
 - GUI. Let's be honest, a GUI is a game-changer and will make SHPS accessible for more people and especially beginners
 - work on feature list
+- implement domain/user-states which cache certain objects (e.g. log, auth, permissions-array,...)
+- pack source in modules into automatically executing function wraps
+- only load plugins which are enabled by configurations
+- only use explicitly enabled plugins for defined requests
 - improve querystring parser with FOSS modules from npm (`qs`)
 - add log to disk with FOSS modules from npm (`logrotate-stream`)
 - add timeout for sandboxes
@@ -56,3 +63,11 @@ Build your site with SHPS and see if it fits your needs. If your project is non-
 - re-enable gzip compression
 - remove Q and use native promisses instead (bundled with `promise-defer` for easy rewrite)
 - separate module-interface and code by moving all implementation code away from index files
+- cache DB in local variables on startup; add cache-tools to commandline in order to invalidate cache manually
+- add websocket support for server-requests (create or implement existing protocol)
+- extract commandline module into own project + glue and action handler for SHPS (creating the SHPS console "Look 'n Feel")
+- enable site-specific plugin (interesting for plugin version as well) by adding subdirectories to /system/plugin
+- implement file upload
+- clean up classes (constructors are crowded with methods at the moment)
+- check if plugin is loaded or physically available before trying to use it (e.g. calling event)
+- rewrite function-classes in modules to be real (ES6-)Classes

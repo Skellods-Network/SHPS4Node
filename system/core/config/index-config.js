@@ -12,31 +12,10 @@ var mp = {
 };
 
 
-var config = mp.config = {};
-var master = mp.master = {};
-var domain = mp.domain = [];
+var config = {};
+var master = {};
+var domain = [];
 
-
-/**
- * Grouphuggable
- * Breaks after 3 hugs per partner
- * 
- * @param $hug
- *  Huggable caller
- */
-var _hug 
-= me.hug = function f_log_hug($h) {
-    
-    return libs.helper.genericHug($h, mp, function f_helper_log_hug($hugCount) {
-        
-        if ($hugCount > 3) {
-            
-            return false;
-        }
-        
-        return true;
-    });
-};
 
 /**
  * Get setting from config file
@@ -74,6 +53,12 @@ var _getHPConfig
     }
     
     return;
+};
+
+var _getConfigs =
+me._getConfigs = function () {
+
+    return config;
 };
 
 /**
@@ -128,7 +113,7 @@ var _readConfig
     if (!(dir = libs.main.getDir(SHPS_DIR_CONFIGS))) {
         
         defer.reject(new Error("Could not retrive config directory!"));
-        task.end(SHPS_COML_TASK_RESULT_ERROR);
+        task.end(TASK_RESULT_ERROR);
 
         return defer.promise;
     }
@@ -139,7 +124,7 @@ var _readConfig
         if ($err) {
             
             defer.reject($err);
-            task.end(SHPS_COML_TASK_RESULT_ERROR);
+            task.end(TASK_RESULT_ERROR);
 
             return;
         }
@@ -158,7 +143,7 @@ var _readConfig
                     }
                     else if ($stat && !$stat.isDirectory()) {
                         
-                        task.interim(SHPS_COML_TASK_RESULT_OK, 'Config file found: ' + $file);
+                        task.interim(TASK_RESULT_OK, 'Config file found: ' + $file);
                         _readFile(dir + $file).done(function ($config) {
                             
                             if (!$config.configHeader) {
@@ -176,7 +161,7 @@ var _readConfig
 
                                 case 'master': {
                                     
-                                    task.interim(SHPS_COML_TASK_RESULT_OK, 'Master file was ' + 'loaded successfully'.green);
+                                    task.interim(TASK_RESULT_OK, 'Master file was ' + 'loaded successfully'.green);
                                     master = $config;
                                     masterFound = true;
                                     break;
@@ -187,13 +172,13 @@ var _readConfig
                                     //TODO: join result with default config (template)
                                     var cName = libs.helper.SHPS_domain($config.generalConfig.URL.value, true).host;
                                     config[cName] = $config;
-                                    task.interim(SHPS_COML_TASK_RESULT_OK, 'Config file `' + $file + '` was ' + ('loaded successfully (' + cName + ')').green);
+                                    task.interim(TASK_RESULT_OK, 'Config file `' + $file + '` was ' + ('loaded successfully (' + cName + ')').green);
                                     break;
                                 }
 
                                 default: {
 
-                                    libs.coml.write(SHPS_COML_TASK_RESULT_ERROR, 'Config file `' + $file + '` is of ' + ('UNKNOWN TYPE').yellow);
+                                    libs.coml.write(TASK_RESULT_ERROR, 'Config file `' + $file + '` is of ' + ('UNKNOWN TYPE').yellow);
                                     status = false;
                                 }
                             }
@@ -203,7 +188,7 @@ var _readConfig
                             $callback();
                         }, function ($err) {
                                                 
-                            task.interim(SHPS_COML_TASK_RESULT_ERROR, 'Config file `' + $file + '` was ' + 'invalid'.red.bold + '! ' + 'SKIPPED'.red.bold);
+                            task.interim(TASK_RESULT_ERROR, 'Config file `' + $file + '` was ' + 'invalid'.red.bold + '! ' + 'SKIPPED'.red.bold);
                             libs.coml.writeError($err.toString());
                             
                             libs.schedule.sendSignal('onConfigLoaded', $file, false, null);
@@ -237,19 +222,19 @@ var _readConfig
 
                 case 0: {
 
-                    task.end(SHPS_COML_TASK_RESULT_OK);
+                    task.end(TASK_RESULT_OK);
                     break;
                 }
 
                 case 1: {
                     
-                    task.end(SHPS_COML_TASK_RESULT_ERROR);
+                    task.end(TASK_RESULT_ERROR);
                     break;
                 }
 
                 case 2: {
                     
-                    task.end(SHPS_COML_TASK_RESULT_WARNING);
+                    task.end(TASK_RESULT_WARNING);
                     break;
                 }
             }

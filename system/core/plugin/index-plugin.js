@@ -28,10 +28,11 @@ GLOBAL.SHPS_PLUGIN_ACTIVE = 3;
  * 
  * @return Promise()
  */
-var _loadPlugins 
-= me.loadPlugins = function f_plugin_loadPlugins() {
+var _loadPluginList 
+= me.loadPluginList = function f_plugin_loadPlugins() {
     
     var task = libs.coml.newTask('Detecting Plugins');
+    var taskResult = TASK_RESULT_OK;
 
     var defer = promDef();
     var dir = libs.main.getDir(SHPS_DIR_PLUGINS);
@@ -39,7 +40,7 @@ var _loadPlugins
         
         if ($err) {
             
-            task.end(SHPS_COML_TASK_RESULT_ERROR);
+            task.end(TASK_RESULT_ERROR);
             defer.reject(new Error($err));
             return;
         }
@@ -52,11 +53,11 @@ var _loadPlugins
             let file = $files[i];
             let lp = promDef();
             proms.push(lp.promise);
-            fs.stat(dir + path.sep + file, function ($err, $stat) {
+            fs.stat(dir + file, function ($err, $stat) {
     
                 if ($err) {
                     
-                    task.end(SHPS_COML_TASK_RESULT_ERROR);
+                    task.end(TASK_RESULT_ERROR);
                     lp.reject(new Error($err));
                     return;
                 }
@@ -68,12 +69,33 @@ var _loadPlugins
                     return;
                 }
 
-                nml.getPackageInfo(dir + path.sep + file)
+                nml.getPackageInfo(dir + file)
                 .then(function ($config) {
                                 
-                    task.interim(SHPS_COML_TASK_RESULT_OK, 'Plugin found: ' + $config.name);
-                    _loadable[$config.name]
-                    lp.resolve();
+                    task.interim(TASK_RESULT_OK, 'Plugin found: ' + $config.name);
+                    _loadable[$config.name] = dir + file;
+                    
+                    // TEMPORARY
+                    // This section is to keep plugins working as they did before. It has to be removed as soon as the rest of the plugin manager is implemented
+                    try {
+
+                        _plugins[$config.name] = require(dir + file);
+                        task.interim(TASK_RESULT_OK, 'Plugin loaded: ' + $config.name);
+                        if (_plugins[$config.name].onLoad) {
+
+                            _plugins[$config.name].onLoad();
+                        }
+                    }
+                    catch ($e) {
+
+                        task.interim(TASK_RESULT_ERROR, 'Plugin could not be loaded: ' + $config.name);
+                        taskResult = TASK_RESULT_WARNING;
+                    }
+                    //\\ TEMPORARY
+                    finally {
+
+                        lp.resolve();
+                    }
                 })
                 .catch(function ($err) {
                                 
@@ -82,57 +104,34 @@ var _loadPlugins
                 });
             });
             
-            /*
-            if (fs.statSync(dir + file).isFile()) {
-                
-                if (file.substring(file.length - 3) != '.js') {
-                    
-                    i++;
-                    libs.schedule.sendSignal('onFilePollution', dir, 'plugin', file);
-                    continue;
-                }
-
-                var pname = file.substring(0, file.length - 3);
-                
-                task.interim(SHPS_COML_TASK_RESULT_OK, 'Plugin found: ' + pname);
-                _plugins[pname] = require(dir + file);
-                
-                var loadOK = true;
-                if (typeof _plugins[pname].onLoad !== 'undefined') {
-                    
-                    loadOK = _plugins[pname].onLoad();
-                }
-                
-                if (loadOK) {
-                    
-                    var piname = _plugins[pname].info.name;
-                    task.interim(SHPS_COML_TASK_RESULT_OK, 'Plugin `' + piname + '` was ' + 'loaded successfully'.green);
-                }
-                else {
-                    
-                    task.interim(SHPS_COML_TASK_RESULT_ERROR, 'Plugin `' + pname + '` ' + 'encountered problems'.red);
-                }
-                
-                libs.schedule.sendSignal('onPluginLoaded', pname, loadOK);
-            }
-            */
-
             i++;
         }
-        
+
         Promise.all(proms).then(function ($v) {
             
             defer.resolve();
-            task.end(SHPS_COML_TASK_RESULT_OK);
+            task.end(taskResult);
         }, function ($v) {
             
             defer.reject($v);
-            task.end(SHPS_COML_TASK_RESULT_ERROR);
+            task.end(TASK_RESULT_ERROR);
         });
         
     });
 
     return defer.promise;
+};
+
+var _getLoadablePlugins 
+= me.getLoadablePlugins = function f_plugin_getLoadablePlugins() {
+    
+    return Object.keys(_loadable);
+};
+
+var _getLoadedPlugins 
+= me.getLoadedPlugins = function f_plugin_getLoadedPlugins() {
+    
+    return Object.keys(_plugins);
 };
 
 /**

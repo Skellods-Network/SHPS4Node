@@ -7,31 +7,6 @@ var util = require('util');
 
 var libs = require('node-mod-load').libs;
 
-var mp = {
-    self: this
-};
-
-
-/**
- * Grouphuggable
- * Breaks after 3 hugs per partner
- * 
- * @param $hug
- *  Huggable caller
- */
-var _hug 
-= me.hug = function f_auth_hug($h) {
-    
-    return libs.helper.genericHug($h, mp, function f_main_hug_hug($hugCount) {
-        
-        if ($hugCount > 3) {
-            
-            return false;
-        }
-        
-        return true;
-    });
-};
 
 var _getCookies
 = me.getCookies = function f_cookie_getCookies($requestState) {

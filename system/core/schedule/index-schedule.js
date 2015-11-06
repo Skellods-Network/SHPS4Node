@@ -65,24 +65,3 @@ var _addDuplexSlot
         call: $slot,
     });
 };
-
-/**
- * Grouphuggable
- * Breaks after 3 hugs per partner
- * 
- * @param $hug
- *  Huggable caller
- */
-var _hug 
-= me.hug = function f_schedule_hug($h) {
-    
-    return libs.helper.genericHug($h, mp, function f_schedule_hug_hug($hugCount) {
-        
-        if ($hugCount > 3) {
-            
-            return false;
-        }
-        
-        return true;
-    });
-};

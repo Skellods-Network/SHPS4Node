@@ -79,27 +79,6 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
      */
     var additionalTables = [];
 
-
-    /**
-     * Grouphuggable
-     * Breaks after 3 hugs per partner
-     * 
-     * @param $hug
-     *  Huggable caller
-     */
-    var _hug =
-    this.hug = function f_sqlQueryBuilder_hug($h) {
-        
-        return libs.helper.genericHug($h, mp, function f_sql_hug_hug($hugCount) {
-            
-            if ($hugCount > 3) {
-                
-                return false;
-            }
-            
-            return true;
-        });
-    };
     
     /**
      * Reset this builder
@@ -390,25 +369,4 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
             }
         }
     };
-};
-
-/**
- * Grouphuggable
- * Breaks after 3 hugs per partner
- * 
- * @param $hug
- *  Huggable caller
- */
-var _hug 
-= me.hug = function f_sql_hug($h) {
-    
-    return libs.helper.genericHug($h, mp, function f_sql_hug_hug($hugCount) {
-        
-        if ($hugCount > 3) {
-            
-            return false;
-        }
-        
-        return true;
-    });
 };

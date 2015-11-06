@@ -46,23 +46,22 @@ var preferredModuleName;
 var description = undefined;
 
 
-/**
- * Handlers
- */
-libs.schedule.addSlot('onDependencyError', function ($depName, $depVer, $error) {
-
-    libs.coml.writeError('The dependency `' + $depName + '` (ver.' + $depVer + ') is missing or does not work as expected.\n' + $error);
-
-    libs.schedule.sendSignal('fatalError');
-});
-
-libs.schedule.addSlot('onDependencyWarning', function ($depName, $warning) {
-    
-    libs.coml.writeWarning('The dependency `' + $depName + '` has thrown a warning:\n' + $warning);
-});
-
-
 me.init = function () {
+
+    /**
+     * Handlers
+     */
+    libs.schedule.addSlot('onDependencyError', function ($depName, $depVer, $error) {
+
+        libs.coml.writeError('The dependency `' + $depName + '` (ver.' + $depVer + ') is missing or does not work as expected.\n' + $error);
+
+        libs.schedule.sendSignal('fatalError');
+    });
+
+    libs.schedule.addSlot('onDependencyWarning', function ($depName, $warning) {
+
+        libs.coml.writeWarning('The dependency `' + $depName + '` has thrown a warning:\n' + $warning);
+    });
 
     /**
      * Check for openssl

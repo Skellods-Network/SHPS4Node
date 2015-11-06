@@ -7,31 +7,6 @@ var vm = require('vm');
 
 var libs = require('node-mod-load').libs;
 
-var mp = {
-    self: this
-};
-
-
-/**
- * Grouphuggable
- * Breaks after 3 hugs per partner
- * 
- * @param $hug
- *  Huggable caller
- */
-var _hug 
-= me.hug = function f_sandbox_hug($h) {
-    
-    return libs.helper.genericHug($h, mp, function f_helper_log_hug($hugCount) {
-        
-        if ($hugCount > 3) {
-            
-            return false;
-        }
-        
-        return true;
-    });
-};
 
 var _newSandbox 
 = me.newSandbox = function f_sandbox_newSandbox($requestState) {

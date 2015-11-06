@@ -70,8 +70,7 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
      * @param mixed $value
      * @return string
      */
-    var _prepare 
-    = mp.prepare = function f_sqlConditionBuilder_sqlConditionBuilder_prepare($value) {
+    var _prepare = function f_sqlConditionBuilder_sqlConditionBuilder_prepare($value) {
         
         var errorFun = function () {
 
@@ -444,28 +443,6 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
 
         return this;
     };
-
-    /**
-     * Grouphuggable
-     * Breaks after 3 hugs per partner
-     * 
-     * @param $hug
-     *  Huggable caller
-     */
-    var _hug
-    = mp.hug
-    this.hug = function f_sqlConditionBuilder_sqlConditionBuilder_hug($h) {
-        
-        return libs.helper.genericHug($h, _mp, function f_sql_hug_hug($hugCount) {
-            
-            if ($hugCount > 3) {
-                
-                return false;
-            }
-            
-            return true;
-        });
-    };
     
     /**
      * Execute query
@@ -485,27 +462,4 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
             return this;
         }
     };
-};
-
-/**
- * Grouphuggable
- * Breaks after 3 hugs per partner
- * 
- * @param $hug
- *  Huggable caller
- */
-var _hug 
-= me.hug
-= mp.hug =
-this.hug = function f_sqlConditionBuilder_hug($h) {
-    
-    return libs.helper.genericHug($h, mp, function f_sql_hug_hug($hugCount) {
-        
-        if ($hugCount > 3) {
-            
-            return false;
-        }
-        
-        return true;
-    });
 };

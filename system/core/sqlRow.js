@@ -4,31 +4,6 @@ var me = module.exports;
 
 var libs = require('node-mod-load').libs;
 
-var mp = {
-    self: this
-};
-
-
-/**
- * Grouphuggable
- * Breaks after 3 hugs per partner
- * 
- * @param $hug
- *  Huggable caller
- */
-var _hug 
-= me.hug = function f_main_hug($h) {
-    
-    return libs.helper.genericHug($h, mp, function f_main_hug_hug($hugCount) {
-        
-        if ($hugCount > 3) {
-            
-            return false;
-        }
-        
-        return true;
-    });
-};
 
 var _newRow 
 = me.newRow = function f_sqlRow_newRow($table) {
@@ -48,27 +23,7 @@ var _sqlRow = function c_sqlRow($table) {
      * @var {} of Key => Value pairs indexed by table
      */
     var data = {};
-    
-    /**
-     * Grouphuggable
-     * Breaks after 3 hugs per partner
-     * 
-     * @param $hug
-     *  Huggable caller
-     */
-    var _hug 
-    = me.hug = function f_main_hug($h) {
-        
-        return libs.helper.genericHug($h, mp, function f_main_hug_hug($hugCount) {
-            
-            if ($hugCount > 3) {
-                
-                return false;
-            }
-            
-            return true;
-        });
-    };
+
     
     /**
      * Retrive value of result row
@@ -149,7 +104,7 @@ var _sqlRow = function c_sqlRow($table) {
             $table = SQL_NO_TABLE;
         }
         
-        if ($table instanceof libs.sqlTable.hug(mp.self).table) {
+        if ($table.getName) {
             
             $table = $table.getName();
         }
@@ -186,26 +141,5 @@ var _sqlRow = function c_sqlRow($table) {
         }
         
         return r;
-    };
-
-    /**
-     * Grouphuggable
-     * Breaks after 3 hugs per partner
-     * 
-     * @param $hug
-     *  Huggable caller
-     */
-    var _hug 
-    = me.hug = function f_main_hug($h) {
-        
-        return helper.genericHug($h, mp, function f_main_hug_hug($hugCount) {
-            
-            if ($hugCount > 3) {
-                
-                return false;
-            }
-            
-            return true;
-        });
     };
 };

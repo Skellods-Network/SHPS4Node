@@ -28,8 +28,7 @@ var mp = {
  * 
  * @var array
  */
-var _stringdeterminator
-= mp.stringdeterminator = {};
+var _stringdeterminator = {};
 _stringdeterminator[SHPS_SQL_MYSQL] = '\'';
 _stringdeterminator[SHPS_SQL_MARIA] = '\'';
 _stringdeterminator[SHPS_SQL_MSSQL] = '\'';
@@ -39,8 +38,7 @@ _stringdeterminator[SHPS_SQL_MSSQL] = '\'';
  * 
  * @var array
  */
-var _variabledeterminator 
-= mp.variabledeterminator = {};
+var _variabledeterminator = {};
 _variabledeterminator[SHPS_SQL_MYSQL] = ['`', '`'];
 _variabledeterminator[SHPS_SQL_MARIA] = ['`', '`'];
 _variabledeterminator[SHPS_SQL_MSSQL] = ['[', ']'];
@@ -79,28 +77,6 @@ var _newConditionBuilder
 = me.newConditionBuilder = libs.sqlConditionBuilder.newSQLConditionBuilder;
 
 /**
- * Grouphuggable
- * Breaks after 3 hugs per partner
- * 
- * @param $hug
- *  Huggable caller
- */
-var _hug 
-= mp.hug
-= me.hug = function f_sql_hug($h) {
-    
-    return libs.helper.genericHug($h, mp, function f_sql_hug_hug($hugCount) {
-        
-        if ($hugCount > 3) {
-            
-            return false;
-        }
-        
-        return true;
-    });
-};
-
-/**
  * SQL Class<br>
  * For SQLite, a new file will be created if the database file is missing
  * 
@@ -111,8 +87,7 @@ var _hug
  * @param string $prefix
  * @param array $mcServers [[(Sting)'Host',(Integer)['Port']],[...]]
  */
-var _SQL 
-= mp.SQL = function ($dbconfig, $connection) {
+var _SQL = function ($dbConfig, $connection) {
     
     if (typeof $dbConfig === 'undefined') {
         
@@ -229,27 +204,6 @@ var _SQL
     var _resultFields = [];
     
 
-    /**
-     * Grouphuggable
-     * Breaks after 3 hugs per partner
-     * 
-     * @param $hug
-     *  Huggable caller
-     */
-    var _hug 
-    = mp.hug = function f_sql_hug($h) {
-        
-        return libs.helper.genericHug($h, mp, function f_sql_hug_hug($hugCount) {
-            
-            if ($hugCount > 3) {
-                
-                return false;
-            }
-            
-            return true;
-        });
-    };
-    
     /**
      * Make a new SQL query
      * 
@@ -392,7 +346,7 @@ var _SQL
      * Create a custom Table and return table object
      * 
      * @param string $name
-     * @param [] $cols Array of sql_colspec
+     * @param $cols [] Array of sql_colspec
      * @param boolean $ifNotExists Throws error if table exists //Default: true
      * @param boolean $temp If true table is only temporary (in memory) //Default: false
      * @return sql_table
@@ -525,7 +479,6 @@ var _SQL
      * @result string
      */
     var _getDB 
-    = mp.getDB =
     this.getDB = function f_sql_getDB() {
         
         return $dbConfig.name.value;
@@ -537,7 +490,6 @@ var _SQL
      * @result string
      */
     var _getPrefix 
-    = mp.getPrefix =
     this.getPrefix = function f_sql_getPrefix() {
         
         return $dbConfig.prefix.value;
@@ -841,7 +793,7 @@ var sql_colspec = function f_sql_sql_colspec($table, $col) {
  */
 var _focus 
 = me.focus = function c_sql_focus($requestState) {
-    if (typeof $requestState !== 'undefined') {
+    if (typeof $requestState === 'undefined') {
 
         throw ('Cannot focus undefined requestState!');
     }

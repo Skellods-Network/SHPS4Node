@@ -28,32 +28,6 @@ __defineGetter__('log', function () {
     return __nLog;
 });
 
-var mp = {
-    self: this
-};
-
-
-/**
- * Grouphuggable
- * Breaks after 3 hugs per partner
- * 
- * @param $hug
- *  Huggable caller
- */
-var _hug 
-= me.hug 
-= mp.hug = function f_main_hug($h) {
-    
-    return libs.helper.genericHug($h, mp, function f_main_hug_hug($hugCount) {
-        
-        if ($hugCount > 3) {
-            
-            return false;
-        }
-        
-        return true;
-    });
-};
 
 var _newTable 
 = me.newTable = function f_sqlTable_newTable($sql, $name) {
@@ -76,7 +50,6 @@ var _sqlTable = function c_sqlTable($sql, $name) {
      *   Default: undefined
      */
     var _col 
-    = mp.col =
     this.col = function f_sqlTable_col($name, $asName) {
 
         return libs.sqlCol.newCol(this, $name, $asName);
@@ -147,7 +120,6 @@ var _sqlTable = function c_sqlTable($sql, $name) {
      * @result string
      */
     var _toString 
-    = mp.toString =
     this.toString = function f_sqlTable_toString() {
     
         return _getAbsoluteName();

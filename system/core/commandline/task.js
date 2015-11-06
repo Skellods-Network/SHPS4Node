@@ -19,12 +19,13 @@ me.newTask = function ($name) {
     var mark = 'task_' + $name + libs.SFFM.randomString(5);
 
     index.write(('\n' + $name + '...').bold, mark);
-    var start = process.hrtime()[1];
     return {
         
+        _startTime: process.hrtime()[1],
+
         end: function f_commandline_newTask_end($result) {
             
-            var time = (process.hrtime()[1] - start) / 1000000 |0;
+            var time = (process.hrtime()[1] - this._startTime) / 1000000 |0;
             var rl = time.toString().length + $name.replace(rxRemoveEscapes, '').length + $result.replace(rxRemoveEscapes, '').length + 9;
             var l = process.stdout.columns - rl;
             var i = 0;
@@ -43,13 +44,13 @@ me.newTask = function ($name) {
             var star = '*';
             switch ($result) {
 
-                case SHPS_COML_TASK_RESULT_OK: {
+                case TASK_RESULT_OK: {
 
                     star = star.green.bold;
                     break;
                 }
 
-                case SHPS_COML_TASK_RESULT_WARNING: {
+                case TASK_RESULT_WARNING: {
                     
                     star = star.yellow.bold;
                     break;

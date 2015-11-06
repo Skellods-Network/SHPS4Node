@@ -35,6 +35,7 @@ GLOBAL.SHPS_DIR_PLUGINS = 1;
 GLOBAL.SHPS_DIR_CERTS = 2;
 GLOBAL.SHPS_DIR_CONFIGS = 3;
 GLOBAL.SHPS_DIR_UPLOAD = 4;
+GLOBAL.SHPS_DIR_POOL = 5;
 
 
 var constants = require('constants')
@@ -63,11 +64,12 @@ var mp = {
 };
 
 
+/*
 libs.schedule.addSlot('fatalError', function () {
 
     process.abort();
 });
-
+*/
 
 /**
  * Get directory path
@@ -81,11 +83,12 @@ var _getDir
     var r = null;
     switch ($key) {
 
-        case SHPS_DIR_ROOT: r = path.dirname(require.main.filename) + '/'; break;
-        case SHPS_DIR_PLUGINS: r = path.dirname(require.main.filename) + '/system/plugins/'; break;
-        case SHPS_DIR_CERTS: r = path.dirname(require.main.filename) + '/cert/'; break;
-        case SHPS_DIR_CONFIGS: r = path.dirname(require.main.filename) + '/config/'; break;
-        case SHPS_DIR_UPLOAD: r = path.dirname(require.main.filename) + '/upload/'; break;
+        case SHPS_DIR_ROOT: r = path.dirname(require.main.filename) + path.sep; break;
+        case SHPS_DIR_PLUGINS: r = path.dirname(require.main.filename) + path.sep + 'system' + path.sep + 'plugins' + path.sep; break;
+        case SHPS_DIR_CERTS: r = path.dirname(require.main.filename) + path.sep + 'cert' + path.sep; break;
+        case SHPS_DIR_CONFIGS: r = path.dirname(require.main.filename) + path.sep + 'config' + path.sep; break;
+        case SHPS_DIR_UPLOAD: r = path.dirname(require.main.filename) + path.sep + 'upload' + path.sep; break;
+        case SHPS_DIR_POOL: r = path.dirname(require.main.filename) + path.sep + 'pool' + path.sep; break;
     }
 
     if (r !== null) {
@@ -152,7 +155,7 @@ var _checkFS
             i++;
         }
         
-        task.end(SHPS_COML_TASK_RESULT_OK);
+        task.end(TASK_RESULT_OK);
         defer.resolve();
     });
 
@@ -177,7 +180,7 @@ var _getInstance
  * @param SHPS_domain $domain
  */
 var _init
-= me.init = function func_init () {
+= me.init = function f_main_init () {
 
     if (typeof _init.initialized !== 'undefined') return;
     
@@ -192,8 +195,17 @@ var _init
             
             function f_init_prepare($_p1, $_p2) {
                 
-                libs.optimize;
+                libs.dependency.init();
+                libs.optimize.init();
                 $_p2();
+            }
+            , function f_init_terminal($_p1, $_p2) {
+
+                // resolver will receive list of loaded modules
+                libs.coml.init('SHPS'.cyan + '> '.bold).then(function () {
+
+                    $_p2();
+                }, $_p2);
             }
             , function f_init_checkUpdate($_p1, $_p2) { _checkUpdate().done($_p2, $_p2); }
             , function f_init_checkFS($_p1, $_p2) { _checkFS().done($_p2, $_p2); }
@@ -210,7 +222,7 @@ var _init
                     process.nextTick($_p2);
                 }
             }
-            , function f_init_loadPlugins($_p1, $_p2) { libs.plugin.loadPlugins().then($_p2, $_p2); }
+            , function f_init_loadPlugins($_p1, $_p2) { libs.plugin.loadPluginList().then($_p2, $_p2); }
             , function f_init_listen($_p1, $_p2) {
                 
                 _listen();
@@ -237,8 +249,7 @@ var _init
         }
         else {
 
-            libs.coml.write('\nWe done here! SHPS at your service - what can we do for you?'.bold);
-            libs.coml.handleRequest();
+            libs.coml.write('\nWe done here! SHPS at your service - what can we do for you?\n'.bold);
         }
     });
 }
@@ -347,29 +358,29 @@ var _listen
         //TODO: somehow clean up rs to remove memory leak
         //      -> Content Pipelines, cache and reuse RS's cache, better multi-process approach for disposable workers
     };
-    
-    var configHug = libs.config.hug(mp);
+
     var server;
-    for (var $c in configHug.config) {
+    var configs = libs.config._getConfigs();
+    for (var $c in configs) {
         
-        if (configHug.config[$c].generalConfig.useHTTP1.value) {
+        if (configs[$c].generalConfig.useHTTP1.value) {
             
-            var p = configHug.config[$c].generalConfig.HTTP1Port.value;
+            var p = configs[$c].generalConfig.HTTP1Port.value;
             if (port.indexOf(p) == -1) {
                 
                 server = http.createServer(httpResponse);
                 server.listen(p);
                 servers.push(server);
                 
-                task.interim(SHPS_COML_TASK_RESULT_OK, 'HTTP/1.1 port opened on ' + (p + '').green);
+                task.interim(TASK_RESULT_OK, 'HTTP/1.1 port opened on ' + (p + '').green);
                 port += p;
                 libs.schedule.sendSignal('onListenStart', 'HTTP/1.1', p, server);
             }
         }
         
-        if (configHug.config[$c].generalConfig.useHTTP2.value) {
+        if (configs[$c].generalConfig.useHTTP2.value) {
             
-            var p = configHug.config[$c].generalConfig.HTTP2Port.value;
+            var p = configs[$c].generalConfig.HTTP2Port.value;
             if (port.indexOf(p) == -1) {
                 
                 //TODO: implement TLS Tickets, OCSP stapling, SNI
@@ -382,36 +393,36 @@ var _listen
                     honorCipherOrder: true,
                 };
                 
-                if (configHug.config[$c].TLSConfig.key.value != '' && configHug.config[$c].TLSConfig.cert.value != '') {
+                if (configs[$c].TLSConfig.key.value != '' && configs[$c].TLSConfig.cert.value != '') {
 
-                    options.key = fs.readFileSync(_getDir(SHPS_DIR_CERTS) + configHug.config[$c].TLSConfig.key.value);
-                    options.cert = fs.readFileSync(_getDir(SHPS_DIR_CERTS) + configHug.config[$c].TLSConfig.cert.value);
+                    options.key = fs.readFileSync(_getDir(SHPS_DIR_CERTS) + configs[$c].TLSConfig.key.value);
+                    options.cert = fs.readFileSync(_getDir(SHPS_DIR_CERTS) + configs[$c].TLSConfig.cert.value);
                 }
-                else if (configHug.config[$c].TLSConfig.pfx.value) {
+                else if (configs[$c].TLSConfig.pfx.value) {
 
-                    options.pfx = fs.readFileSync(_getDir(SHPS_DIR_CERTS) + configHug.config[$c].TLSConfig.pfx.value);
-                }
-                
-                if (configHug.config[$c].TLSConfig.ca.value != '') {
-
-                    options.ca = fs.readFileSync(_getDir(SHPS_DIR_CERTS) + configHug.config[$c].TLSConfig.ca.value);
+                    options.pfx = fs.readFileSync(_getDir(SHPS_DIR_CERTS) + configs[$c].TLSConfig.pfx.value);
                 }
                 
-                if (configHug.config[$c].TLSConfig.passphrase.value != '') {
+                if (configs[$c].TLSConfig.ca.value != '') {
+
+                    options.ca = fs.readFileSync(_getDir(SHPS_DIR_CERTS) + configs[$c].TLSConfig.ca.value);
+                }
+                
+                if (configs[$c].TLSConfig.passphrase.value != '') {
                     
-                    options.passphrase = configHug.config[$c].TLSConfig.passphrase.value;
+                    options.passphrase = configs[$c].TLSConfig.passphrase.value;
                 }
                 
-                if (configHug.config[$c].TLSConfig.dhParam.value != '') {
+                if (configs[$c].TLSConfig.dhParam.value != '') {
                     
-                    options.dhparam = _getDir(SHPS_DIR_CERTS) + configHug.config[$c].TLSConfig.dhParam.value
+                    options.dhparam = _getDir(SHPS_DIR_CERTS) + configs[$c].TLSConfig.dhParam.value
                 }
 
                 server = https.createServer(options, httpResponse);
                 server.listen(p);
                 servers.push(server);
                 
-                task.interim(SHPS_COML_TASK_RESULT_OK, 'HTTP/2 port opened on ' + (p + '').green);
+                task.interim(TASK_RESULT_OK, 'HTTP/2 port opened on ' + (p + '').green);
                 port += p;
                 libs.schedule.sendSignal('onListenStart', 'HTTP/2', p, server);
             }
@@ -419,7 +430,7 @@ var _listen
     }
     
     libs.schedule.sendSignal('onServerStart', port);
-    task.end(SHPS_COML_TASK_RESULT_OK);
+    task.end(TASK_RESULT_OK);
 };
 
 var _killAllServers 
@@ -468,27 +479,6 @@ var _setDebug
     debug = $onOff;
     libs.schedule.sendSignal('onDebugChange', $onOff);
 }
-
-/**
- * Grouphuggable
- * Breaks after 3 hugs per partner
- * 
- * @param $hug
- *  Huggable caller
- */
-var _hug 
-= me.hug = function f_main_hug($h) {
-    
-    return libs.helper.genericHug($h, mp, function f_main_hug_hug($hugCount) {
-        
-        if ($hugCount > 3) {
-            
-            return false;
-        }
-        
-        return true;
-    });
-};
 
 /**
  * Focus all actions on a given requestState
