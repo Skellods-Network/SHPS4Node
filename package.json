@@ -47,6 +47,7 @@
         "node-mb-string-size": "^1.0.0",
         "node-mod-load": "^2.1.0",
         "logrotate-stream": "0.2.0",
-        "promise-defer": "^1.0.0"
+        "promise-defer": "^1.0.0",
+		"node-app-terminal": "^0.1.0"
     }
 }
