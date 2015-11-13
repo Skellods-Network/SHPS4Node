@@ -6,8 +6,9 @@ SET time_zone = "+00:00";
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
 /*!40101 SET NAMES utf8 */;
 
-CREATE DATABASE IF NOT EXISTS `shps_test` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE `shps_test`;
+-- Sample DB
+-- CREATE DATABASE IF NOT EXISTS `shps_test` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- USE `shps_test`;
 
 DROP TABLE IF EXISTS `accesskey`;
 CREATE TABLE IF NOT EXISTS `accesskey` (

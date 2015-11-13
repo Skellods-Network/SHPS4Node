@@ -12,7 +12,11 @@ var _getCookies
 = me.getCookies = function f_cookie_getCookies($requestState) {
 
     var list = {};
-    var rc = $requestState.request.headers.cookie;
+    var rc = '';
+    if ($requestState.request.headers) {
+
+        rc = $requestState.request.headers.cookie;
+    }
     
     rc && rc.split(';').forEach(function ($cookie) {
 

@@ -3,8 +3,10 @@
 var me = module.exports;
 
 var oa = require('object-assign');
+var fs = require('fs');
 var util = require('util');
 var zip = require('zlib');
+var path = require('path');
 var q = require('q');
 var crypt = require('crypto');
 var streams = require('stream');
@@ -218,6 +220,41 @@ var _handleRequest
             $requestState.httpStatus = 418;
             $requestState.responseType = 'text/plain';
             $requestState.responseBody = 'ERROR 418: I\'m a teapot!';
+        }
+        else if ($requestState.path.length > 1) {
+
+            // Web Components
+            var reqPath = path.normalize(libs.main.getDir(SHPS_DIR_POOL) + 'webComponents' + path.sep + $requestState.path.substr(1));
+            if (path.relative(libs.main.getDir(SHPS_DIR_POOL) + 'webComponents', reqPath)[0] !== '.') {
+
+                $requestState.httpStatus = 200;
+                $requestState.responseType = 'text/plain';
+                var d = q.defer();
+                unblock = d.promise;
+                fs.readFile(reqPath, ($err, $data) => {
+
+                    if ($err) {
+
+                        $requestState.httpStatus = 500;
+                        d.reject($err);
+                    }
+                    else {
+
+                        $requestState.responseBody = $data;
+                        d.resolve();
+                    }
+                });
+            }
+            else {
+
+                // uh-oh, someone wants to read other files than web components...
+                $requestState.httpStatus = 404;
+                $requestState.responseType = 'text/plain';
+                $requestState.responseBody = 'Not found!';
+                unblock = q.defer();
+                unblock.resolve();
+                unblock = unblock.promise;
+            }
         }
         else {
             

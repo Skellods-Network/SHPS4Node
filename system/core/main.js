@@ -344,16 +344,7 @@ var _listen
     var defer = q.defer();
     var httpResponse = function ($req, $res) {
         
-        var rs = new libs.helper.requestState();
-        rs._domain = new libs.helper.SHPS_domain($req.headers.host, true);
-        rs.uri = rs._domain.href;
-        rs.config = libs.config.getConfig(rs._domain.hostname);
-        rs.path = $req.url;
-        rs.request = $req;
-        rs.response = $res;
-        rs.COOKIE = libs.cookie.newCookieJar(rs);
-
-        libs.request.handleRequest(rs);
+        libs.request.handleRequest(libs.helper.newRequestState($req, $res));
 
         //TODO: somehow clean up rs to remove memory leak
         //      -> Content Pipelines, cache and reuse RS's cache, better multi-process approach for disposable workers

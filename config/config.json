@@ -19,11 +19,6 @@
             "description": "Your resource URL",
             "value": "localhost"
         },
-        "dirUpload": {
-
-            "description": "Directory for uploaded data",
-            "value": "uploads"
-        },
         "mail": {
 
             "description": "Mail used as `FROM` address",
@@ -47,11 +42,6 @@
         "templateTimeout": { 
             "description": "Maximum amount of time in seconds a template (partial or content) can take before excution is stopped",
             "value": 60
-        },
-        "displayStats": {
-
-            "description": "Display speed and resource stats in the homepage's source (not recommended)",
-            "value": false
         },
         "indexContent": {
 

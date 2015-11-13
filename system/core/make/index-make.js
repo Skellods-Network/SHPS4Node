@@ -806,7 +806,12 @@ var _requestResponse
 
                         defer.resolve();
                     }, function ($err) {
-                                            
+                                        
+                        if ($err.message) {
+
+                            $err = $err.message;
+                        }
+                            
                         $requestState.responseBody = JSON.stringify({
                             
                             status: 'error',

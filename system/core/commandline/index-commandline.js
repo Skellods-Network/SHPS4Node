@@ -12,7 +12,7 @@ var sb = null;
 
 var originalInit = module.exports.__proto__.init;
 module.exports.__proto__.init = function () {
-
+    
     var internalRS = new libs.helper.requestState();
     internalRS.request = {
 

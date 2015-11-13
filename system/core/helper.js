@@ -161,4 +161,28 @@ me.requestState = function () {
     events.EventEmitter.call(this);
 };
 
+me.newRequestState = function f_helper_newRequestState($req, $res) {
+
+    var rs = new me.requestState();
+    var host = '';
+    if ($req.origin /* probably WS connection */) {
+
+        host = $req.origin;
+    }
+    else {
+
+        host = $req.headers.host;
+    }
+
+    rs._domain = new me.SHPS_domain(host, true);
+    rs.uri = rs._domain.href;
+    rs.config = libs.config.getConfig(rs._domain.hostname);
+    rs.path = $req.url ? $req.url : '/';
+    rs.request = $req;
+    rs.response = $res;
+    rs.COOKIE = libs.cookie.newCookieJar(rs);
+
+    return rs;
+};
+
 u.inherits(me.requestState, events.EventEmitter);

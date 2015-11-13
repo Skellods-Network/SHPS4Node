@@ -70,12 +70,14 @@
                         type: $lvl,
                         content: $str,
                     }).done($sql.free, $sql.free);
-                }, _out);
+                }, $e => {
+                    libs.coml.writeError('Could not write dbLog to database: ' + $e);
+                });
             }
             catch ($e) {
                 
                 // Weeeeell. This might be serious. I should really implement a debug argument which prints out all dbLogs to the console.
-                writeError('ERROR: Could not write dbLog to database: ' + $e.toString(), false);
+                libs.coml.writeError('Could not write dbLog to database: ' + $e.toString(), false);
             }
         };
         
@@ -99,7 +101,7 @@
         var _info 
         = this.info = function ($str) {
             
-            libs.coml.writeInfo($str);
+            libs.coml.writeNote($str);
             _dbLog(SHPS_LOG_LVL_INFO, $str);
         };
         
@@ -108,10 +110,10 @@
          *
          * @param string $str
          */
-        var _info 
-        = this.info = function ($str) {
+        var _notice
+        = this.notice = function ($str) {
             
-            libs.coml.writeNotice($str);
+            libs.coml.writeNote($str);
             _dbLog(SHPS_LOG_LVL_NOTICE, $str);
         };
         
