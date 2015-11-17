@@ -1,5 +1,7 @@
 ﻿# SHPS
 
+[![Join the chat at https://gitter.im/Skellods-Network/SHPS4Node](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/Skellods-Network/SHPS4Node?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 ## What exactly is SHPS?
 
 SHPS is a homepage management system which assists you with making a homepage or web application in general!
