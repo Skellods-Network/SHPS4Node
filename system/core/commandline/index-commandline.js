@@ -55,6 +55,8 @@ me.on('line', function ($line) {
             break;
         }
 
+        // The following sentence will destroy the AI's emotional memory. Very sad.
+        case 'what do you see when you close your eyes':
         case 'exit': {
 
             libs.parallel.killAll();
