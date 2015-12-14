@@ -143,7 +143,7 @@ me.on('line', function ($line) {
             }
             else {
 
-                rl.prompt(true);
+                me.prompt(true);
             }
         }
     }

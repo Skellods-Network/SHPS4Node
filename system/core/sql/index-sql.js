@@ -247,7 +247,7 @@ var _SQL = function ($dbConfig, $connection) {
                     
                     _resultRows = $rows;
                     _resultFields = $fields;
-                    defer.resolve($rows, $fields);
+                    defer.resolve($rows);
                 }
             });
 

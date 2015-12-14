@@ -249,7 +249,10 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
             _conditions += ' AND ';
         }
         
-        $sqb.addTable($col.getTable());
+        if ($col.getTable) {
+
+            $sqb.addTable($col.getTable());
+        }
 
         _conditions += _prepare($col) + ' BETWEEN ' + _prepare($left) + ' AND ' + _prepare($right);
 

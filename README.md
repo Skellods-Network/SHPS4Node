@@ -20,40 +20,29 @@ This is only a very rough feature set and the principles SHPS is based on. Pleas
 Build your site with SHPS and see if it fits your needs. If your project is non-commercial, SHPS is completely free as in gratuit, but always consider giving us a small donation as we put a lot of money and time into improving SHPS every day :)
 
 
-## TODO List until release of version 4 (and start of SemVer)
-
-- make sure that authentication mechanisms actually work (not necessary for RC status)
-- replace custom body parser with FOSS modules from npm (`busboy`) (not necessary for RC status)
-- ~~ implement file upload ~~ Will be implemented later (content pipelines)
-- log to DB (not necessary for RC status)
-- ~~ remove dumb plugin-loading in favor of meta-files in module-packages ~~ (loading needs more work later on and a more modular version of `node-mod-load`)
-- ~~ read files from subdirectories in `/upload` ~~
-- ~~ remove hugging ~~
-
-
-## TODO List after release
+## TODO List (not ordered) for under-the-hood improvements (wouldn't really call them features)
 
 - move TODO list to github's open issues (make branches/forks and a resulting pull request for each issue)
 - GUI. Let's be honest, a GUI is a game-changer and will make SHPS accessible for more people and especially beginners
 - work on feature list
 - implement domain/user-states which cache certain objects (e.g. log, auth, permissions-array,...)
-- pack source in modules into automatically executing function wraps
+- split all modules into a header and multiple code files. Code files should only export one method, so that they can be easily required by the header files inside a getter
 - only load plugins which are enabled by configurations
 - only use explicitly enabled plugins for defined requests
 - improve querystring parser with FOSS modules from npm (`qs`)
-- add log to disk with FOSS modules from npm (`logrotate-stream`)
+- improve logging capabilities
 - add timeout for sandboxes
 - replace default.js with template files
 - guided setup
 - include dependency checks into init flow
 - remove JS modules from CORE directory and pack them into the module-packages
 - organize the module packages in a way which optimizes overview
-- add config file encryption
+- add config file encryption (I think this is a ASVS item... but this will be hard to implement as SHPS should be able to auto-start...)
 - add ipc in local cluster to improve collaboration between processes
 - improve cluster-collaboration by assigning specific tasks to different processes
 - add possibility of npm-modules which are loaded as plugins
-- add auto dependency installation (e.g. download openssl binaries and install them next to SHPS if missing)
-- improve sandbox security
+- add auto dependency installation (e.g. download openssl/libressl binaries and install them next to SHPS if missing)
+- improve sandbox security (omfg, this will be a never-ending item)
 - better error detection and management
 - improve HTTPS security
 - stabilize HTTP/2 server
@@ -71,3 +60,7 @@ Build your site with SHPS and see if it fits your needs. If your project is non-
 - clean up classes (constructors are crowded with methods at the moment)
 - check if plugin is loaded or physically available before trying to use it (e.g. calling event)
 - rewrite function-classes in modules to be real (ES6-)Classes
+- remove (deprecated) iojs code paths
+- setup plugin repository and add plugin-commands for console (and extend plugins module so it can download and install plugins; from code as well for plugins and GUI :) )
+- add better mimeType management and auto-detection
+- plugins should get their own namespace in node-mod-load (see node-mod-load issue #5)
