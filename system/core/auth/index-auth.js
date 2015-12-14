@@ -5,6 +5,7 @@ var me = module.exports;
 GLOBAL.SHPS_COOKIE_AUTOLOGINTOKEN = 'SHPSALT';
 
 var q = require('q');
+var defer = require('promise-defer');
 var oa = require('object-assign');
 var async = require('vasync');
 var u = require('util');
@@ -158,7 +159,7 @@ var Auth
                     
                     if (!$err) {
                         
-                        //_updatePassword($uid, $passwd); <-- Only needed with multiple pw crypting/hashing algos
+                        //_updatePassword($uid, $passwd); <-- Only needed with multiple selectable pw crypting/hashing algos
                         log.info('Password Check for UID ' + $uid + ': ' + $res);
                         defer2.resolve($res);
                     }
@@ -171,10 +172,34 @@ var Auth
             }, defer2.reject);
         });
         
-
         return defer2.promise;
     };
     
+    var _normalizeAKParams = function f_auth_normalizeAKParams($user, $key, $isGroup) {
+
+        var d = defer();
+        var gako = {};
+        
+        var guSwitch = _getIDFromUser;
+        if ($isGroup) {
+
+            guSwitch = _getIDFromGroup;
+        }
+
+        guSwitch($user).then(function ($uid) {
+            
+            gako.uid = $uid;
+            return _getIDFromAccessKey($key);
+        }, d.reject)
+        .done(function ($kID) {
+            
+            gako.key = $kID;// let's put the kids into gakkou (jp. school)
+            d.resolve(gako);
+        }, d.reject);
+
+        return d.promise;
+    };
+
     /**
      * Grant an access key to a user or a group
      * 
@@ -198,9 +223,9 @@ var Auth
             authorizer = _session.data['ID'];
         }
         
-        _getIDFromAccessKey($key).done(function ($key) {
+        _normalizeAKParams($uid, $key, $isGroup).then(function ($gako) {
             
-            log.audit('ACCESS KEY GRANT INITIATED ' + $key + ' for ' + ($isGroup ? 'group' : 'user') + ' ' + $uid + ': ' + new Date($from * 1000).toUTCString() + ' - ' + new Date($to * 1000).toUTCString());
+            //log.audit('ACCESS KEY GRANT INITIATED ' + $key + ' for ' + ($isGroup ? 'group' : 'user') + ' ' + $uid + ': ' + new Date($from * 1000).toUTCString() + ' - ' + new Date($to * 1000).toUTCString());
             
             libs.sql.newSQL('usermanagement', $requestState).done(function ($sql) {
                 
@@ -210,8 +235,8 @@ var Auth
                     $sql.openTable('groupSecurity')
                     .insert({
                         
-                        gid: _getIDFromGroup($user),
-                        key: _getIDFromAccessKey($key),
+                        gid: $gako.uid,
+                        accesskey: $gako.key,
                         from: $from,
                         to: $to,
                         authorizer: authorizer
@@ -222,8 +247,8 @@ var Auth
                     $sql.openTable('userSecurity')
                     .insert({
                         
-                        gid: _getIDFromUser($uid),
-                        key: _getIDFromAccessKey($key),
+                        uid: $gako.uid,
+                        accesskey: $gako.key,
                         from: $from,
                         to: $to,
                         authorizer: authorizer
@@ -372,31 +397,31 @@ var Auth
     this.revokeAccessKey = function f_auth_revokeAccessKey($user, $key, $isGroup) {
         $isGroup = $isGroup || false;
         
-        _getIDFromAccessKey($key).done(function ($key) {
+        _normalizeAKParams($user, $key, $isGroup).then(function ($gako) {
             
-            log.audit('ACCESS KEY REVOKE INITIATED ' + $key + ' for ' + ($isGroup ? 'group' : 'user') + ' ' + $uid + ': ' + new Date($from * 1000).toUTCString() + ' - ' + new Date($to * 1000).toUTCString());
+            //log.audit('ACCESS KEY REVOKE INITIATED ' + $key + ' for ' + ($isGroup ? 'group' : 'user') + ' ' + $uid + ': ' + new Date($from * 1000).toUTCString() + ' - ' + new Date($to * 1000).toUTCString());
 
             libs.sql.newSQL('usermanagement', $requestState).done(function ($sql) {
 
                 if ($isGroup) {
                     
-                    $user = _getIDFromGroup($user);
                     var tblGS = $sql.openTable('groupSecurity');
                     var tblG = $sql.openTable('group');
-                    tblGS.delete(libs.sql.newConditionBuilder(null)
-                        .eq(tblGS.col('gid'), $user)
-                        .eq(tblGS.col('key'), $key)
-                    ).done($sql.free, $sql.free);
+                    tblGS.delete()
+                        .eq(tblGS.col('gid'), $gako.uid)
+                        .eq(tblGS.col('accesskey'), $gako.key)
+                        .execute()
+                        .done($sql.free, $sql.free);
                 }
                 else {
                     
-                    $user = _getIDFromUser($user);
                     var tblGS = $sql.openTable('userSecurity');
                     var tblG = $sql.openTable('user');
-                    tblGS.delete(libs.sql.newConditionBuilder(null)
-                        .eq(tblGS.col('uid'), $user)
-                        .eq(tblGS.col('key'), $key)
-                    ).done($sql.free, $sql.free);
+                    tblGS.delete()
+                        .eq(tblGS.col('uid'), $gako.uid)
+                        .eq(tblGS.col('accesskey'), $gako.key)
+                        .execute()
+                        .done($sql.free, $sql.free);
                 }
             });
         });
@@ -512,7 +537,7 @@ var Auth
             return defer.promise;
         }
         
-        var uPromise = q.promise();
+        var uPromise = q.defer();
         if (typeof $user === 'undefined') {
             
             if (!_isClientLoggedIn()) {
@@ -531,54 +556,69 @@ var Auth
             }, uPromise.reject);
         }
         
-        uPromise.done(function ($user) {
+        uPromise.promise.done(function ($user) {
 
             libs.sql.newSQL('usermanagement', $requestState).done(function ($sql) {
                 
+                var time = (new Date()).getTime() / 1000 | 0;
+                var tblAK = $sql.openTable('accessKey');
                 async.parallel({
                     
                     funcs: [
                         function ($_p1, $_p2) {
                             
                             var tblUS = $sql.openTable('userSecurity');
+
                             $sql.query()
                                 .get(tblUS.col('uid'))
                                 .fulfilling()
                                 .eq(tblUS.col('uid'), $user)
-                                .between(time(), tblUS.col('from'), tblUS.col('to'))
+                                .eq(tblUS.col('accesskey'), tblAK.col('ID'))
+                                .eq(tblAK.col('name'), $key)
+                                .between(time, tblUS.col('from'), tblUS.col('to'))
                                 .execute()
                                 .done(function ($rows) {
+
+                                $_p1(null, $rows.length > 0);
+                            }, function ($err) {
                                 
                                 $sql.free();
-                                $_p1(null, $rows.length > 0);
-                            }, $_p1);
+                                $_p1($err);
+                            });
                         },
 
                         function ($_p1, $_p2) {
                             
                             var tblGS = $sql.openTable('groupSecurity');
                             var tblGU = $sql.openTable('groupUser');
+                            
                             $sql.query()
                                 .get(tblGS.col('gid'))
                                 .fulfilling()
                                 .eq(tblGU.col('gid'), tblGS.col('gid'))
                                 .eq(tblGU.col('uid'), $user)
-                                .between(time(), tblGS.col('from'), tblGS.col('to'))
+                                .eq(tblGS.col('accesskey'), tblAK.col('ID'))
+                                .eq(tblAK.col('name'), $key)
+                                .between(time, tblGS.col('from'), tblGS.col('to'))
                                 .execute()
                                 .done(function ($rows) {
                                 
                                 $sql.free();
                                 $_p1(null, $rows.length > 0);
-                            }, $_p1);
+                            }, function ($err) {
+                                
+                                $sql.free();
+                                $_p1($err);
+                            });
                         }
                     ]
-                }, function ($results) {
+                }, function ($err, $results) {
                     
                     var i = 0;
-                    var l = $results.length;
+                    var l = $results.operations.length;
                     while (i < l) {
                         
-                        if ($results[i]) {
+                        if ($results.operations[i].status === 'ok' && $results.operations[i].result) {
                             
                             defer.resolve(true);
                             return;
@@ -699,7 +739,7 @@ var Auth
         }
         else {
 
-            log.audit('USER NOT LOGGED IN OR LOGGED OUT BY FORCE: ' + $dbRec.ID + ' | ' + $dbRec.user);
+            //log.audit('USER NOT LOGGED IN OR WAS LOGGED OUT BY FORCE: ' + $dbRec.ID + ' | ' + $dbRec.user);
         }
 
         return false;
@@ -831,6 +871,12 @@ var Auth
                             return;
                         }
                         
+                        if (ur.isLocked) {
+
+                            $cb(null, false);
+                            return;
+                        }
+
                         _checkPassword($user, $pw, ur.password, ur.salt).done(function ($cpR) {
                             
                             if ($cpR) {
@@ -913,6 +959,44 @@ var Auth
         }, defer.reject);
         
         return defer.promise;
+    };
+    
+    var _register =
+    this.register = function f_auth_register($user, $password, $mail, $locked) {
+        $locked = typeof $locked !== 'undefined' ? $locked : true;
+
+        var d = q.defer();
+        
+        libs.dep.getBCrypt().hash($password, null, null, function ($err, $hash) {
+        
+            if ($err) {
+
+                d.reject($err);
+                return;
+            }
+
+            libs.sql.newSQL('usermanagement', $requestState).done(function ($sql) {
+                
+                var tblU = $sql.openTable('user');
+                var ip = libs.SFFM.getIP($requestState.request);
+                var uts = (new Date()).getTime() / 1000 | 0;
+                tblU.insert({
+                    
+                    user: $user,
+                    email: $mail,
+                    pass: $hash,
+                    host: ip,
+                    regDate: uts,
+                    lastIP: ip,
+                    lastActivity: uts,
+                    isLocked: $locked,
+                    xForward: '',//TODO
+                    uaInfo: 0,//TODO
+                }).done(d.resolve, d.reject);
+            });
+        });
+
+        return d.promise;
     };
 
 

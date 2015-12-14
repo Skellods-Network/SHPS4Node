@@ -61,10 +61,6 @@ me.requestState = function () {
     var self = this;
     var _GET = null;
     
-    //TODO: Those 2 do not need getters or setters
-    var _POST = null;
-    var FILE = null;
-    
     this.isDataComplete = false;
     
     this._COOKIE = {};
@@ -74,7 +70,9 @@ me.requestState = function () {
     this.locked = false;
     this.uri = '';
     this.path = '/';
+    this.FILE = {};
     this.SESSION = {};
+    this.POST = {};
     this.config = null;
     this.site = '';
     this.namespace = 'default';
@@ -114,51 +112,32 @@ me.requestState = function () {
         
         _GET = $val
     });
-    
-    this.__defineGetter__('POST', function () {
-        
-        if (_POST === null) {
-            
-            var defer = q.defer();
-            var queryData = '';
-            
-            if (self.request.method == 'POST') {
-                
-                self.request.on('data', function func_processPost_onData($data) {
-                    
-                    queryData += $data;
-                    if (queryData.length > 1e6) { // can only handle requests smaller than 1e6 == 1MB, see Node.JS source code
-                        
-                        queryData = "";
-                        self.response.writeHead(413, { 'Content-Type': 'text/plain' }).end();
-                        self.request.connection.destroy();
-                        defer.resolve(null);
-                    }
-                });
-                
-                self.request.on('end', function func_processPost_onEnd() {
-                    
-                    _POST = qs.parse(queryData);
-                    defer.resolve(_POST);
-                });
-            }
-            else {
-                
-                defer.resolve(null);
-            }
-            
-            return defer.promise;
-        }
-        
-        return _POST;
-    });
-    
-    this.__defineSetter__('POST', function ($val) {
-        
-        _POST = $val
-    });
 
     events.EventEmitter.call(this);
+};
+
+me.newRequestState = function f_helper_newRequestState($req, $res) {
+
+    var rs = new me.requestState();
+    var host = '';
+    if ($req.origin /* probably WS connection */) {
+
+        host = $req.origin;
+    }
+    else {
+
+        host = $req.headers.host;
+    }
+
+    rs._domain = new me.SHPS_domain(host, true);
+    rs.uri = rs._domain.href;
+    rs.config = libs.config.getConfig(rs._domain.hostname);
+    rs.path = $req.url ? $req.url : '/';
+    rs.request = $req;
+    rs.response = $res;
+    rs.COOKIE = libs.cookie.newCookieJar(rs);
+
+    return rs;
 };
 
 u.inherits(me.requestState, events.EventEmitter);

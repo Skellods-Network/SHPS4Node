@@ -243,7 +243,7 @@ var _sqlTable = function c_sqlTable($sql, $name) {
         var keys = [];
         for (var key in $vals) {
             
-            keys.push(key);
+            keys.push($sql.standardizeName(key));
             if (typeof $vals[key] === 'string') {
 
                 vals.push($sql.standardizeString($vals[key]));
@@ -290,11 +290,22 @@ var _sqlTable = function c_sqlTable($sql, $name) {
 
                 defer.resolve($r);
             }
+        }, function ($e) {
+        
+            console.log($e);
         });
 
         return defer.promise;
     };
-
+    
+    /**
+     * Delete data in this table
+     * 
+     * @param string $conditions
+     *   If not set, a sqlConditionBuilder will be returned
+     *   Default: undefined
+     * @result Promise()|sqlConitionBuilder
+     */
     var _delete =
     this.delete = function f_sqlTable_delete($conditions) {
     
@@ -303,7 +314,7 @@ var _sqlTable = function c_sqlTable($sql, $name) {
             return libs.sqlQueryBuilder.newSQLQueryBuilder($sql).delete(this).fulfilling();
         }
 
-        $sql.query('DELETE FROM ' + _getAbsoluteName() + ' WHERE ' + $conditions.toString());
+        return $sql.query('DELETE FROM ' + _getAbsoluteName() + ' WHERE ' + $conditions.toString());
     };
     
     /**

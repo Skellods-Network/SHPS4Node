@@ -8,10 +8,17 @@
     var util = require('util');
     var cluster = require('cluster');
     var readline = require('readline');
-    var log = require('log');
+    var Logrotate = require('logrotate-stream');
+    var os = require('os');
     
     var libs = require('node-mod-load').libs;
     
+    var lrs = Logrotate({
+        file: libs.main.getDir(SHPS_DIR_LOG) + 'info.log',
+        size: '200k', keep: 50,
+        compress: true,
+    });
+
     var mp = {
         self: this
     };
@@ -55,6 +62,7 @@
          */
         var _dbLog = function f_log_dbLog($lvl, $str) {
             
+            _fileLog($lvl, $str);
             if (!$requestState) {
                 
                 return;
@@ -70,15 +78,30 @@
                         type: $lvl,
                         content: $str,
                     }).done($sql.free, $sql.free);
-                }, _out);
+                }, $e => {
+                    libs.coml.writeError('Could not write dbLog to database: ' + $e);
+                });
             }
             catch ($e) {
                 
                 // Weeeeell. This might be serious. I should really implement a debug argument which prints out all dbLogs to the console.
-                writeError('ERROR: Could not write dbLog to database: ' + $e.toString(), false);
+                libs.coml.writeError('Could not write dbLog to database: ' + $e.toString(), false);
             }
         };
         
+        var _fileLog = function f_log_fileLog($lvl, $str) {
+
+            var dt = new Date();
+            var uts = (dt / 1000) | 0;
+            var client = '';
+            if ($requestState) {
+
+                client = ' ' + libs.SFFM.getIP($requestState.request);
+            }
+
+            lrs.write('[' + $lvl + '] ' + uts + ' (' + dt.toString() + ')' + client + ' ' + $str + os.EOL);
+        };
+
         /**
          * Write debug
          * 
@@ -87,8 +110,7 @@
         var _debug =
         this.debug = function ($str) {
 
-            libs.coml.writeDebug($str);
-            _dbLog(SHPS_LOG_LVL_DEBUG, $str);
+            _fileLog(SHPS_LOG_LVL_DEBUG, $str);
         };
 
         /**
@@ -99,8 +121,7 @@
         var _info 
         = this.info = function ($str) {
             
-            libs.coml.writeInfo($str);
-            _dbLog(SHPS_LOG_LVL_INFO, $str);
+            _fileLog(SHPS_LOG_LVL_INFO, $str);
         };
         
         /**
@@ -108,11 +129,10 @@
          *
          * @param string $str
          */
-        var _info 
-        = this.info = function ($str) {
+        var _notice
+        = this.notice = function ($str) {
             
-            libs.coml.writeNotice($str);
-            _dbLog(SHPS_LOG_LVL_NOTICE, $str);
+            _fileLog(SHPS_LOG_LVL_NOTICE, $str);
         };
         
         /**
@@ -124,6 +144,7 @@
         = this.emergency = function ($str) {
             
             libs.coml.writeEmergency($str);
+            _fileLog(SHPS_LOG_LVL_EMERGENCY, $str);
             _dbLog(SHPS_LOG_LVL_EMERGENCY, $str);
         };
         
@@ -136,6 +157,7 @@
         = this.alert = function ($str) {
             
             libs.coml.writeAlert($str);
+            _fileLog(SHPS_LOG_LVL_ALERT, $str);
             _dbLog(SHPS_LOG_LVL_ALERT, $str);
         };
         
@@ -148,6 +170,7 @@
         = this.warning = function f_log_warning($str) {
             
             libs.coml.writeWarning($str);
+            _fileLog(SHPS_LOG_LVL_WARNING, $str);
             _dbLog(SHPS_LOG_LVL_WARNING, $str);
         };
         
@@ -160,6 +183,7 @@
         = this.error = function ($str) {
             
             libs.coml.writeError($str);
+            _fileLog(SHPS_LOG_LVL_ERROR, $str);
             _dbLog(SHPS_LOG_LVL_ERROR, $str);
         };
         
@@ -172,6 +196,7 @@
         = this.critical = function ($str) {
             
             libs.coml.writeCritical($str);
+            _fileLog(SHPS_LOG_LVL_CRITICAL, $str);
             _dbLog(SHPS_LOG_LVL_CRITICAL, $str);
         };
     };

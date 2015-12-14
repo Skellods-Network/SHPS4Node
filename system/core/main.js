@@ -36,6 +36,7 @@ GLOBAL.SHPS_DIR_CERTS = 2;
 GLOBAL.SHPS_DIR_CONFIGS = 3;
 GLOBAL.SHPS_DIR_UPLOAD = 4;
 GLOBAL.SHPS_DIR_POOL = 5;
+GLOBAL.SHPS_DIR_LOG = 6;
 
 
 var constants = require('constants')
@@ -89,6 +90,7 @@ var _getDir
         case SHPS_DIR_CONFIGS: r = path.dirname(require.main.filename) + path.sep + 'config' + path.sep; break;
         case SHPS_DIR_UPLOAD: r = path.dirname(require.main.filename) + path.sep + 'upload' + path.sep; break;
         case SHPS_DIR_POOL: r = path.dirname(require.main.filename) + path.sep + 'pool' + path.sep; break;
+		case SHPS_DIR_LOG: r = path.dirname(require.main.filename) + path.sep + 'log' + path.sep; break;
     }
 
     if (r !== null) {
@@ -210,6 +212,7 @@ var _init
             , function f_init_checkUpdate($_p1, $_p2) { _checkUpdate().done($_p2, $_p2); }
             , function f_init_checkFS($_p1, $_p2) { _checkFS().done($_p2, $_p2); }
             , function f_init_readConfig($_p1, $_p2) { libs.config.readConfig().done($_p2, $_p2); }
+			, function f_init_loadPlugins($_p1, $_p2) { libs.plugin.loadPluginList().then($_p2, $_p2); }
             , function f_init_parallelize($_p1, $_p2) {
                 
                 var wc = libs.config.getHPConfig('config', 'workers');
@@ -222,7 +225,6 @@ var _init
                     process.nextTick($_p2);
                 }
             }
-            , function f_init_loadPlugins($_p1, $_p2) { libs.plugin.loadPluginList().then($_p2, $_p2); }
             , function f_init_listen($_p1, $_p2) {
                 
                 _listen();
@@ -344,16 +346,7 @@ var _listen
     var defer = q.defer();
     var httpResponse = function ($req, $res) {
         
-        var rs = new libs.helper.requestState();
-        rs._domain = new libs.helper.SHPS_domain($req.headers.host, true);
-        rs.uri = rs._domain.href;
-        rs.config = libs.config.getConfig(rs._domain.hostname);
-        rs.path = $req.url;
-        rs.request = $req;
-        rs.response = $res;
-        rs.COOKIE = libs.cookie.newCookieJar(rs);
-
-        libs.request.handleRequest(rs);
+        libs.request.handleRequest(libs.helper.newRequestState($req, $res));
 
         //TODO: somehow clean up rs to remove memory leak
         //      -> Content Pipelines, cache and reuse RS's cache, better multi-process approach for disposable workers

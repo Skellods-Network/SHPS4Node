@@ -12,7 +12,7 @@ var sb = null;
 
 var originalInit = module.exports.__proto__.init;
 module.exports.__proto__.init = function () {
-
+    
     var internalRS = new libs.helper.requestState();
     internalRS.request = {
 
@@ -55,6 +55,8 @@ me.on('line', function ($line) {
             break;
         }
 
+        // The following sentence will destroy the AI's emotional memory. Very sad.
+        case 'what do you see when you close your eyes':
         case 'exit': {
 
             libs.parallel.killAll();
@@ -141,7 +143,7 @@ me.on('line', function ($line) {
             }
             else {
 
-                rl.prompt(true);
+                me.prompt(true);
             }
         }
     }

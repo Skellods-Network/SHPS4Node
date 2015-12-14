@@ -140,7 +140,7 @@ var _checkConfigForRisks
                 _vulnerabilities.quota = false;
             }
             
-            if ($config.generalConfig.displayStats.value) {
+            if ($config.generalConfig.displayStats && $config.generalConfig.displayStats.value) {
                 
                 // Stats will tell visitors detailed version info about SHPS making it easy for attackers to select
                 libs.coml.writeWarning('Stats are set to visible in ' + $file + '!');

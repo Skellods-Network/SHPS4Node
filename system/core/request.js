@@ -2,12 +2,16 @@
 
 var me = module.exports;
 
+var defer = require('promise-defer');
 var oa = require('object-assign');
+var fs = require('fs');
 var util = require('util');
 var zip = require('zlib');
+var path = require('path');
 var q = require('q');
 var crypt = require('crypto');
 var streams = require('stream');
+var Busboy = require('busboy');
 
 var libs = require('node-mod-load').libs;
 
@@ -24,110 +28,33 @@ var mp = {
 var _parseRequestBody 
 = me.parseRequestBody = function f_request_parseRequestBody($requestState) {
     
-    var cl = $requestState.request.headers['content-length'];
-    if (!cl || cl < 0) {
-        
-        $requestState.isDataComplete = true;
-        return;
+    var d = defer();
+
+    if ($requestState.request.method !== 'POST') {
+
+        //TODO: Make other request types parseable if they have a body
+        d.reject('No POST request');
+        return d.promise;
     }
 
-    var body = ''; //new Buffer($requestState.request.headers['content-length'] * 1);
-    $requestState.request.on('data', function ($chunk) {
+    var bb = new Busboy({
+
+        headers: $requestState.request.headers,
+    });
     
-        //body.fill($chunk.toString(), offset, offset + $chunk.length);
-        //offset += $chunk.length;
-        body += $chunk;
+    bb.on('field', function ($fieldname, $val, $fieldnameTruncated, $valTruncated, $encoding, $mimetype) {
+
+        $requestState.POST[$fieldname] = $val;
     });
 
-    $requestState.request.once('end', function () {
-        
-        var ct = $requestState.request.headers['content-type'];
-        switch (ct) {
+    bb.on('finish', function () {
 
-            case 'application/x-www-form-urlencoded': {
-
-                $requestState.POST = libs.SFFM.splitQueryString(body);
-                break;
-            }
-
-            default: {
-
-                var regexFD = /^multipart\/form-data\s*;\s*boundary=(.+)$/i;
-                var match = regexFD.exec(ct);
-                if (!match) {
-                    
-                    $requestState.POST = libs.SFFM.splitQueryString(body);
-                    break;
-                }
-                
-                var boundary = '--' + match[1];
-                var offset = 0;
-                var l = boundary.length;
-                var dhStartIndex = 0;
-                var dhStopIndex = 0;
-                var index = body.indexOf(boundary, offset);
-                var data = '';
-                var nlL = 1;
-                var regexCD = /Content\-Disposition\s*\:\s*(.+)?\n/i;
-                var regexCDT = /^([\w-]+)\s*?\;?/i;
-                var regexCDN = /name[^;=\n]*=\"?([^;\n"]+)/i;
-                var regexCDFN = /filename[^;=\n]*=\"?([^;\n"]+)/i
-                var dh = '';
-                var cd = '';
-                var cdType = '';
-                var cdName = '';
-                var cdFilename = '';
-                while (index >= 0) {
-
-                    index += l;
-                    if (body.substr(index, 2) === '--') {
-
-                        break;
-                    }
-
-                    offset = index;
-                    dhStartIndex = index + 1;
-                    dhStopIndex = body.indexOf('\n\n', dhStartIndex) + 2;
-                    if (dhStopIndex <= 1) {
-                        
-                        dhStopIndex = body.indexOf('\r\n\r\n', dhStartIndex) + 4;
-                        nlL = 2;
-                    }
-
-                    index = body.indexOf(boundary, offset);
-                    dh = body.substring(dhStartIndex, dhStopIndex);
-                    data = new Buffer(body.substring(dhStopIndex, index - nlL));
-
-                    cd = regexCD.exec(dh);
-                    if (cd === undefined) {
-
-                        break;
-                    }
-
-                    cdType = regexCDT.exec(cd);
-                    cdName = regexCDN.exec(cd)[1];
-                    cdFilename = regexCDFN.exec(cd)[1];
-                    
-                    if (cdFilename === undefined) {
-
-                        $requestState.POST[cdName] = data;
-                    }
-                    else {
-
-                        $requestState.FILE[cdName] = {
-
-                            filename: cdFilename,
-                            filetype: cdType,
-                        }
-                    }
-                    
-                    //TODO: Handle multiple boundary names
-                }
-            }
-        }
-
-        $requestState.isDataComplete = true;
+        d.resolve();
     });
+
+    $requestState.request.pipe(bb);
+
+    return d.promise;
 };
 
 /**
@@ -139,10 +66,13 @@ var _handleRequest
 = me.handleRequest = function f_request_handleRequest($requestState) {
     
     $requestState.httpStatus = 501;
+
+    var log = libs.log.newLog($requestState);
+    log.info('Request for ' + $requestState.uri + $requestState.path.substr(1));
+
+    //TODO: wait for promise
     _parseRequestBody($requestState);
     
-    var log = libs.log.newLog($requestState);
-
     var unblock;
     if (typeof $requestState.config === 'undefined') {
         
@@ -218,6 +148,55 @@ var _handleRequest
             $requestState.httpStatus = 418;
             $requestState.responseType = 'text/plain';
             $requestState.responseBody = 'ERROR 418: I\'m a teapot!';
+        }
+        else if ($requestState.path.length > 1) {
+
+            // Web Components via bower
+            // This section is in massive need for a "workflow" (URI-parser+logic to work on a useful response) as it's not very useful in SHPS CORE, but very much needed for the official GUI
+            var reqPath = path.normalize(libs.main.getDir(SHPS_DIR_POOL) + 'bower_components' + path.sep + $requestState.path.substr(1));
+            if (path.relative(libs.main.getDir(SHPS_DIR_POOL) + 'bower_components', reqPath)[0] !== '.') {
+
+                $requestState.httpStatus = 200;
+
+                // This is just plain bad. The mimeType should always be fetched from the DB...
+                // For now (v4.0 Release) I will leave this here and add a TODO
+                // I want to add a smart algorithm which either detects the mimeType from file extension automatically or can read a cached mimeType from DB
+                // But until this is implemented, the following few lines should work just fine
+                if (path.extname(reqPath) === '.js') {
+
+                    $requestState.responseType = 'application/javascript';
+                }
+                else {
+
+                    $requestState.responseType = 'text/html';
+                }
+
+                var d = q.defer();
+                unblock = d.promise;
+                fs.readFile(reqPath, ($err, $data) => {
+
+                    if ($err) {
+
+                        $requestState.httpStatus = 500;
+                        d.reject($err);
+                    }
+                    else {
+
+                        $requestState.responseBody = $data;
+                        d.resolve();
+                    }
+                });
+            }
+            else {
+
+                // uh-oh, someone wants to read other files than web components...
+                $requestState.httpStatus = 404;
+                $requestState.responseType = 'text/plain';
+                $requestState.responseBody = 'Not found!';
+                unblock = q.defer();
+                unblock.resolve();
+                unblock = unblock.promise;
+            }
         }
         else {
             
@@ -415,6 +394,7 @@ var _handleRequest
                 if ($requestState.resultPending) {
                     
                     $requestState.response.end();
+                    log.info('[' + $requestState.httpStatus + '] Answered ' + $requestState.uri + $requestState.path.substr(1));
                 }
             }, errfun);
         };
