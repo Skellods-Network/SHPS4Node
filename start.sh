@@ -13,5 +13,5 @@ command -v $NODE_COM >/dev/null 2>&1 || {
   }
 }
 
-eval "$NODE_COM --expose_gc --harmony_proxies SHPS.js"
+eval "$NODE_COM --expose_gc SHPS.js"
 read -rsp $'Press any key to continue...\n'
