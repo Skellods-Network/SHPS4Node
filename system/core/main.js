@@ -24,7 +24,7 @@ GLOBAL.SHPS_ = 1;
 GLOBAL.SHPS_MAJOR_VERSION = 4;
 GLOBAL.SHPS_MINOR_VERSION = 0;
 GLOBAL.SHPS_PATCH_VERSION = 0;
-GLOBAL.SHPS_BUILD = 'BETA';
+GLOBAL.SHPS_BUILD = '';
 GLOBAL.SHPS_INTERNAL_NAME = 'IROKOKOU';
 GLOBAL.SHPS_VERSION = SHPS_MAJOR_VERSION + '.' + SHPS_MINOR_VERSION + '.' + SHPS_PATCH_VERSION;
 
@@ -65,13 +65,6 @@ var mp = {
 };
 
 
-/*
-libs.schedule.addSlot('fatalError', function () {
-
-    process.abort();
-});
-*/
-
 /**
  * Get directory path
  * 
@@ -104,7 +97,7 @@ var _getDir
 var _getVersionText 
 = me.getVersionText = function f_main_getVersionText() {
     
-    /*let*/var build = SHPS_BUILD;
+    var build = SHPS_BUILD;
     if (build != '') {
         
         build = ' ' + build;
