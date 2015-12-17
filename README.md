@@ -66,3 +66,4 @@ Build your site with SHPS and see if it fits your needs. If your project is non-
 - setup plugin repository and add plugin-commands for console (and extend plugins module so it can download and install plugins; from code as well for plugins and GUI :) )
 - add better mimeType management and auto-detection
 - plugins should get their own namespace in node-mod-load (see node-mod-load issue #5)
+- make init module for all startup action
