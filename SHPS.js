@@ -97,10 +97,7 @@ GLOBAL.__debug__ = false;
                 }
 
                 param.push('./SHPS.js');
-                var bin = SFFM.isIOJS() ? 'iojs'
-                    : 'node';
-
-                var x = cp.spawn(bin, param, { stdio: 'inherit' });
+                var x = cp.spawn('node', param, { stdio: 'inherit' });
                 libs.coml.write('Reconfiguring start parameters...');
             }
         };
