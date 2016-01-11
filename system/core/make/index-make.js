@@ -85,7 +85,7 @@ var _run
             }
 
             try {
-                $sb.run($code, $requestState.config.generalConfig.templateTimeout.value).done(function ($res) {
+                $sb.run($code).done(function ($res) {
                     
                     defer.resolve($res);
                     r.status = true;
