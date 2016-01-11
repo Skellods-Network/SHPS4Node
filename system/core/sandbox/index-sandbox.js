@@ -241,18 +241,15 @@ var _newSandbox
          */
         var _run =
         this.run = function f_sandbox_newSandbox_run($script, $timeout) {
+            $timeout = typeof $timeout !== 'undefined' ? $timeout : 3000;
             
             var defer = q.defer();
             var options = {
 
-                displayErrors: true
+                displayErrors: true,
+                timeout: $timeout,
             };
 
-            if (typeof $timeout !== 'undefined') {
-                
-                options.timeout = $timeout;
-            }
-            
             _flushContext().done(function () {
                 
                 defer.resolve($script.script.runInContext(context, options));
