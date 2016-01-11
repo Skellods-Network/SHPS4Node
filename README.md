@@ -1,6 +1,7 @@
 ﻿# SHPS
 
 [![Join the chat at https://gitter.im/Skellods-Network/SHPS4Node](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/Skellods-Network/SHPS4Node?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Semver](http://img.shields.io/SemVer/2.0.0.png)](http://semver.org/spec/v2.0.0.html)
 
 ## What exactly is SHPS?
 
