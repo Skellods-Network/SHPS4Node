@@ -8,6 +8,7 @@ var crypto = require('crypto');
 var _ = require('lodash');
 var reqIP = require('request-ip');
 var strSize = require('node-mb-string-size');
+var qs = require('qs');
 
 var libs = require('node-mod-load').libs;
 
@@ -125,35 +126,48 @@ var _splitQueryString
         reqPath = components[0];
     }
 
-    var reqParams = reqPath.split('&');
-    var i = 0;
-    var params = {};
+    var r = qs.parse(reqPath, {
     
-    while (typeof reqParams[i] !== 'undefined') {
-        
-        var kvp = reqParams[i].split('=');
-        if (kvp.length == 1) {
-            
-            params[kvp[0]] = true;
-        }
-        else if (kvp.length == 2) {
-            
-            params[kvp[0]] = decodeURIComponent(kvp[1]);
-        }
-        else {
-            
-            var j = 1;
-            while (typeof kvp[j] !== 'undefined') {
-                
-                params[kvp[0]] += decodeURIComponent(kvp[j]);
-                j++;
-            }
-        }
-        
-        i++;
-    }
+        plainObjects: true,
+        allowDots: true,
+    });
+    
+    var correctObject = function ($obj) {
 
-    return params;
+        var i = 0;
+        var keys = Object.keys($obj);
+        var l = keys.length;
+        var val = null;
+        while (i < l) {
+            
+            val = $obj[keys[i]];
+            if (Array.isArray(val) && val.length == 1 && val[0] === '') {
+
+                    $obj[keys[i]] = [];
+            }
+            else if (typeof val === 'object') {
+
+                correctObject($obj[keys[i]]);
+            }
+            else {
+
+                if (val === '') {
+
+                    $obj[keys[i]] = true;
+                }
+                else if (!isNaN(val)) {
+
+                    $obj[keys[i]] = +val;
+                }
+            }
+
+            i++;
+        }
+
+        return $obj;
+    };
+
+    return correctObject(r);
 };
 
 /**
