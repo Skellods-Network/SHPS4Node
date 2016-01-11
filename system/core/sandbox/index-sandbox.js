@@ -241,7 +241,7 @@ var _newSandbox
          */
         var _run =
         this.run = function f_sandbox_newSandbox_run($script, $timeout) {
-            $timeout = typeof $timeout !== 'undefined' ? $timeout : 3000;
+            $timeout = typeof $timeout !== 'undefined' ? $timeout : $requestState.config.generalConfig.templateTimeout.value * 1000;
             
             var defer = q.defer();
             var options = {
