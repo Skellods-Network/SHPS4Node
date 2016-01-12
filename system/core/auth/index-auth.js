@@ -354,8 +354,8 @@ var Auth
      * @result integer
      *   ID
      */
-    var _getIDFromUser =
-    this.getIDFromUser = function f_auth_getIDFromUser($mail) {
+    var _getIDFromMail =
+    this.getIDFromMail = function f_auth_getIDFromMail($mail) {
         
         return _getIDFromTable('user', 'email', $mail);
     };
