@@ -347,6 +347,20 @@ var Auth
     };
     
     /**
+     * Get ID from mail
+     * 
+     * @param $mail string
+     *   Mail
+     * @result integer
+     *   ID
+     */
+    var _getIDFromUser =
+    this.getIDFromUser = function f_auth_getIDFromUser($mail) {
+        
+        return _getIDFromTable('user', 'email', $mail);
+    };
+    
+    /**
      * Get ID from group
      * 
      * @param $name string
@@ -771,7 +785,17 @@ var Auth
                     
                     $user = $id;
                     $cb();
-                }, $cb);
+                }, function ($e) {
+                        
+                    if ($e === SHPS_ERROR_NO_ROWS) {
+
+                        _getIDFromMail($user).done(function ($id) {
+                                                
+                            $user = $id;
+                            $cb();                
+                        }, $cb);
+                    }
+                });
             },
             function ($cb) {
                 
