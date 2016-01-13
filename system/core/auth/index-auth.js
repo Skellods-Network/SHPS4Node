@@ -924,6 +924,7 @@ var Auth
     
     /**
      * Checks if current client is logged in
+     * @deprecated since 4.0.1, use auth::isLoggedIn(undefined) instead
      * 
      * @result boolean
      */
@@ -934,29 +935,52 @@ var Auth
     };
     
     /**
-     * Checks if $user is logged in
+     * Checks if $user is logged in. If $user is left undefined, this method will use the current user
      * 
-     * @param $user integer|string
+     * @param $user integer|string|undefined
      *   User ID or name
      * @result
-     *   promise(err, boolean)
+     *   promise(boolean)
      */
     var _isLoggedIn =
     this.isLoggedIn = function f_auth_isLoggedIn($user) {
         
         var defer = q.defer();
-        $user = _getIDFromUser($user).done(function ($user) {
+        
+        if (typeof $user === 'undefined') {
             
-            if ($user === $requestState.SESSION['ID']) {
+            defer.resolve(typeof $requestState.SESSION.user !== 'undefined');
+        }
+        else {
+            
+            _getIDFromUser($user).done(function ($user) {
+            
+                if ($user === $requestState.SESSION.ID) {
                 
-                defer.resolve(null, _isClientLoggedIn());
-                return;
-            }
+                    defer.resolve(null, _isClientLoggedIn());
+                    return;
+                }
 
-            //check DB
-            defer.resolve(false);
-            return;
-        }, defer.reject);
+                libs.sql.newSQL('usermanagement', $requestState).done(function ($sql) {
+                    
+                    var tblUser = $sql.openTable('user');
+                    $sql.query()
+                        .get(tblUser.col('isLoggedIn'))
+                        .fulfilling()
+                        .eq(tblUser.col('ID'), $user)
+                        .execute()
+                        .done(function ($rows) {
+                            
+                            $sql.free();
+                            defer.resolve($rows.length > 0 && $rows[0].isLoggedIn > 0);
+                        }, function ($e) {
+                            
+                            $sql.free();
+                            defer.reject($e);
+                        });
+                });
+            }, defer.reject);
+        }
         
         return defer.promise;
     };
