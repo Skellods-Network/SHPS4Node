@@ -795,6 +795,10 @@ var Auth
                             $cb();                
                         }, $cb);
                     }
+                    else {
+                        
+                        $cb($e);
+                    }
                 });
             },
             function ($cb) {
