@@ -28,6 +28,7 @@ Build your site with SHPS and see if it fits your needs. If your project is non-
 - move TODO list to github's open issues (make branches/forks and a resulting pull request for each issue)
 - GUI. Let's be honest, a GUI is a game-changer and will make SHPS accessible for more people and especially beginners
 - work on feature list
+- add config-tester which is called on startup and implements a modular test-interface for checking stuff like DB connections ahead
 - implement domain/user-states which cache certain objects (e.g. log, auth, permissions-array,...)
 - only load plugins which are enabled by configurations
 - only use explicitly enabled plugins for defined requests
