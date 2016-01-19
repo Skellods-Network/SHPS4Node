@@ -389,8 +389,12 @@ var _getPartial = function f_make_getPartial($requestState, $partialName, $names
                         });
                     }
                 });
+            }, function ($e) {
+                    
+                $sql.free();
+                defer.reject($e);
             });
-        });
+        }, defer.reject);
     }
     
     return defer.promise;
@@ -650,34 +654,46 @@ var _siteResponse
     $siteName = typeof $siteName === 'string' && $siteName !== '' ? $siteName : 'index';
     
     var defer = q.defer();
-    _getPartial($requestState, $requestState.config.generalConfig.rootTemplate.value, $namespace).then(function ($res) {
-        
-        return _executeBody($requestState, $res);
-    }, defer.reject)
-    .then(function ($res) {
-        
-        return _parseTemplate($requestState, $res.result);//TODO: Check status
-    }, defer.reject)
-    .then(function ($res) {
+
+    async.waterfall([
     
-        if (q.isPromise($res.body)) {
+        function ($cb) {
+
+            _getPartial($requestState, $requestState.config.generalConfig.rootTemplate.value, $namespace).done($cb.bind(undefined, null), $cb);
+        },
+        function ($res, $cb) {
+
+            _executeBody($requestState, $res).done($cb.bind(undefined, null), $cb);
+        },
+        function ($res, $cb) {
             
-            return $res.body;
+            _parseTemplate($requestState, $res.result).done($cb.bind(undefined, null), $cb);//TODO: Check status
+        },
+        function ($res, $cb) {
+
+            if (q.isPromise($res.body)) {
+                
+                $res.body.done($cb.bind(undefined, null), $cb);
+            }
+            else {
+                
+                $cb(null, $res);
+            }
+        },
+    ], function ($err, $res) {
+        
+        if ($err) {
+            
+            defer.reject($err);
         }
         else {
             
-            var defer = q.defer();
+            $requestState.httpStatus = $res.status;
+            $requestState.responseType = 'text/html';
+            $requestState.responseBody = $res.body;
             defer.resolve($res);
-            return defer.promise;
         }
-    }, defer.reject)
-    .done(function ($res) {
-    
-        $requestState.httpStatus = $res.status;
-        $requestState.responseType = 'text/html';
-        $requestState.responseBody = $res.body;
-        defer.resolve($res);
-    }, defer.reject);
+    });
     
     return defer.promise;
 };

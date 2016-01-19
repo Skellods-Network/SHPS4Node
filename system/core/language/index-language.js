@@ -86,7 +86,7 @@ var _Language
                         }
                     }
                 });
-            });
+            }, defer.reject);
         }
         
         return defer.promise;
