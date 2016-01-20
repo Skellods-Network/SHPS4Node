@@ -1,6 +1,7 @@
 ﻿# SHPS
 
 [![Join the chat at https://gitter.im/Skellods-Network/SHPS4Node](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/Skellods-Network/SHPS4Node?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Semver](http://img.shields.io/SemVer/2.0.0.png)](http://semver.org/spec/v2.0.0.html)
 
 ## What exactly is SHPS?
 
@@ -28,17 +29,12 @@ Build your site with SHPS and see if it fits your needs. If your project is non-
 - GUI. Let's be honest, a GUI is a game-changer and will make SHPS accessible for more people and especially beginners
 - work on feature list
 - implement domain/user-states which cache certain objects (e.g. log, auth, permissions-array,...)
-- split all modules into a header and multiple code files. Code files should only export one method, so that they can be easily required by the header files inside a getter
 - only load plugins which are enabled by configurations
 - only use explicitly enabled plugins for defined requests
-- improve querystring parser with FOSS modules from npm (`qs`)
 - improve logging capabilities
-- add timeout for sandboxes
-- replace default.js with template files
 - guided setup
+- make init module for all startup action
 - include dependency checks into init flow
-- remove JS modules from CORE directory and pack them into the module-packages
-- organize the module packages in a way which optimizes overview
 - add config file encryption (I think this is a ASVS item... but this will be hard to implement as SHPS should be able to auto-start...)
 - add ipc in local cluster to improve collaboration between processes
 - improve cluster-collaboration by assigning specific tasks to different processes
@@ -52,17 +48,9 @@ Build your site with SHPS and see if it fits your needs. If your project is non-
 - improve commandline
 - cache requestState cached structures
 - re-enable gzip compression
-- remove Q and use native promisses instead (bundled with `promise-defer` for easy rewrite)
-- separate module-interface and code by moving all implementation code away from index files
 - cache DB in local variables on startup; add cache-tools to commandline in order to invalidate cache manually
-- add websocket support for server-requests (create or implement existing protocol)
-- extract commandline module into own project + glue and action handler for SHPS (creating the SHPS console "Look 'n Feel")
 - enable site-specific plugin (interesting for plugin version as well) by adding subdirectories to /system/plugin
-- implement file upload
-- clean up classes (constructors are crowded with methods at the moment)
 - check if plugin is loaded or physically available before trying to use it (e.g. calling event)
-- rewrite function-classes in modules to be real (ES6-)Classes
-- remove (deprecated) iojs code paths
 - setup plugin repository and add plugin-commands for console (and extend plugins module so it can download and install plugins; from code as well for plugins and GUI :) )
 - add better mimeType management and auto-detection
 - plugins should get their own namespace in node-mod-load (see node-mod-load issue #5)

@@ -213,15 +213,6 @@ var _init =
 
         libs.schedule.addSlot('onMainInit', function () {
 
-            if (libs.SFFM.isIOJS()) {
-
-                libs.coml.write('SHPS detected IOJS and will make use of Harmony features!'.green);
-            }
-            else if (libs.SFFM.isHarmonyActivated()) {
-
-                libs.coml.write('SHPS detected that Harmony features are activated and will make use of them!'.green);
-            }
-
             if (global.gc) {
 
                 libs.coml.write('SHPS will optimize garbage collection!'.green);

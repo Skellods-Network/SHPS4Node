@@ -41,7 +41,7 @@
         },
         "templateTimeout": { 
             "description": "Maximum amount of time in seconds a template (partial or content) can take before excution is stopped",
-            "value": 60
+            "value": 3
         },
         "indexContent": {
 
