@@ -217,8 +217,8 @@ var _getContent = function f_make_getContent($requestState, $contentName, $names
                     
                     defer.resolve({
 
-                        body: '<error>' + hak.message + '</error>',
-                        status: hak.httpStatus,
+                        body: '<error>' + $akExt.message + '</error>',
+                        status: $akExt.httpStatus,
                     });
                     
                     return;
