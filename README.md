@@ -54,4 +54,5 @@ Build your site with SHPS and see if it fits your needs. If your project is non-
 - check if plugin is loaded or physically available before trying to use it (e.g. calling event)
 - setup plugin repository and add plugin-commands for console (and extend plugins module so it can download and install plugins; from code as well for plugins and GUI :) )
 - add better mimeType management and auto-detection
+- process client hints
 - plugins should get their own namespace in node-mod-load (see node-mod-load issue #5)
