@@ -94,9 +94,17 @@ var _handleRequest
             
             var defer = q.defer();
             defer.resolve($loop);
-
+            
             return defer.promise;
-        }
+        };
+        
+        var errFun = function ($err) {
+            
+            $requestState.response.writeHead(500, { 'Server': 'SHPS' });
+            $requestState.response.end($err.toString());//TODO: don't send error info -> might be sensitive data
+            $requestState.resultPending = false;
+            $requestState.headerPending = false;
+        };
 
         if ($requestState.path === '/favicon.ico') {
             
@@ -202,7 +210,7 @@ var _handleRequest
             
             // if they don't know what they want, they should just get the index site...
             $requestState.GET['site'] = $requestState.site;
-            unblock = libs.make.siteResponse($requestState, $requestState.GET['site'], $requestState.GET['ns']).then(siteHandler, siteHandler);
+            unblock = libs.make.siteResponse($requestState, $requestState.GET['site'], $requestState.GET['ns']).then(siteHandler, errFun);
         }
     }
     
@@ -226,12 +234,6 @@ var _handleRequest
             }
         };
     }
-    
-    var errFun = function ($err) {
-        
-        $requestState.response.writeHead(500, { 'Server': 'SHPS' });
-        $requestState.response.end($err.toString());//TODO: don't send error info -> might be sensitive data
-    };
 
     // This is just here to ease the transition from using Q to using native Promises
     if (!unblock.done) {
