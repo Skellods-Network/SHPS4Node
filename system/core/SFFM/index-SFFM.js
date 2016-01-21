@@ -48,7 +48,10 @@ var _isHarmonyActivated
     // For deprecation reasons
     if (typeof _isIOJS === 'undefined') {
         
-        _isIOJS = false;
+        _isIOJS = function() {
+            
+            return false;
+        };
     }
     
     return (_isIOJS() || ~process.execArgv.indexOf('--harmony'));
