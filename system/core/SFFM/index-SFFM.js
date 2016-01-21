@@ -20,6 +20,7 @@ var _cleanStr
 
 /**
  * Tries to determine if SHPS is running on io.js or node.js
+ * @DEPRECATED
  * 
  * @return boolean
  */
@@ -43,6 +44,12 @@ var _isIOJS
 var _isHarmonyActivated 
 = me.isHarmonyActivated = function f_SFFM_isHarmonyActivated() {
 
+    // For deprecation reasons
+    if (typeof _isIOJS === 'undefined') {
+        
+        _isIOJS = false;
+    }
+    
     return (_isIOJS() || ~process.execArgv.indexOf('--harmony'));
 };
 
