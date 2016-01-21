@@ -940,7 +940,7 @@ var Auth
      * @param $user integer|string|undefined
      *   User ID or name
      * @result
-     *   promise(err, boolean)
+     *   promise(boolean)
      */
     var _isLoggedIn =
     this.isLoggedIn = function f_auth_isLoggedIn($user) {
