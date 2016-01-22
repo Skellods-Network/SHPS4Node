@@ -550,6 +550,17 @@ var _makePoolName = function f_sql_makePoolName($dbConfig) {
         $dbConfig.prefix.value;
 };
 
+var _makeErrorObject = function f_sql_makeErrorObject ($dbConfig, $err) {
+
+    $err.conf = $dbConfig;
+    $err.toString = function () {
+
+        return ($err.fatal ? 'FATAL ' : '') + 'ERROR: ' + $err.code + ' on DB ' + $dbConfig.host.value + ':' + $dbConfig.port.value + ' -> ' + $dbConfig.user.value + '@' + $dbConfig.name.value;
+    };
+
+    return $err;
+};
+
 /**
  * Create new managed SQL connection from alias (see config file)
  * 
@@ -604,6 +615,19 @@ var _newSQL
                     multipleStatements: true
                 });
                 
+                nPool.on('connection', function ($con) {
+                        
+                    $con.on('error', function ($err) {
+                                            
+                        libs.coml.writeError('DB ERROR: ' + $err.code);
+                    });
+                });
+                
+                nPool.on('enqueue', function () {
+                        
+                    // Use optimizer here to ask admin for higher connection limit
+                });
+                
                 nPool.getConnection(function ($err, $con) {
                     
                     if (!$err) {
@@ -612,7 +636,7 @@ var _newSQL
                     }
                     else {
 
-                        defer.reject(new Error($err));
+                        defer.reject(_makeErrorObject(dbConfig, $err));
                     }
                 });
 
@@ -661,7 +685,7 @@ var _newSQL
                     }
                     else {
 
-                        defer.reject(new Error($err));
+                        defer.reject(_makeErrorObject(dbConfig, $err));
                     }
                     
                 });
@@ -686,7 +710,7 @@ var _newSQL
                     
                     if ($err) {
 
-                        defer.reject(new Error($err));
+                        defer.reject(_makeErrorObject(dbConfig, $err));
                     }
                     else {
 
@@ -703,7 +727,7 @@ var _newSQL
                     
                     if ($err) {
                         
-                        defer.reject(new Error($err));
+                        defer.reject(_makeErrorObject(dbConfig, $err));
                     }
                     else {
                         
