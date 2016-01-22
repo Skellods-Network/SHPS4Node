@@ -215,7 +215,12 @@ var _getContent = function f_make_getContent($requestState, $contentName, $names
                 
                 if (!$akExt.hasAccessKey) {
                     
-                    defer.resolve('<error>' + hak.message + '</error>', hak.httpStatus);
+                    defer.resolve({
+
+                        body: '<error>' + $akExt.message + '</error>',
+                        status: $akExt.httpStatus,
+                    });
+                    
                     return;
                 }
                 
