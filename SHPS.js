@@ -89,9 +89,8 @@ GLOBAL.__debug__ = false;
             else {
 
                 var cp = require('child_process');
-                var SFFM = require('./system/core/SFFM.js');
                 var param = ['--expose-gc', '--harmony_proxies'];
-                if (SFFM.isHarmonyActivated()) {
+                if (libs.SFFM.isHarmonyActivated()) {
 
                     param.push('--harmony');
                 }
