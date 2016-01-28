@@ -620,19 +620,37 @@ this.parseTemplate = function f_make_parseTemplate($requestState, $template) {
         default: {
             
             var res = null;
-            _getPartial($requestState, name, namespace)
-            .then(function ($res) {
-                
-                res = $res;
-                return _executeBody($requestState, $res.body, params);
-            }, defer.reject)
-            .done(function ($res) {
-                
+            async.waterfall([
+
+                $cb => {
+
+                    _getPartial($requestState, name, namespace).done($cb.bind(null, null), $cb);
+                },
+                ($res, $cb) => {
+
+                    res = $res;
+                    _executeBody($requestState, $res.body, params).done($cb.bind(null, null), $cb);
+                }
+            ], ($err, $res) => {
+
+                if ($err) {
+
+                    var msg = $err.body ? $err.body : $err.result;
+                    defer.resolve({
+
+                        body: tmp + msg,
+                        status: $err.status,
+                    });
+
+                    return;
+                }
+
                 defer.resolve({
+
                     body: tmp + $res.result,
                     status: res.status,
                 });
-            }, defer.reject);
+            });
         }
     }
     
