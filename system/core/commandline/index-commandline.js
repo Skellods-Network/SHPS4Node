@@ -44,7 +44,9 @@ var _writeWelcome
 me.on('line', function ($line) {
 
     $line = $line.trim();
-    switch ($line) {
+    var tokens = $line.split(' ');
+    //ohmygod, this should really be exchanged with some eventing action
+    switch (tokens[0]) {
 
         case 'clear':
         case 'clr':
@@ -108,6 +110,32 @@ me.on('line', function ($line) {
         case 'cache': {
 
             me.write('Not Implemented yet');
+        }
+        
+        case 'reload': {
+
+            switch (tokens[1]) {
+
+                case 'config': {
+
+                    var end = () => {
+
+                        me.write('\n');
+                    };
+
+                    libs.config.readConfig().then(end, end);
+                    break;
+                }
+
+                //case 'plugins': {}
+
+                default: {
+
+                    me.write('Usage:\n reload <what>\n\nThings to reload:\n - config');
+                }
+            }
+
+            break;
         }
 
         case /^\s*?!.*/i.test($line)
