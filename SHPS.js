@@ -89,18 +89,14 @@ GLOBAL.__debug__ = false;
             else {
 
                 var cp = require('child_process');
-                var SFFM = require('./system/core/SFFM.js');
                 var param = ['--expose-gc', '--harmony_proxies'];
-                if (SFFM.isHarmonyActivated()) {
+                if (libs.SFFM.isHarmonyActivated()) {
 
                     param.push('--harmony');
                 }
 
                 param.push('./SHPS.js');
-                var bin = SFFM.isIOJS() ? 'iojs'
-                    : 'node';
-
-                var x = cp.spawn(bin, param, { stdio: 'inherit' });
+                var x = cp.spawn('node', param, { stdio: 'inherit' });
                 libs.coml.write('Reconfiguring start parameters...');
             }
         };

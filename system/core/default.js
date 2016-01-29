@@ -38,6 +38,11 @@ me.config = {
             "description": "Number of log entries stored in the DB",
             "value": 50
         },
+        "templateTimeout": {
+
+            "description": "Maximum amount of time in seconds a template (partial or content) can take before excution is stopped",
+            "value": 60
+        },
         "timezone"		: {
             
             "description": "Timezone of the server",

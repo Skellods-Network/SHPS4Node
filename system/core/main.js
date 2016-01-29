@@ -22,8 +22,8 @@ var me = module.exports;
 
 GLOBAL.SHPS_ = 1;
 GLOBAL.SHPS_MAJOR_VERSION = 4;
-GLOBAL.SHPS_MINOR_VERSION = 0;
-GLOBAL.SHPS_PATCH_VERSION = 2;
+GLOBAL.SHPS_MINOR_VERSION = 1;
+GLOBAL.SHPS_PATCH_VERSION = 0;
 GLOBAL.SHPS_BUILD = '';
 GLOBAL.SHPS_INTERNAL_NAME = 'IROKOKOU';
 GLOBAL.SHPS_VERSION = SHPS_MAJOR_VERSION + '.' + SHPS_MINOR_VERSION + '.' + SHPS_PATCH_VERSION;
@@ -215,12 +215,16 @@ var _init
                 }
                 else {
                     
-                    process.nextTick($_p2);
+                    $_p2();
                 }
             }
             , function f_init_listen($_p1, $_p2) {
                 
-                _listen();
+                if (libs.parallel.work()) {
+                
+                  _listen();
+                }
+                
                 process.nextTick($_p2);
             }
             , function f_init_event($_p1, $_p2) {
@@ -240,7 +244,7 @@ var _init
         
         if ($err) {
 
-            libs.coml.writeEmergency('\nCould not fully initialize SHPS!\nError: ' + $err);
+            libs.coml.writeFatal('\nCould not fully initialize SHPS!\nError: ' + $err);
         }
         else {
 
