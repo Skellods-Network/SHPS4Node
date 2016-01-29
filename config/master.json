@@ -10,7 +10,7 @@
 
 		"workers": {
 			"description": "Spawns {%value} workers to handle work. Workers are working even closer together than clustered SHPSs. Makes use of multiple cores. Even with 0 workers there will always be a master process. Insert -1 for smart worker regulation",
-			"value": 0
+			"value": -1
 		},
 		"eastereggs": {
             "description": "Enable eastereggs which might give information about the used SHPS version to a third party",

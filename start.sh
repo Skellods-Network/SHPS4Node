@@ -13,5 +13,5 @@ command -v $NODE_COM >/dev/null 2>&1 || {
   }
 }
 
-eval "$NODE_COM --expose_gc SHPS.js"
+eval "$NODE_COM SHPS.js"
 read -rsp $'Press any key to continue...\n'

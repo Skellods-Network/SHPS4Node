@@ -1,2 +1,2 @@
-node --expose_gc SHPS.js
+node SHPS.js
 PAUSE
