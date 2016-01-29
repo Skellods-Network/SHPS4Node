@@ -240,7 +240,7 @@ var _init
         
         if ($err) {
 
-            libs.coml.writeEmergency('\nCould not fully initialize SHPS!\nError: ' + $err);
+            libs.coml.writeFatal('\nCould not fully initialize SHPS!\nError: ' + $err);
         }
         else {
 
