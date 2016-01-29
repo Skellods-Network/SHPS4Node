@@ -215,12 +215,16 @@ var _init
                 }
                 else {
                     
-                    process.nextTick($_p2);
+                    $_p2();
                 }
             }
             , function f_init_listen($_p1, $_p2) {
                 
-                _listen();
+                if (libs.parallel.work()) {
+                
+                  _listen();
+                }
+                
                 process.nextTick($_p2);
             }
             , function f_init_event($_p1, $_p2) {
