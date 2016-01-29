@@ -20,7 +20,14 @@ var libs = require('node-mod-load').libs;
 var _work 
 = me.work = function f_parallelize_work() {
 
-    return cluster.isMaster;
+    if (libs.config.getHPConfig('config', 'workers') == 0) {
+
+        return true;
+    }
+    else {
+
+        return cluster.isWorker;
+    }
 };
 
 var _spawnWorker = function () {
@@ -101,7 +108,7 @@ var _handle
             worker = _spawnWorker();
         }
         
-        defer.resolve(SHPS_ERROR_NO_ERROR);
+        defer.resolve();
     }
     else {
         
