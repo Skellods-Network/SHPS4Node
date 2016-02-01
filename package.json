@@ -51,6 +51,7 @@
         "promise-defer": "^1.0.0",
         "terminal-kit": "^0.15.0",
         "terminal-menu": "^2.1.0",
-        "busboy": "^0.2.0"
+        "busboy": "^0.2.0",
+        "qs": "^6.0.0"
     }
 }
