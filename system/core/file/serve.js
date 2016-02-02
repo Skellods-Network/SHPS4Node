@@ -144,11 +144,10 @@ var _getFileLocation = function f_file_serve_addFileData($fileObject) {
                 }
                 else {
 
-                    $fileObject.stats = $stats;
-
                     $res({
 
                         path: pathList[dex],
+                        stats: $stats,
                     });
                 }
             });
@@ -166,6 +165,7 @@ var _getFileLocation = function f_file_serve_addFileData($fileObject) {
             if (!$vals[i].failed) {
 
                 $fileObject.path = $vals[i].path;
+                $fileObject.stats = $vals[i].stats;
                 d.resolve($fileObject);
                 return;
             }
