@@ -35,6 +35,7 @@ var _getFileInfo = function f_file_serve_getFileInfo($requestState, $name, $cb) 
                 tblU.col('fileName'),
                 tblU.col('cache'),
                 tblU.col('ttc'),
+                tblU.col('hash'),
                 tblU.col('lastModified'),
                 tblU.col('accessKey'),
                 tblU.col('compressedSize'),
@@ -234,9 +235,14 @@ var _zipNServe = function f_file_serve_zipNServe($fileObject, $cb) {
 
     $fileObject.requestState.responseHeaders['Trailer'] = 'Content-MD5';
 
-    if ($fileObject.cache == 1) {
+    if ($fileObject.cache !== 0) {
 
-        $fileObject.requestState.responseHeaders['Cache-Control'] = 'max-age=' + $fileObject.ttc;
+        $fileObject.requestState.responseHeaders['Cache-Control'] = 'no-cache'; //, max-age=' + $fileObject.ttc;
+        $fileObject.requestState.responseHeaders['ETag'] = $fileObject.hash;
+    }
+    else {
+
+        $fileObject.requestState.responseHeaders['Cache-Control'] = 'no-store';
     }
 
     $fileObject.requestState.resultPending = false;
@@ -288,6 +294,39 @@ var _zipNServe = function f_file_serve_zipNServe($fileObject, $cb) {
     ;
 };
 
+var _cacheLookup = function f_file_serve_cacheLookup($fileObject, $cb) {
+
+    if (typeof $fileObject.requestState.request.headers['if-modified-since'] === 'undefined') {
+
+        if (typeof $fileObject.requestState.request.headers['If-None-Match'] === 'undefined') {
+
+            $cb(null, $fileObject);
+        }
+        else {
+
+            if ($fileObject.requestState.request.headers['If-None-Match'] !== $fileObject.hash) {
+
+                $cb(null, $fileObject);
+            }
+            else {
+
+                $cb('cached');
+            }
+        }
+    }
+    else {
+
+        if (new Date($fileObject.requestState.request.headers['if-modified-since']) < new Date($fileObject.lastModified * 1000)) {
+
+            $cb(null, $fileObject);
+        }
+        else {
+
+            $cb('cached');
+        }
+    }
+};
+
 me.serveFile = function f_file_serve_serveFile($requestState, $name) {
 
     var d = defer();
@@ -296,7 +335,14 @@ me.serveFile = function f_file_serve_serveFile($requestState, $name) {
 
         $requestState.httpStatus = $err.status;
         $requestState.responseBody = $err.msg;
-        d.reject();
+        d.resolve();
+    };
+
+    var _cacheHit = function() {
+        
+        $requestState.httpStatus = 304;
+        $requestState.responseBody = '';
+        d.resolve();
     };
 
     // In preparation of the programmable workflows + content-pipeline let me present to you: the hard-coded workflow + pipeline
@@ -309,6 +355,7 @@ me.serveFile = function f_file_serve_serveFile($requestState, $name) {
         },
         _getFileInfo,
         _hasAccessKey,
+        _cacheLookup,
         _getFileLocation,
         _addFileData,
         _zipNServe,
@@ -316,7 +363,14 @@ me.serveFile = function f_file_serve_serveFile($requestState, $name) {
 
         if ($err) {
 
-            _errorFun($err);
+            if ($err === 'cached') {
+
+                _cacheHit();
+            }
+            else {
+
+                _errorFun($err);
+            }
         }
         else {
 
