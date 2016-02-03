@@ -2,6 +2,7 @@
 
 var me = module.exports;
 
+var async = require('vasync');
 var crypto = require('crypto');
 var q = require('q');
 var fs = require('fs')
@@ -23,9 +24,7 @@ var libs = require('node-mod-load').libs;
  * @param $name string
  * @result Promise(fileObject or errorObject)
  */
-var _getFileInfo = function f_file_serve_getFileInfo($requestState, $name) {
-
-    var d = defer();
+var _getFileInfo = function f_file_serve_getFileInfo($requestState, $name, $cb) {
 
     libs.sql.newSQL('default', $requestState).done(function ($sql) {
 
@@ -51,7 +50,7 @@ var _getFileInfo = function f_file_serve_getFileInfo($requestState, $name) {
                 $sql.free();
                 if ($rows.length <= 0) {
 
-                    d.reject({
+                    $cb({
                         msg: 'File not found',
                         status: 404,
                     });
@@ -63,7 +62,7 @@ var _getFileInfo = function f_file_serve_getFileInfo($requestState, $name) {
                 fo.requestState = $requestState;
                 fo.name = $name;
 
-                d.resolve(fo);
+                $cb(null, fo);
             }, function ($err) {
 
                 $sql.free();
@@ -73,14 +72,12 @@ var _getFileInfo = function f_file_serve_getFileInfo($requestState, $name) {
                     msg += ': ' + $err;
                 }
 
-                d.reject({
+                $cb({
                     msg: msg,
                     status: 500,
                 });
             });
     });
-
-    return d.promise;
 };
 
 /**
@@ -89,31 +86,25 @@ var _getFileInfo = function f_file_serve_getFileInfo($requestState, $name) {
  * @param $fileObject Object
  * @result Promise(fileObject or errorObject)
  */
-var _hasAccessKey = function f_file_serve_hasAccessKey($fileObject) {
-
-    var d = defer();
+var _hasAccessKey = function f_file_serve_hasAccessKey($fileObject, $cb) {
 
     $fileObject.requestState.cache.auth.hasAccessKeyExt($fileObject.accessKey).done(function ($result) {
 
         if ($result.hasAccessKey) {
 
-            d.resolve($fileObject);
+            $cb(null, $fileObject);
         }
         else {
 
-            d.reject({
+            $cb({
                 msg: $result.message,
                 status: $result.httpStatus,
             });
         }
-    });
-
-    return d.promise;
+    }, $cb);
 };
 
-var _getFileLocation = function f_file_serve_addFileData($fileObject) {
-
-    var d = defer();
+var _getFileLocation = function f_file_serve_addFileData($fileObject, $cb) {
 
     var pathList = [
         libs.main.getDir(SHPS_DIR_POOL) + $fileObject.requestState.config.generalConfig.URL.value + path.sep + $fileObject.fileName,
@@ -166,20 +157,19 @@ var _getFileLocation = function f_file_serve_addFileData($fileObject) {
 
                 $fileObject.path = $vals[i].path;
                 $fileObject.stats = $vals[i].stats;
-                d.resolve($fileObject);
+                $cb(null, $fileObject);
+
                 return;
             }
 
             i++;
         }
 
-        d.reject({
+        $cb({
             msg: 'File could not be found!',
             status: 404,
         });
     });
-
-    return d.promise;
 };
 
 /**
@@ -188,9 +178,7 @@ var _getFileLocation = function f_file_serve_addFileData($fileObject) {
  * @param $fileObject Object
  * @result Promise(fileObject or errorObject)
  */
-var _addFileData = function f_file_serve_addFileData($fileObject) {
-
-    var d = defer();
+var _addFileData = function f_file_serve_addFileData($fileObject, $cb) {
 
     var rs = fs.createReadStream($fileObject.path, { bufferSize: 64 * 1024 });
     rs.pause();
@@ -204,9 +192,7 @@ var _addFileData = function f_file_serve_addFileData($fileObject) {
         $fileObject.fStream.resume();
     });
 
-    d.resolve($fileObject);
-
-    return d.promise;
+    $cb(null, $fileObject);
 };
 
 /**
@@ -215,9 +201,7 @@ var _addFileData = function f_file_serve_addFileData($fileObject) {
  * @param $fileObject Object
  * @result Promise()
  */
-var _zipNServe = function f_file_serve_zipNServe($fileObject) {
-
-    var d = defer();
+var _zipNServe = function f_file_serve_zipNServe($fileObject, $cb) {
 
     $fileObject.requestState.isResponseBinary = true;
     $fileObject.requestState.httpStatus = 200;
@@ -256,7 +240,7 @@ var _zipNServe = function f_file_serve_zipNServe($fileObject) {
     }
 
     $fileObject.requestState.resultPending = false;
-    d.resolve();
+    $cb();
 
     var compSize = 0;
     var hash = crypto.createHash('md5');
@@ -302,8 +286,6 @@ var _zipNServe = function f_file_serve_zipNServe($fileObject) {
             });
         })
     ;
-
-    return d.promise;
 };
 
 me.serveFile = function f_file_serve_serveFile($requestState, $name) {
@@ -319,13 +301,28 @@ me.serveFile = function f_file_serve_serveFile($requestState, $name) {
 
     // In preparation of the programmable workflows + content-pipeline let me present to you: the hard-coded workflow + pipeline
     // Well.. at least it looks a little like a pipeline... data is piped to the next function...
-    _getFileInfo($requestState, $name)
-        .then(_hasAccessKey, _errorFun)
-        .then(_getFileLocation, _errorFun)
-        .then(_addFileData, _errorFun)
-        .then(_zipNServe, _errorFun)
-        .then(d.resolve, d.reject)
-    ;
+    async.waterfall([
+
+        $cb => {
+
+            $cb(null, $requestState, $name);
+        },
+        _getFileInfo,
+        _hasAccessKey,
+        _getFileLocation,
+        _addFileData,
+        _zipNServe,
+    ], $err => {
+
+        if ($err) {
+
+            _errorFun($err);
+        }
+        else {
+
+            d.resolve();
+        }
+    });
 
     return d.promise;
 };
