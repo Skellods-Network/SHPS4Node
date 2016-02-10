@@ -1,0 +1,7 @@
+﻿{
+    "name": "core",
+    "version": "0.1.0",
+    "description": "SHPS core module exposing tools in order to centrally enforce certain standards",
+    "author": "Marco Alka <me@marco-alka.de>",
+    "main": "index-core.js"
+}

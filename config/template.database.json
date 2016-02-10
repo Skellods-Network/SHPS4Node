@@ -13,7 +13,8 @@
 			"description": "The database config file contains information on how to connect to a database",
 			"SHPSVERSION_MA": 4,
 			"SHPSVERSION_MI": 2,
-			"type": "database"
+			"type": "database",
+			"vhost": "localhost"
 		},
 		"alias": {
 		
