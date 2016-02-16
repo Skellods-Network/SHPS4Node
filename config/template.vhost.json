@@ -180,7 +180,7 @@
             },
             "sessionLifetime": {
         
-                "description": "Max age of a session in seconds. After a session reaches this age, it will be destoyed"
+                "description": "Max age of a session in seconds. After a session reaches this age, it will be destoyed",
                 "type": "integer",
                 "default": 86400
             },

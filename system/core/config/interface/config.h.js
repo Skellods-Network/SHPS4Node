@@ -1,6 +1,6 @@
 ﻿'use strict';
 
-module.exports = class config extends require('node-mod-load').libs.core.module {
+module.exports = class config {
 
     constructor() { this._init(); };
 
@@ -66,4 +66,13 @@ module.exports = class config extends require('node-mod-load').libs.core.module 
      *  Promise()
      */
     readConfig() { throw 'Not implemented'; };
+
+    /**
+     * Get whole configuration of certain homepage
+     * 
+     * @deprecated since v4.2.0, removal scheduled for v4.3.0
+     * @param string $uri
+     * @return array|null
+     */
+    getConfig($uri) { throw 'Not implemented'; };
 };
