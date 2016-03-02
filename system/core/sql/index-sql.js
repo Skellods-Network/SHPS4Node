@@ -344,17 +344,58 @@ var _SQL = function ($dbConfig, $connection) {
     
     /**
      * Create a custom Table and return table object
+     * This method will automatically respect any prefix
      * 
-     * @param string $name
-     * @param $cols [] Array of sql_colspec
-     * @param boolean $ifNotExists Throws error if table exists //Default: true
-     * @param boolean $temp If true table is only temporary (in memory) //Default: false
-     * @return sql_table
+     * @return Promise(O:Table)
      */
     var _createTable 
-    = this.createTable = function ($name, $cols, $ifNotExists/* = true*/, $temp/* = false*/) {
+    = this.createTable = function ({
         
-        //TODO
+        name = '',
+        charset = 'mb4_utf8',
+        fieldset = [
+            { name: 'ID', 'type': SHPS_DB_COLTYPE_INT, key: SHPS_DB_KEY_PRIMARY, 'null': false, }
+        ],
+    } = {}) {
+        
+        var table = _openTable(name);
+        var query = `
+            SELECT COUNT(` + _standardizeName('table_name') + `)
+            FROM ` + _standardizeName('information_schema') + `.` + _standardizeName('tables') + `
+            WHERE
+                ` + _standardizeName('table_name') + ` = '` + table.toString() + `'`;
+                
+        //TODO: Check if table exists. If yes, compare fieldset. If possible, extend fieldset. Else reject
+        switch ($dbConfig.type.value) {
+            
+            case SHPS_SQL_MSSQL: {
+                
+                query += ' AND ' + _standardizeName('TABLE_CATALOG') + '=\'' + _getDB() + '\';';
+                break;
+            }
+            
+            case SHPS_SQL_MYSQL:
+            case SHPS_SQL_MARIADB: {
+                
+                query += ' AND '_standardizeName('TABLE_SCHEMA') + '=\'' + _getDB() + '\';';
+                break;
+            }
+            
+            default: {
+                
+                //REJECT
+            }
+        }
+        
+        query = query.replace(/[\r\n\t]/gi, ' ').replace(/ +/gim, ' ');
+        
+        //execute
+        
+        if (rows <= 0) return;
+        
+        query = 'CREATE TABLE ' + name + '';
+        
+        //TODO: create table
     }
     
     /**
