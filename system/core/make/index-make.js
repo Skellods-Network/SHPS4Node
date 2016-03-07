@@ -500,7 +500,7 @@ this.parseTemplate = function f_make_parseTemplate($requestState, $template) {
             .done(function ($body) {
                 
                 defer.resolve({
-                    body: tmp + $body.result,
+                    body: tmp + $body.body,
                     status: status,
                 });
             }, errFun);
