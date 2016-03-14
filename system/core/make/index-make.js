@@ -499,8 +499,10 @@ this.parseTemplate = function f_make_parseTemplate($requestState, $template) {
             }, errFun)
             .done(function ($body) {
                 
+                //TODO Standardize this
+                var body = $body.body || $body.result;
                 defer.resolve({
-                    body: tmp + $body.body,
+                    body: tmp + body,
                     status: status,
                 });
             }, errFun);
