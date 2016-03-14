@@ -475,8 +475,10 @@ this.parseTemplate = function f_make_parseTemplate($requestState, $template) {
                 ? $requestState.site
                 : $requestState.config.generalConfig.indexContent.value;
             
+            var siteNotFound = false;
             var errFun = function ($err) {
                 
+                siteNotFound = true;
                 if ($err.status && $err.body) {
                     
                     $err.body = tmp + $err.body;
@@ -498,6 +500,11 @@ this.parseTemplate = function f_make_parseTemplate($requestState, $template) {
                 return _executeBody($requestState, $res, params);
             }, errFun)
             .done(function ($body) {
+                
+                if (siteNotFound) {
+                    
+                    return;
+                }
                 
                 //TODO Standardize this
                 var body = $body.body || $body.result;
