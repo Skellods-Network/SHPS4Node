@@ -213,7 +213,8 @@ var _sqlTable = function c_sqlTable($sql, $name) {
      * @param $vals
      *  Object or array of objects containing values (1 object / row)
      * 
-     * @return Promise
+     * @return Promise(Object|Array)
+     *   The resolving object(s) will contain information about the insert(s), containing for example the row index
      */
     var _insert =
     this.insert = function f_sqlTable_insert($vals) {
@@ -223,11 +224,21 @@ var _sqlTable = function c_sqlTable($sql, $name) {
             
             async.forEachParallel({
                 
-                func: _insert,
-                inputs: $vals
+                inputs: $vals,
+                func: ($val, $cb) => {
+                    
+                    _insert($val).done($cb.bind(null, null), $cb);
+                },
             }, function f_sqlTable_insert_1($err, $res) {
             
-                defer.resolve($err, $res);
+                if ($err) {
+
+                    defer.reject($err);
+                }
+                else {
+
+                    defer.resolve($res);
+                }
             });
 
             return defer.promise;
@@ -280,20 +291,7 @@ var _sqlTable = function c_sqlTable($sql, $name) {
             }
         }
 
-        $sql.query('INSERT INTO ' + _getAbsoluteName() + ' (' + keys + ') VALUES (' + vals + ');').then(function f_sqlTable_insert_2($e, $r) {
-            
-            if ($e) {
-
-                defer.reject($e);
-            }
-            else {
-
-                defer.resolve($r);
-            }
-        }, function ($e) {
-        
-            console.log($e);
-        });
+        $sql.query('INSERT INTO ' + _getAbsoluteName() + ' (' + keys + ') VALUES (' + vals + ');').then(defer.resolve, defer.reject);
 
         return defer.promise;
     };
