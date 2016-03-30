@@ -342,19 +342,89 @@ var _SQL = function ($dbConfig, $connection) {
         return 0;
     }
     
+    var _hasTable = function f_sql_hasTable($db, $name) {
+
+        var d = q.defer();
+
+        var table = _openTable($name);
+        var query = `
+            SELECT COUNT(${_standardizeName('table_name') }) AS ${_standardizeName('c')}
+            FROM ${_standardizeName('information_schema')}.${_standardizeName('tables')}
+            WHERE
+                ${_standardizeName('table_name')} = '${table.toString()}'`;
+                
+        
+        switch ($dbConfig.type.value) {
+
+            case SHPS_SQL_MSSQL: {
+
+                query += ' AND ' + _standardizeName('TABLE_CATALOG') + '=\'' + $db + '\';';
+                break;
+            }
+
+            case SHPS_SQL_MYSQL:
+            case SHPS_SQL_MARIADB: {
+
+                query += ' AND ' + _standardizeName('TABLE_SCHEMA') + '=\'' + $db + '\';';
+                break;
+            }
+
+            default: {
+                
+                // I might make it reject earlier for better performance, but let's see how this turns out
+                d.reject(new Error('Unknown Database Type'));
+                return d.promise;
+            }
+        }
+
+        // The next line should decrease DB traffic by saving bytes. Is this really useful?
+        query = query.replace(/[\r\n\t]/gi, ' ').replace(/ +/gim, ' ');
+        
+        // Hmm, I might have to be careful not to overwrite stuff by internally executing queries...
+        _query(query).done($rows => {
+
+            if ($rows.length <= 0) {
+
+                d.reject(SHPS_ERROR_NO_ROWS);
+            }
+            else {
+
+                d.resolve($rows[0].c > 0);
+            }
+        }, d.reject);
+
+
+        return d.promise;
+    };
+
     /**
      * Create a custom Table and return table object
+     * This method will automatically respect any prefix
      * 
-     * @param string $name
-     * @param $cols [] Array of sql_colspec
-     * @param boolean $ifNotExists Throws error if table exists //Default: true
-     * @param boolean $temp If true table is only temporary (in memory) //Default: false
-     * @return sql_table
+     * @return Q::Promise(O:Table)
      */
     var _createTable 
-    = this.createTable = function ($name, $cols, $ifNotExists/* = true*/, $temp/* = false*/) {
+    = this.createTable = function ({
         
-        //TODO
+        name = '',
+        charset = 'mb4_utf8',
+        fieldset = [
+            { name: 'ID', 'type': SHPS_DB_COLTYPE_INT, key: SHPS_DB_KEY_PRIMARY, 'null': false, }
+        ],
+    } = {}) {
+        
+        //TODO: Check if table exists. If yes, compare fieldset. If possible, extend fieldset. Else reject
+        if (_hasTable(_getDB(), name)) {
+
+        }
+
+            //execute
+        
+            if (rows <= 0) return;
+
+            query = 'CREATE TABLE ' + name + '';
+        
+        //TODO: create table
     }
     
     /**
