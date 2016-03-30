@@ -1,0 +1,70 @@
+{
+	"configHeader": {
+
+		"description": "This part contains info about the config file. The version noted here indicates the minimum SHPS version the config file is compatibel with",
+        "SHPSVERSION_MA": 4,
+        "SHPSVERSION_MI": 0,
+		"type": "template"
+    },
+	"template": {
+
+		"_info": {
+
+			"description": "The database config file contains information on how to connect to a database",
+			"SHPSVERSION_MA": 4,
+			"SHPSVERSION_MI": 2,
+			"type": "database",
+			"vhost": "localhost"
+		},
+		"alias": {
+		
+			"description": "The alias name you can use to work with this database from the SQL class",
+			"type": "string",
+			"default": "default"
+		},
+		"host": {
+
+            "description": "DB host",
+            "default": "localhost"
+        },
+        "port": {
+
+            "description": "DB port",
+            "default": 3306
+        },
+        "name": {
+
+            "description": "Name of schema",
+            "default": "shps_test"
+        },
+        "user": {
+
+            "description": "DB user",
+            "default": "shps"
+        },
+        "pass": {
+
+            "description": "User's password",
+            "default": "shps"
+        },
+        "prefix": {
+
+           "description": "Table prefix",
+           "default": ""
+       },
+        "type": {
+
+           "description": "Type of DB",
+           "default": 2,
+            "options": {
+                "MySQL": 2,
+                "MSSQL": 16
+            }
+        },
+        "connectionLimit": {
+
+            "description": "Maximum number of simultaneous connections to the DB server",
+            "default": 100
+        }
+	}
+}

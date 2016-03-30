@@ -22,8 +22,8 @@ var me = module.exports;
 
 GLOBAL.SHPS_ = 1;
 GLOBAL.SHPS_MAJOR_VERSION = 4;
-GLOBAL.SHPS_MINOR_VERSION = 1;
-GLOBAL.SHPS_PATCH_VERSION = 1;
+GLOBAL.SHPS_MINOR_VERSION = 2;
+GLOBAL.SHPS_PATCH_VERSION = 0;
 GLOBAL.SHPS_BUILD = '';
 GLOBAL.SHPS_INTERNAL_NAME = 'IROKOKOU';
 GLOBAL.SHPS_VERSION = SHPS_MAJOR_VERSION + '.' + SHPS_MINOR_VERSION + '.' + SHPS_PATCH_VERSION;
@@ -83,7 +83,7 @@ var _getDir
         case SHPS_DIR_CONFIGS: r = path.dirname(require.main.filename) + path.sep + 'config' + path.sep; break;
         case SHPS_DIR_UPLOAD: r = path.dirname(require.main.filename) + path.sep + 'upload' + path.sep; break;
         case SHPS_DIR_POOL: r = path.dirname(require.main.filename) + path.sep + 'pool' + path.sep; break;
-		case SHPS_DIR_LOG: r = path.dirname(require.main.filename) + path.sep + 'log' + path.sep; break;
+        case SHPS_DIR_LOG: r = path.dirname(require.main.filename) + path.sep + 'log' + path.sep; break;
     }
 
     if (r !== null) {
@@ -205,7 +205,7 @@ var _init
             , function f_init_checkUpdate($_p1, $_p2) { _checkUpdate().done($_p2, $_p2); }
             , function f_init_checkFS($_p1, $_p2) { _checkFS().done($_p2, $_p2); }
             , function f_init_readConfig($_p1, $_p2) { libs.config.readConfig().done($_p2, $_p2); }
-			, function f_init_loadPlugins($_p1, $_p2) { libs.plugin.loadPluginList().then($_p2, $_p2); }
+            , function f_init_loadPlugins($_p1, $_p2) { libs.plugin.loadPluginList().then($_p2, $_p2); }
             , function f_init_parallelize($_p1, $_p2) {
                 
                 var wc = libs.config.getHPConfig('config', 'workers');
