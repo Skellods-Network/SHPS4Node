@@ -2,11 +2,11 @@
 
 var me = module.exports;
 
-GLOBAL.SHPS_SQL_MYSQL = 2;
-GLOBAL.SHPS_SQL_MSSQL = 16;
+GLOBAL.SHPS_SQL_MYSQL = 0b10;
+GLOBAL.SHPS_SQL_MSSQL = 0b10000;
 
-GLOBAL.SHPS_SQL_MARIA = SHPS_SQL_MYSQL | 4;
-GLOBAL.SHPS_SQL_PERCONA = SHPS_SQL_MYSQL | 8;
+GLOBAL.SHPS_SQL_MARIA = SHPS_SQL_MYSQL | 0b100;
+GLOBAL.SHPS_SQL_PERCONA = SHPS_SQL_MYSQL | 0b1000;
 
 GLOBAL.SHPS_ERROR_NO_ROWS = 'No rows were returned!';
 
@@ -393,7 +393,6 @@ var _SQL = function ($dbConfig, $connection) {
             }
         }, d.reject);
 
-
         return d.promise;
     };
 
@@ -403,29 +402,92 @@ var _SQL = function ($dbConfig, $connection) {
      * 
      * @return Q::Promise(O:Table)
      */
-    var _createTable 
-    = this.createTable = function ({
-        
-        name = '',
-        charset = 'mb4_utf8',
-        fieldset = [
-            { name: 'ID', 'type': SHPS_DB_COLTYPE_INT, key: SHPS_DB_KEY_PRIMARY, 'null': false, }
-        ],
-    } = {}) {
-        
-        //TODO: Check if table exists. If yes, compare fieldset. If possible, extend fieldset. Else reject
-        if (_hasTable(_getDB(), name)) {
+    var _createTable
+        = this.createTable = function f_sql_createTable (/*{  // Node.JS v4.x does not allow for destructuring :/
 
-        }
+            name = '',
+            charset = 'utf8mb4',
+            collate = 'utf8mb4_unicode_ci',
+            fieldset = [
+                {
+                    name: 'ID',
+                    'type': SHPS_DB_COLTYPE_INT,
+                    key: SHPS_DB_KEY_PRIMARY,
+                    'null': false,
+                    'default': undefined,
+                    autoincrement: true,
+                    comment: 'Just a sample',
+                }
+            ],
+        } = {}*/
+            name, charset, collate, fieldset
+        ) {
+            charset = typeof charset !== 'undefined' ? charset : 'utf8mb4';
+            collate = typeof collate !== 'undefined' ? collate : 'utf8mb4_unicode_ci';
 
-            //execute
-        
-            if (rows <= 0) return;
+            // Why I did not write a createTable method for such a long time even though it's so useful?
+            // Bc I hate queries and this one is especially annoying to construct since you need so much knowledge about the DB itself
 
-            query = 'CREATE TABLE ' + name + '';
-        
-        //TODO: create table
-    }
+            //TODO: Check if table exists. If yes, compare fieldset. If possible, extend fieldset. Else reject
+            //if (_hasTable(_getDB(), name)) {
+            //
+            //}
+
+            var query = 'CREATE TABLE ' + _standardizeName(name) + '(';
+            var i = 0;
+            var l = fieldset.length;
+            while (i < l) {
+
+                query += _standardizeName(fieldset[i].name) + ' ' + fieldset[i].type + (fieldset[i].null ? ' ' : ' NOT') + ' NULL'; /* COMMENT*/
+                if (typeof fieldset[i].default !== 'undefined') {
+
+                    query += ' DEFAULT ' + fieldset[i].default; //TODO: add string delimiters if necessary! Change Date Obj to String (or INT Timestamp??)
+                }
+
+                if (fieldset[i].autoincrement) {
+
+                    query += ' AUTO_INCREMENT';
+                }
+
+                if (typeof fieldset[i].key !== 'undefined') {
+
+                    query += ' ' + fieldset[i].key;
+                }
+
+                if (typeof fieldset[i].comment !== 'undefined') {
+
+                    query += ' COMMENT ' + _standardizeString(fieldset[i].comment);
+                }
+
+                i++;
+
+                if (i < l) {
+
+                    query += ',';
+                }
+            }
+
+            query += ')';
+
+            if (_dbType & SHPS_SQL_MYSQL) {
+
+                if (_dbType & SHPS_SQL_MARIA) {
+
+                    query += ' ENGINE=ARIA';
+                }
+                else {
+
+                    query += ' ENGINE=InnoDB';// or ENGINE=MyISAM if available (check engine-list first!)
+                }
+
+                // ENCRYPTION='N'  <-- this might be activated later on, but I first need a way to securely store passwords
+                query += ' DEFAULT CHARSET=' + charset + ' COLLATE=' + collate;
+            }
+
+            query += ';';
+
+            return _query(query);
+        };
     
     /**
      * Get Server Type
