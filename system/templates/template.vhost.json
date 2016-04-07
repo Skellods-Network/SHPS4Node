@@ -3,7 +3,7 @@
 
         "description": "This part contains info about the config file. The version noted here indicates the minimum SHPS version the config file is compatibel with",
         "SHPSVERSION_MA": 4,
-        "SHPSVERSION_MI": 0,
+        "SHPSVERSION_MI": 2,
         "type": "template"
     },
     "template": {

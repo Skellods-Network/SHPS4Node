@@ -1,62 +1,3 @@
-<<<<<<< HEAD
-{
-  "name": "SHPS",
-  "version": "4.1.1",
-  "description": "SHPS",
-  "main": "system/core/main.js",
-  "homepage": "https://shps.io",
-  "author": {
-    "name": "Marco Alka",
-    "email": "me@marco-alka.de",
-    "url": "https://marco-alka.de"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Skellods-Network/SHPS4Node.git"
-  },
-  "files": [
-    "./SHPS.js",
-    "./LICENCE.md",
-    "./README.md",
-    "./package.json",
-    "./system"
-  ],
-  "engines": {
-    "node": ">=4.0.0",
-    "npm": ">=2.5.0"
-  },
-  "os": [
-    "linux",
-    "win32"
-  ],
-  "scripts": {
-    "start": "node --expose-gc --harmony_proxies SHPS.js"
-  },
-  "preferGlobal": true,
-  "dependencies": {
-    "bcrypt-nodejs": "0.0.3",
-    "busboy": "^0.2.0",
-    "colors": ">=0.6.0 < 2",
-    "generic-pool": "^2.1.0",
-    "http2": "^2.7.0",
-    "lodash": "^3.0.0",
-    "logrotate-stream": "0.2.0",
-    "mssql": "^1.3.0",
-    "mysql": "^2.4.0",
-    "node-app-terminal": "^0.1.0",
-    "node-mb-string-size": "^1.0.0",
-    "object-assign": "^2.0.0",
-    "promise-defer": "^1.0.0",
-    "q": "^1.2.0",
-    "qs": "^6.0.0",
-    "request-ip": "^1.1.4",
-    "terminal-kit": "^0.15.0",
-    "terminal-menu": "^2.1.0",
-    "vasync": "^1.6.0",
-	"semver": "^5.1.0"
-  }
-}
-=======
 ﻿{
     "name": "SHPS",
     "version": "4.1.1",
@@ -114,4 +55,3 @@
         "qs": "^6.0.0"
     }
 }
->>>>>>> origin/v4.2
