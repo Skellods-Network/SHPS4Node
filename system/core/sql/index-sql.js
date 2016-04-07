@@ -2,11 +2,11 @@
 
 var me = module.exports;
 
-GLOBAL.SHPS_SQL_MYSQL = 2;
-GLOBAL.SHPS_SQL_MSSQL = 16;
+GLOBAL.SHPS_SQL_MYSQL = 0b10;
+GLOBAL.SHPS_SQL_MSSQL = 0b10000;
 
-GLOBAL.SHPS_SQL_MARIA = SHPS_SQL_MYSQL | 4;
-GLOBAL.SHPS_SQL_PERCONA = SHPS_SQL_MYSQL | 8;
+GLOBAL.SHPS_SQL_MARIA = SHPS_SQL_MYSQL | 0b100;
+GLOBAL.SHPS_SQL_PERCONA = SHPS_SQL_MYSQL | 0b1000;
 
 GLOBAL.SHPS_ERROR_NO_ROWS = 'No rows were returned!';
 
@@ -342,20 +342,152 @@ var _SQL = function ($dbConfig, $connection) {
         return 0;
     }
     
+    var _hasTable = function f_sql_hasTable($db, $name) {
+
+        var d = q.defer();
+
+        var table = _openTable($name);
+        var query = `
+            SELECT COUNT(${_standardizeName('table_name') }) AS ${_standardizeName('c')}
+            FROM ${_standardizeName('information_schema')}.${_standardizeName('tables')}
+            WHERE
+                ${_standardizeName('table_name')} = '${table.toString()}'`;
+                
+        
+        switch ($dbConfig.type.value) {
+
+            case SHPS_SQL_MSSQL: {
+
+                query += ' AND ' + _standardizeName('TABLE_CATALOG') + '=\'' + $db + '\';';
+                break;
+            }
+
+            case SHPS_SQL_MYSQL:
+            case SHPS_SQL_MARIADB: {
+
+                query += ' AND ' + _standardizeName('TABLE_SCHEMA') + '=\'' + $db + '\';';
+                break;
+            }
+
+            default: {
+                
+                // I might make it reject earlier for better performance, but let's see how this turns out
+                d.reject(new Error('Unknown Database Type'));
+                return d.promise;
+            }
+        }
+
+        // The next line should decrease DB traffic by saving bytes. Is this really useful?
+        query = query.replace(/[\r\n\t]/gi, ' ').replace(/ +/gim, ' ');
+        
+        // Hmm, I might have to be careful not to overwrite stuff by internally executing queries...
+        _query(query).done($rows => {
+
+            if ($rows.length <= 0) {
+
+                d.reject(SHPS_ERROR_NO_ROWS);
+            }
+            else {
+
+                d.resolve($rows[0].c > 0);
+            }
+        }, d.reject);
+
+        return d.promise;
+    };
+
     /**
      * Create a custom Table and return table object
+     * This method will automatically respect any prefix
      * 
-     * @param string $name
-     * @param $cols [] Array of sql_colspec
-     * @param boolean $ifNotExists Throws error if table exists //Default: true
-     * @param boolean $temp If true table is only temporary (in memory) //Default: false
-     * @return sql_table
+     * @return Q::Promise(O:Table)
      */
-    var _createTable 
-    = this.createTable = function ($name, $cols, $ifNotExists/* = true*/, $temp/* = false*/) {
-        
-        //TODO
-    }
+    var _createTable
+        = this.createTable = function f_sql_createTable (/*{  // Node.JS v4.x does not allow for destructuring :/
+
+            name = '',
+            charset = 'utf8mb4',
+            collate = 'utf8mb4_unicode_ci',
+            fieldset = [
+                {
+                    name: 'ID',
+                    'type': SHPS_DB_COLTYPE_INT,
+                    key: SHPS_DB_KEY_PRIMARY,
+                    'null': false,
+                    'default': undefined,
+                    autoincrement: true,
+                    comment: 'Just a sample',
+                }
+            ],
+        } = {}*/
+            name, charset, collate, fieldset
+        ) {
+            charset = typeof charset !== 'undefined' ? charset : 'utf8mb4';
+            collate = typeof collate !== 'undefined' ? collate : 'utf8mb4_unicode_ci';
+
+            // Why I did not write a createTable method for such a long time even though it's so useful?
+            // Bc I hate queries and this one is especially annoying to construct since you need so much knowledge about the DB itself
+
+            //TODO: Check if table exists. If yes, compare fieldset. If possible, extend fieldset. Else reject
+            //if (_hasTable(_getDB(), name)) {
+            //
+            //}
+
+            var query = 'CREATE TABLE ' + _standardizeName(name) + '(';
+            var i = 0;
+            var l = fieldset.length;
+            while (i < l) {
+
+                query += _standardizeName(fieldset[i].name) + ' ' + fieldset[i].type + (fieldset[i].null ? ' ' : ' NOT') + ' NULL'; /* COMMENT*/
+                if (typeof fieldset[i].default !== 'undefined') {
+
+                    query += ' DEFAULT ' + fieldset[i].default; //TODO: add string delimiters if necessary! Change Date Obj to String (or INT Timestamp??)
+                }
+
+                if (fieldset[i].autoincrement) {
+
+                    query += ' AUTO_INCREMENT';
+                }
+
+                if (typeof fieldset[i].key !== 'undefined') {
+
+                    query += ' ' + fieldset[i].key;
+                }
+
+                if (typeof fieldset[i].comment !== 'undefined') {
+
+                    query += ' COMMENT ' + _standardizeString(fieldset[i].comment);
+                }
+
+                i++;
+
+                if (i < l) {
+
+                    query += ',';
+                }
+            }
+
+            query += ')';
+
+            if (_dbType & SHPS_SQL_MYSQL) {
+
+                if (_dbType & SHPS_SQL_MARIA) {
+
+                    query += ' ENGINE=ARIA';
+                }
+                else {
+
+                    query += ' ENGINE=InnoDB';// or ENGINE=MyISAM if available (check engine-list first!)
+                }
+
+                // ENCRYPTION='N'  <-- this might be activated later on, but I first need a way to securely store passwords
+                query += ' DEFAULT CHARSET=' + charset + ' COLLATE=' + collate;
+            }
+
+            query += ';';
+
+            return _query(query);
+        };
     
     /**
      * Get Server Type
