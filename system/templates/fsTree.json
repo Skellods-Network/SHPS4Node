@@ -1,0 +1,88 @@
+{
+    "configHeader": {
+
+        "description": "This part contains info about the config file. The version noted here indicates the minimum SHPS version the config file is compatibel with",
+        "SHPSVERSION_MA": 4,
+        "SHPSVERSION_MI": 2,
+        "type": "template"
+    },
+    "template": {
+
+        "_info": {
+
+            "description": "This file contains a filesystem tree with infos about what is OK and what is unexpected in a given filesystem. All boolean values default to `false`.",
+            "SHPSVERSION_MA": 4,
+            "SHPSVERSION_MI": 2,
+            "type": "fstree"
+        },
+        "root": "/",
+        "tree": {
+
+            ".isDir": true,
+            ".canHazFiles": true,
+            ".canHazFolders": true,
+            "cache": {
+                ".isDir": true
+            },
+            "cert": {
+                ".isDir": true,
+                ".canHazFiles": true
+            },
+            "config": {
+                ".isDir": true,
+                ".canHazFiles": true
+            },
+            "logs": {
+                ".isDir": true,
+                ".canHazFiles": true
+            },
+            "node_modules": {
+                ".isDir": true,
+                ".canHazFiles": true,
+                ".canHazFolders": true
+            },
+            "system": {
+                ".isDir": true,
+                ".canHazFolders": true,
+                "core": {
+                    ".isDir": true,
+                    "_files": [
+                        "commandline.js",
+                        "componentLibrary.js",
+                        "default.js",
+                        "helper.js",
+                        "io.js",
+                        "log.js",
+                        "main.js",
+                        "optimize.js",
+                        "plugin.js",
+                        "request.js",
+                        "schedule.js",
+                        "SFFM.js",
+                        "sql.js",
+                        "sqlCol.js",
+                        "sqlConditionBuilder.js",
+                        "sqlQueryBuilder.js",
+                        "sqlRow.js",
+                        "sqlTable.js"
+                    ]
+                },
+                "plugins": {
+                    ".isDir": true,
+                    ".canHazFiles": true,
+                    ".canHazFolders": true
+                },
+                "templates": {
+                    ".isDir": true,
+                    ".canHazFiles": true
+                }
+            },
+            "_files": [
+                "LICENCE.md",
+                "package.json",
+                "README.md",
+                "SHPS.js"
+            ]
+        }
+    }
+}

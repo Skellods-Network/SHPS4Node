@@ -1,0 +1,37 @@
+{
+	"configHeader": {
+
+		"description": "This part contains info about the config file. The version noted here indicates the minimum SHPS version the config file is compatibel with",
+        "SHPSVERSION_MA": 4,
+        "SHPSVERSION_MI": 2,
+		"type": "template"
+    },
+	"template": {
+
+		"_info": {
+
+			"description": "The master config file sets certain defaults which are important for SHPS as a server in general. There can be only one master config file.",
+			"SHPSVERSION_MA": 4,
+			"SHPSVERSION_MI": 2,
+			"type": "master"
+		},
+		"workers": {
+
+			"description": "Spawns {%default} workers to handle work. Workers are working even closer together than clustered SHPSs. Makes use of multiple cores. Even with 0 workers there will always be a master process. Insert -1 for smart worker regulation",
+			"type": "integer",
+			"default": -1
+		},
+		"eastereggs": {
+
+			"description": "Enable eastereggs which might give information about the used SHPS version to a third party",
+			"type": "boolean",
+			"default": false
+		},
+		"1337": {
+
+			"description": "This easteregg will make work a lot more fun... beware of eye cancer :)",
+			"type": "boolean",
+			"default": false
+		}
+	}
+}
