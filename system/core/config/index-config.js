@@ -13,11 +13,13 @@ require('./src/config.getHPConfig.c.js');
 require('./src/config.getMasterConfig.c.js');
 require('./src/config.getVHostConfig.c.js');
 require('./src/config.readConfig.c.js');
-require('./src/config.readFile.c.js');
 
 require('./src/config._init.c.js');
 
 require('./src/config.getConfig.c.js'); // Deprecated since v4.2.0, remove in v4.3.0
+
+// Internal stuff
+require('./src/config._getConfigs.c.js');
 
 
 module.exports = new Config();
