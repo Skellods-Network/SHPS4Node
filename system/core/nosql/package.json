@@ -1,0 +1,7 @@
+﻿{
+    "name": "nosql",
+    "version": "1.0.0",
+    "description": "NoSQL Connector used by SHPS",
+    "author": "Marco Alka <me@marco-alka.de>",
+    "main": "index-nosql.js"
+}
