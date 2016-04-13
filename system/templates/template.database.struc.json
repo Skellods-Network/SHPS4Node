@@ -1,0 +1,165 @@
+﻿{
+    "configHeader": {
+
+        "description": "This part contains info about the config file. The version noted here indicates the minimum SHPS version the config file is compatibel with",
+        "SHPSVERSION_MA": 4,
+        "SHPSVERSION_MI": 2,
+        "type": "template"
+    },
+    "template": {
+        "_info": {
+
+            "description": "The database config file contains information on how to connect to a database",
+            "SHPSVERSION_MA": 4,
+            "SHPSVERSION_MI": 2,
+            "type": "database-struc"
+        },
+        "tables": [
+            {
+                "name": "accesskey",
+                "fieldcat": {
+                    "ID": {
+                        "type": "uinteger",
+                        "key": "primary"
+                    },
+                    "name": {
+                        "type": "string",
+                        "length": 30
+                    },
+                    "description": {
+                        "type": "text"
+                    }
+                },
+                "initial": [
+                    {
+                        "ID": 0,
+                        "name": "SYS_NULL",
+                        "description": "Every user/guest has this access key. Always."
+                    }
+                ]
+            },
+            {
+                "name": "content",
+                "fieldcat": {
+                    "ID": {
+                        "type": "uinteger",
+                        "key": "primary"
+                    },
+                    "name": {
+                        "type": "string",
+                        "length": 30
+                    },
+                    "content": {
+                        "type": "text"
+                    },
+                    "namespace": {
+                        "type": "uinteger",
+                        "default": 0
+                    },
+                    "language": {
+                        "type": "uinteger",
+                        "hint": "Script Language: 0-None, 1-JS, 2-inlineJS",
+                        "default": 0
+                    },
+                    "accessKey": {
+                        "type": "uinteger",
+                        "default": 0
+                    },
+                    "tls": {
+                        "type": "boolean",
+                        "default": true
+                    },
+                    "extSB": {
+                        "type": "boolean",
+                        "hint": "Enable extended sanbox mode for this script",
+                        "default": false
+                    }
+                },
+                "initial": [
+                    {
+                        "ID": 1,
+                        "name": "index",
+                        "content": "Hello World"
+                    }
+                ]
+            },
+            {
+                "name": "css",
+                "fieldcat": {
+                    "ID": {
+                        "type": "uinteger",
+                        "key": "primary"
+                    },
+                    "name": {
+                        "type": "text"
+                    },
+                    "content": {
+                        "type": "text"
+                    },
+                    "comment": {
+                        "type": "text"
+                    },
+                    "namespace": {
+                        "type": "uinteger",
+                        "default": 0
+                    },
+                    "language": {
+                        "type": "uinteger",
+                        "hint": "Script Language: 0-None, 1-JS, 2-inlineJS",
+                        "default": 0
+                    },
+                    "mediaquery": {
+                        "type": "uinteger",
+                        "default": 0
+                    }
+                }
+            },
+            {
+                "name": "filetype",
+                "fieldcat": {
+                    "ID": {
+                        "type": "uinteger",
+                        "key": "primary"
+                    },
+                    "name": {
+                        "type": "string",
+                        "length": 10
+                    },
+                    "mimeType": {
+                        "type": "uinteger"
+                    }
+                },
+                "initial": [
+                    {
+                        "ID": 1,
+                        "name": "css",
+                        "mimeType": 0
+                    },
+                    {
+                        "ID": 2,
+                        "name": "js",
+                        "mimeType": 0
+                    },
+                    {
+                        "ID": 3,
+                        "name": "coffee",
+                        "mimeType": 0
+                    }
+                ]
+            },
+            {
+                "name": "group",
+                "fieldcat": {
+                    "ID": {
+                        "type": "uinteger",
+                        "key": "primary"
+                    },
+                    "name": {
+                        "type": "string",
+                        "length": 30
+                    }
+                }
+            }
+        ]
+    }
+}
