@@ -1037,14 +1037,25 @@ var Auth
                     user: $user,
                     email: $mail,
                     pass: $hash,
+                    salt: '',//TODO remove
                     host: ip,
                     regDate: uts,
+                    token: '',//TODO
                     lastIP: ip,
                     lastActivity: uts,
                     isLocked: $locked,
+                    autoLoginToken: '',//TODO
                     xForward: '',//TODO
                     uaInfo: 0,//TODO
-                }).done(d.resolve, d.reject);
+                }).done($res => {
+
+                    $sql.free();
+                    d.resolve($res);
+                }, $err => {
+
+                    $sql.free();
+                    d.reject($err)
+                });
             });
         });
 

@@ -89,6 +89,7 @@ var _loadPluginList
                     catch ($e) {
 
                         task.interim(TASK_RESULT_ERROR, 'Plugin could not be loaded: ' + $config.name);
+                        libs.coml.writeError($e);
                         taskResult = TASK_RESULT_WARNING;
                     }
                     //\\ TEMPORARY

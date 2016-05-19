@@ -63,55 +63,7 @@ me.init = function () {
         libs.coml.writeWarning('The dependency `' + $depName + '` has thrown a warning:\n' + $warning);
     });
 
-    /**
-     * Check for openssl
-     * 
-     * Requirements:
-     *   openssl:
-     *   - binaries version 1.0.2
-     *   
-     * It should not be too difficult to just download openssl via HTTP.
-     * I only need internet access to do so. This might be the biggest problem for automatization.
-     * Then I will need to get the correct OS. I see potential wrong detections here.
-     */
-    cp.exec('openssl version', function ($error, $stdout, $stderr) {
-        
-        if ($error !== null) {
-            
-            libs.schedule.sendSignal('onDependencyError', 'openssl', '>=1.0.1', $error);
-        }
-        
-        if ($stderr !== "") {
-            
-            if (/^WARNING/.test($stderr)) {
-                
-                libs.schedule.sendSignal('onDependencyWarning', 'openssl', $stderr);
-            }
-            else {
-                
-                libs.schedule.sendSignal('onDependencyError', 'openssl', '>=1.0.1', $stderr);
-            }
-        }
-        
-        //ex. OpenSSL 1.0.2a 19 Mar 2015
-        var fork = 'openssl';
-        var forkMinVer = /1\.0\.[12]/;
-        forkMinVer.asString = '1.0.1';
-        
-        if ($stdout.indexOf('Libre') >= 0) {
-            
-            fork = 'libressl';
-            forkMinVer = /2\.[1-9][0-9]?\.\d/;
-            forkMinVer.asString = '2.1.0';
-        }
-        
-        versions[fork] = $stdout.match(/\S+\s+([\S.]+)\s.*/)[1];
-        if (!forkMinVer.test($stdout)) {
-            
-            libs.schedule.sendSignal('onDependencyError', fork, '>=' + forkMinVer.asString, 'Wrong version: ' + $stdout);
-        }
-    });
-    
+   
     /**
      * Check for bcrypt
      * 

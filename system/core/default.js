@@ -13,7 +13,7 @@ me.master = {
 me.config = {
     "generalConfig": {
         
-        "URL"			: {
+        "URL"            : {
             
             "description": "Your domain",
             "value": "localhost"
@@ -23,17 +23,17 @@ me.config = {
             "description": "Your resource URL",
             "value": "localhost"
         },
-        "dirUpload"		: {
+        "dirUpload"        : {
             
             "description": "Directory for uploaded data",
             "value": "uploads"
         },
-        "mail"			: {
+        "mail"            : {
             
             "description": "Mail used as `FROM` address",
             "value": "support@example.com"
         },
-        "logCount"		: {
+        "logCount"        : {
             
             "description": "Number of log entries stored in the DB",
             "value": 50
@@ -43,12 +43,12 @@ me.config = {
             "description": "Maximum amount of time in seconds a template (partial or content) can take before excution is stopped",
             "value": 60
         },
-        "timezone"		: {
+        "timezone"        : {
             
             "description": "Timezone of the server",
             "value": "Europe/Berlin"
         },
-        "uploadQuota"		: {
+        "uploadQuota"        : {
             
             "description": "Maximum amount of data which can be uploaded from this website instance (0=infinite)",
             "value": 0
