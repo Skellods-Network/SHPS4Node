@@ -139,12 +139,15 @@ var _checkFS
 
             if ($stat.isDirectory()) {
                 
-                if (Object.keys(libs.default.fileTree).indexOf(entry) < 0) {
+                //TODO: analyse template type and version
+                var fileTree = JSON.parse(fs.readFileSync(_getDir(SHPS_DIR_TEMPLATES) + 'fsTree.json')).template.tree;
+
+                if (Object.keys(fileTree).indexOf(entry) < 0) {
 
                     libs.schedule.sendSignal('onPollution', root, 'SHPS root', entry);
                 }
             }
-            else if (libs.default.fileTree._files.indexOf(entry) < 0) {
+            else if (fileTree._files.indexOf(entry) < 0) {
 
                 libs.schedule.sendSignal('onFilePollution', root, 'SHPS root', entry);
             }

@@ -81,7 +81,9 @@
                 "LICENCE.md",
                 "package.json",
                 "README.md",
-                "SHPS.js"
+                "SHPS.js",
+                "start.cmd",
+                "start.sh"
             ]
         }
     }

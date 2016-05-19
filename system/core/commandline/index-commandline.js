@@ -21,7 +21,7 @@ module.exports.__proto__.init = function () {
     };
 
     internalRS.COOKIE = libs.cookie.newCookieJar(internalRS);
-    internalRS.config = libs.default.config;
+    internalRS.config = null;
     internalRS._domain = new libs.helper.SHPS_domain('localhost');
     internalRS.dummy = true;
     sb = libs.sandbox.newSandbox(internalRS);
