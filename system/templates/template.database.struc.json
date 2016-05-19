@@ -14,12 +14,11 @@
             "SHPSVERSION_MI": 2,
             "type": "database-struc"
         },
-        "tables": [
-            {
-                "name": "accesskey",
+        "tables": {
+            "accesskey": {
                 "fieldcat": {
                     "ID": {
-                        "type": "uinteger",
+                        "type": "uint",
                         "key": "primary"
                     },
                     "name": {
@@ -38,11 +37,10 @@
                     }
                 ]
             },
-            {
-                "name": "content",
+            "content": {
                 "fieldcat": {
                     "ID": {
-                        "type": "uinteger",
+                        "type": "uint",
                         "key": "primary"
                     },
                     "name": {
@@ -53,16 +51,19 @@
                         "type": "text"
                     },
                     "namespace": {
-                        "type": "uinteger",
+                        "type": "uint",
+                        "fk": "namespace.ID",
                         "default": 0
                     },
                     "language": {
-                        "type": "uinteger",
+                        "type": "uint",
+                        "fk": "scriptlanguage.ID",
                         "hint": "Script Language: 0-None, 1-JS, 2-inlineJS",
                         "default": 0
                     },
                     "accessKey": {
-                        "type": "uinteger",
+                        "type": "uint",
+                        "fk": "accesskey.ID",
                         "default": 0
                     },
                     "tls": {
@@ -83,11 +84,10 @@
                     }
                 ]
             },
-            {
-                "name": "css",
+            "css": {
                 "fieldcat": {
                     "ID": {
-                        "type": "uinteger",
+                        "type": "uint",
                         "key": "primary"
                     },
                     "name": {
@@ -100,25 +100,27 @@
                         "type": "text"
                     },
                     "namespace": {
-                        "type": "uinteger",
+                        "type": "uint",
+                        "fk": "namespace.ID",
                         "default": 0
                     },
                     "language": {
-                        "type": "uinteger",
+                        "type": "uint",
+                        "fk": "scriptlanguage.ID",
                         "hint": "Script Language: 0-None, 1-JS, 2-inlineJS",
                         "default": 0
                     },
                     "mediaquery": {
-                        "type": "uinteger",
+                        "type": "uint",
+                        "fk": "mediaquery.ID",
                         "default": 0
                     }
                 }
             },
-            {
-                "name": "filetype",
+            "filetype": {
                 "fieldcat": {
                     "ID": {
-                        "type": "uinteger",
+                        "type": "uint",
                         "key": "primary"
                     },
                     "name": {
@@ -126,7 +128,8 @@
                         "length": 10
                     },
                     "mimeType": {
-                        "type": "uinteger"
+                        "fk": "mimeType.ID",
+                        "type": "uint"
                     }
                 },
                 "initial": [
@@ -147,11 +150,10 @@
                     }
                 ]
             },
-            {
-                "name": "group",
+            "group": {
                 "fieldcat": {
                     "ID": {
-                        "type": "uinteger",
+                        "type": "uint",
                         "key": "primary"
                     },
                     "name": {
@@ -159,7 +161,533 @@
                         "length": 30
                     }
                 }
+            },
+            "groupsecurity": {
+                "fieldcat": {
+                    "gid": {
+                        "type": "uint",
+                        "fk": "group.ID",
+                        "hint": "Group ID"
+                    },
+                    "accessKey": {
+                        "type": "uint",
+                        "fk": "accessKey.ID",
+                        "default": 0
+                    },
+                    "from": {
+                        "type": "uint",
+                        "default": 0
+                    },
+                    "to": {
+                        "type": "uint",
+                        "default": 4294967295
+                    },
+                    "authorizer": {
+                        "type": "uint",
+                        "fk": "user.ID",
+                        "hint": "uid"
+                    }
+                }
+            },
+            "groupuser": {
+                "fieldcat": {
+                    "uid": {
+                        "type": "uint",
+                        "fk": "user.ID"
+                    },
+                    "gid": {
+                        "type": "uint",
+                        "fk": "group.ID"
+                    },
+                    "from": {
+                        "type": "uint",
+                        "default": 0
+                    },
+                    "to": {
+                        "type": "uint",
+                        "default": 4294967295
+                    }
+                }
+            },
+            "include": {
+                "fieldcat": {
+                    "ID": {
+                        "type": "uint",
+                        "key": "primary"
+                    },
+                    "fileType": {
+                        "type": "uint",
+                        "fk": "fileType.ID"
+                    },
+                    "namespace": {
+                        "type": "uint",
+                        "fk": "namespace.ID",
+                        "default": 0
+                    }
+                }
+            },
+            "language": {
+                "fieldcat": {
+                    "ID": {
+                        "type": "uint",
+                        "key": "primary"
+                    },
+                    "name": {
+                        "type": "string",
+                        "length": 2
+                    }
+                }
+            },
+            "log": {
+                "fieldcat": {
+                    "ID": {
+                        "type": "uint",
+                        "key": "primary"
+                    },
+                    "time": {
+                        "type": "uint"
+                    },
+                    "type": {
+                        "type": "int"
+                    },
+                    "content": {
+                        "type": "text"
+                    }
+                }
+            },
+            "loginquery": {
+                "fieldcat": {
+                    "uid": {
+                        "type": "uint",
+                        "fk": "user.ID"
+                    },
+                    "time": {
+                        "type": "uint"
+                    }
+                }
+            },
+            "loglevel": {
+                "fieldcat": {
+                    "ID": {
+                        "type": "uint",
+                        "key": "primary"
+                    },
+                    "name": {
+                        "type": "string",
+                        "length": 30
+                    },
+                    "level": {
+                        "type": "uint"
+                    }
+                }
+            },
+            "mediaquery": {
+                "fieldcat": {
+                    "ID": {
+                        "type": "uint",
+                        "key": "primary"
+                    },
+                    "name": {
+                        "type": "string",
+                        "length": 30
+                    },
+                    "query": {
+                        "type": "text"
+                    }
+                }
+            },
+            "mediaquery": {
+                "fieldcat": {
+                    "ID": {
+                        "type": "uint",
+                        "key": "primary"
+                    },
+                    "name": {
+                        "type": "string",
+                        "length": 30
+                    }
+                }
+            },
+            "namespace": {
+                "fieldcat": {
+                    "ID": {
+                        "type": "uint",
+                        "key": "primary"
+                    },
+                    "name": {
+                        "type": "string",
+                        "length": 30
+                    }
+                }
+            },
+            "oldpassword": {
+                "fieldcat": {
+                    "ID": {
+                        "type": "uint",
+                        "key": "primary"
+                    },
+                    "uid": {
+                        "type": "uint",
+                        "fk": "user.ID"
+                    },
+                    "time": {
+                        "type": "uint"
+                    },
+                    "pass": {
+                        "type": "string",
+                        "length": 129
+                    }
+                }
+            },
+            "partial": {
+                "fieldcat": {
+                    "ID": {
+                        "type": "uint",
+                        "key": "primary"
+                    },
+                    "name": {
+                        "type": "string",
+                        "length": 30
+                    },
+                    "language": {
+                        "type": "uint",
+                        "fk": "scriptlanguage.ID",
+                        "default": 0
+                    },
+                    "content": {
+                        "type": "text"
+                    },
+                    "namespace": {
+                        "type": "uint",
+                        "fk": "namespace.ID",
+                        "default": 0
+                    },
+                    "accesskey": {
+                        "type": "uint",
+                        "fk": "accesskey.ID",
+                        "default": 0
+                    },
+                    "extSB": {
+                        "type": "bool",
+                        "default": false,
+                        "hint": "Extended Sandbox"
+                    }
+                },
+                "initial": [
+                    {
+                        "name": "site",
+                        "content": "<!DOCTYPE HTML>\n<html>\n{$head}\n<body>\n  {$body}\n  {$js}\n"
+                    },
+                    {
+                        "name": "head",
+                        "language": 2,
+                        "content": "<head>\n  <title>Hello <%= auth.isLoggedIn() ? SESSION.user : 'and Welcome to SHPS' %>!</title>\n  {$css}\n</head>\n"
+                    }
+                ]
+            },
+            "passquery": {
+                "fieldcat": {
+                    "pass": {
+                        "type": "string",
+                        "length": 129
+                    },
+                    "time": {
+                        "type": "uint"
+                    }
+                }
+            },
+            "plugin": {
+                "fieldcat": {
+                    "GUID": {
+                        "type": "string",
+                        "length": 36,
+                        "key": "primary"
+                    },
+                    "name": {
+                        "type": "string",
+                        "length": 50
+                    },
+                    "namespace": {
+                        "type": "uint",
+                        "fk": "namespace.ID",
+                        "default": 0
+                    },
+                    "status": {
+                        "type": "uint",
+                        "hint": "1: uninstalled; 2: inactive; 3: active"
+                    },
+                    "accesskey": {
+                        "type": "uint",
+                        "fk": "accesskey.ID",
+                        "default": 0
+                    },
+                    "order": {
+                        "type": "uint",
+                        "default": 1
+                    }
+                }
+            },
+            "request": {
+                "fieldcat": {
+                    "name": {
+                        "type": "string",
+                        "length": 30,
+                        "key": "primary"
+                    },
+                    "script": {
+                        "type": "text"
+                    },
+                    "language": {
+                        "type": "uint",
+                        "fk": "scriptlanguage.ID",
+                        "default": 0
+                    },
+                    "namespace": {
+                        "type": "uint",
+                        "fk": "namespace.ID",
+                        "default": 0
+                    },
+                    "tls": {
+                        "type": "bool",
+                        "default": true
+                    },
+                    "extSB": {
+                        "type": "bool",
+                        "default": false,
+                        "hint": "Extended Sandbox"
+                    }
+                }
+            },
+            "scriptlanguage": {
+                "fieldcat": {
+                    "ID": {
+                        "type": "uint",
+                        "key": "primary"
+                    },
+                    "name": {
+                        "type": "string",
+                        "length": 30
+                    }
+                },
+                "initial": [
+                    {
+                        "ID": 0,
+                        "name": "plain"
+                    },
+                    {
+                        "ID": 1,
+                        "name": "javascript"
+                    },
+                    {
+                        "ID": 2,
+                        "name": "embedded javascript"
+                    }
+                ]
+            },
+            "session": {
+                "fieldcat": {
+                    "ID": {
+                        "type": "uint",
+                        "key": "primary"
+                    },
+                    "name": {
+                        "type": "string",
+                        "length": 45
+                    },
+                    "timestamp": {
+                        "type": "uint"
+                    }
+                }
+            },
+            "sessioncontent": {
+                "fieldcat": {
+                    "sid": {
+                        "type": "uint",
+                        "fk": "session.ID",
+                        "hint": "Session ID"
+                    },
+                    "key": {
+                        "type": "string",
+                        "length": 30
+                    },
+                    "value": {
+                        "type": "text"
+                    }
+                }
+            },
+            "string": {
+                "fieldcat": {
+                    "ID": {
+                        "type": "uint",
+                        "key": "primary"
+                    },
+                    "langID": {
+                        "type": "uint",
+                        "fk": "language.ID"
+                    },
+                    "namespace": {
+                        "type": "uint",
+                        "fk": "namespace.ID",
+                        "default": 0
+                    },
+                    "group": {
+                        "type": "uint",
+                        "fk": "stringgroup.ID"
+                    },
+                    "key": {
+                        "type": "string",
+                        "length": 30
+                    },
+                    "value": {
+                        "type": "text"
+                    }
+                }
+            },
+            "stringgroup": {
+                "fieldcat": {
+                    "ID": {
+                        "type": "uint",
+                        "key": "primary"
+                    },
+                    "name": {
+                        "type": "string",
+                        "length": 30
+                    }
+                }
+            },
+            "upload": {
+                "fieldcat": {
+                    "ID": {
+                        "type": "uint",
+                        "key": "primary"
+                    },
+                    "name": {
+                        "type": "string",
+                        "length": 30
+                    },
+                    "fileName": {
+                        "type": "string",
+                        "length": 255
+                    },
+                    "uploadTime": {
+                        "type": "uint"
+                    },
+                    "lastModified": {
+                        "type": "uint"
+                    },
+                    "mimeType": {
+                        "type": "uint",
+                        "fk": "mimetype.ID"
+                    },
+                    "cache": {
+                        "type": "bool",
+                        "default": true
+                    },
+                    "ttc": {
+                        "type": "uint",
+                        "hint": "Time To Cache",
+                        "default": 604800
+                    },
+                    "accessKey": {
+                        "type": "uint",
+                        "fk": "accesskey.ID",
+                        "default": 0
+                    },
+                    "hash": {
+                        "type": "string",
+                        "hint": "MD5",
+                        "length": 32
+                    },
+                    "size": {
+                        "type": "uint"
+                    },
+                    "compressedSize": {
+                        "type": "uint"
+                    }
+                }
+            },
+            "user": {
+                "fieldcat": {
+                    "ID": {
+                        "type": "uint",
+                        "key": "primary"
+                    },
+                    "user": {
+                        "type": "string",
+                        "length": 30
+                    },
+                    "email": {
+                        "type": "string",
+                        "length": 30
+                    },
+                    "pass": {
+                        "type": "string",
+                        "length": 129
+                    },
+                    "host": {
+                        "type": "string",
+                        "length": 30
+                    },
+                    "regDate": {
+                        "type": "uint"
+                    },
+                    "token": {
+                        "type": "string",
+                        "length": 30
+                    },
+                    "lastIP": {
+                        "type": "string",
+                        "length": 45
+                    },
+                    "lastActivity": {
+                        "type": "uint"
+                    },
+                    "isLoggedIn": {
+                        "type": "bool",
+                        "default": false
+                    },
+                    "lastSID": {
+                        "type": "string",
+                        "length": 35
+                    },
+                    "isLocked": {
+                        "type": "bool",
+                        "default": true
+                    },
+                    "autoLoginToken": {
+                        "type": "string",
+                        "length": 35
+                    }
+                }
+            },
+            "usersecurity": {
+                "fieldcat": {
+                    "uid": {
+                        "type": "uint",
+                        "fk": "user.ID",
+                        "hint": "User ID"
+                    },
+                    "accessKey": {
+                        "type": "uint",
+                        "fk": "accesskey.ID",
+                        "default": 0
+                    },
+                    "from": {
+                        "type": "uint",
+                        "default": 0
+                    },
+                    "to": {
+                        "type": "uint",
+                        "default": 4294967295
+                    },
+                    "authorizer": {
+                        "type": "uint",
+                        "fk": "user.ID",
+                        "hint": "User ID; System uses uid 0",
+                        "default": 0
+                    }
+                }
             }
-        ]
+        }
     }
 }

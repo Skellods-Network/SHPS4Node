@@ -38,6 +38,7 @@ GLOBAL.SHPS_DIR_UPLOAD = 4;
 GLOBAL.SHPS_DIR_POOL = 5;
 GLOBAL.SHPS_DIR_LOG = 6;
 GLOBAL.SHPS_DIR_TEMPLATES = 7;
+GLOBAL.SHPS_DIR_DB = 8;
 
 
 var constants = require('constants')
@@ -86,6 +87,7 @@ var _getDir
         case SHPS_DIR_POOL: r = path.dirname(require.main.filename) + path.sep + 'pool' + path.sep; break;
         case SHPS_DIR_LOG: r = path.dirname(require.main.filename) + path.sep + 'log' + path.sep; break;
         case SHPS_DIR_TEMPLATES: r = path.dirname(require.main.filename) + path.sep + 'system' + path.sep + 'templates' + path.sep; break;
+        case SHPS_DIR_DB: r = path.dirname(require.main.filename) + path.sep + 'system' + path.sep + 'db' + path.sep; break;
     }
 
     if (r !== null) {

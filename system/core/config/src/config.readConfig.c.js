@@ -241,8 +241,12 @@ var evalConfigs = function (co, cb) {
             case 'hp': {
 
                 co.task.interim(TASK_RESULT_WARNING, 'This config file uses a deprecated format: ' + f.toString().yellow.bold);
+                this[sym.cfg.vhosts][c.generalConfig.URL.value] = c;
+                co.task.interim(TASK_RESULT_OK, 'VHost config loaded: ' + f.toString().green);
                 co.warnings++;
+                break;
             }
+
             case 'vhost': {
 
                 this[sym.cfg.vhosts][c.generalConfig.URL.value] = matchTemplate(this[sym.template.vhost], c);
