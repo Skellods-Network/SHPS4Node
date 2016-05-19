@@ -1,0 +1,225 @@
+{
+    "configHeader": {
+
+        "description": "This part contains info about the config file. The version noted here indicates the minimum SHPS version the config file is compatibel with",
+        "SHPSVERSION_MA": 4,
+        "SHPSVERSION_MI": 2,
+        "type": "template"
+    },
+    "template": {
+
+        "_info": {
+
+            "description": "The master config file sets certain defaults which are important for SHPS as a server in general. There can be only one master config file.",
+            "SHPSVERSION_MA": 4,
+            "SHPSVERSION_MI": 2,
+            "type": "vhost"
+        },
+        "generalConfig": {
+
+            "URL": {
+
+                "description": "Your domain. Please use it without protocol. Add all subdirectories until the SHPS root folder. On SHPS-webservers, don't add a subdirectory.",
+                "examples": [ "example.com", "php.example.com/path/to/root", "node.example.com", "localhost" ],
+                "type": "string",
+                "default": "localhost"
+            },
+            "staticResourcesURL": {
+
+                "description": "Your resource URL. Like URL, but for resources (images, scripts, ...)",
+                "type": "string",
+                "reference": [ "URL" ],
+                "default": "localhost"
+            },
+            "logCount": {
+
+                "description": "Max number of log entries stored in the DB",
+                "type": "integer",
+                "default": 500
+            },
+            "timezone": {
+
+                "description": "Timezone of the server",
+                "type": "string",
+                "default": "Europe/Berlin"
+            },
+            "uploadQuota": {
+
+                "description": "Maximum amount of data which can be uploaded to this website instance in Bytes (0=infinite)",
+                "type": "string",
+                "default": 0
+            },
+            "templateTimeout": {
+
+                "description": "Maximum amount of time in seconds a template (partial or content) can take before excution is stopped",
+                "type": "integer",
+                "default": 3
+            },
+            "indexContent": {
+
+                "description": "Content which will be used when nothing else is specified",
+                "type": "string",
+                "default": "index"
+            },
+            "rootTemplate": {
+
+                "description": "Template which will contain the raw structure",
+                "type": "string",
+                "status": "deprecated",
+                "message": "Use `rootPartial` instead!",
+                "default": "site"
+            },
+            "rootPartial": {
+
+                "description": "Partial which will contain the raw structure",
+                "type": "string",
+                "default": "site"
+            },
+            "useHTTP1": {
+
+                "description": "Start HTTP/1.1 server (only recommended for forwarding purposes)",
+                "type": "boolean",
+                "default": true
+            },
+            "useHTTP2": {
+
+                "description": "Start HTTP/2.0 server. Needs certificates for SSL/TLS (recommended)",
+                "type": "boolean",
+                "default": false
+            },
+            "HTTP1Port": {
+
+                "description": "Port to serve HTTP/1.1 on",
+                "dependencies": { "useHTTP1": true },
+                "type": "integer",
+                "default": 1280
+            },
+            "HTTP2Port": {
+
+                "description": "Port to serve HTTP/2.0 on",
+                "dependencies": { "useHTTP2": true },
+                "type": "integer",
+                "default": 12443
+            },
+            "timeToCache": {
+
+                "description": "Time for how long content should be cached before it gets refreshed in seconds",
+                "dependencies": { "_or": [ { "useHTTP1": true }, { "useHTTP2": true } ] },
+                "type": "integer",
+                "default": 3600
+            },
+            "gzipMinSize": {
+
+                "description": "Content (in bytes) which is larger will be gzipped",
+                "type": "integer",
+                "default": 256
+            }
+        },
+        "TLSConfig": {
+    
+            "_info": {
+        
+                "dependencies": [ { "generalConfig/useHTTP2": true } ]
+            },
+            "key": {
+
+                "description": "Path to key file",
+                "dependencies": { "pfx": "empty" },
+                "type": "string",
+                "default": ""
+            },
+            "cert": {
+
+                "description": "Path to cert file",
+                "dependencies": { "pfx": "empty" },
+                "type": "string",
+                "default": ""
+            },
+            "pfx": {
+
+                "description": "Instead of a key/cert combo, using a pfx file is possible as well. If key, cert and pfx defaults are given, the key/cert combo is preferred",
+                "dependencies": { "_and": [ { "key": "empty" }, { "cert": "empty" } ] },
+                "type": "string",
+                "default": ""
+            },
+            "passphrase": {
+
+                "description": "Passphrase for certificate or pfx, if applicable",
+                "type": "string",
+                "default": ""
+            },
+            "ca": {
+
+                "description": "Bundle with intermediate certificates",
+                "optional": true,
+                "type": "string",
+                "default": ""
+            },
+            "keypin": {
+
+                "description": "This will be used for HPKP (advanced security). If left blank, SHPS will generate the keypin",
+                "optional": true,
+                "type": "string",
+                "default": ""
+            },
+            "dhParam": {
+
+                "description": "File with Diffie-Hellman key. SHPS will generate one if left blank. Please make sure to keep the file as it is bound to your domain.",
+                "optional": true,
+                "type": "string",
+                "default": "dhParam.pem"
+            }
+        },
+        "securityConfig": {
+
+            "sessionTimeout": {
+
+                "description": "Seconds after which a session is destroyed due to inactivity",
+                "type": "integer",
+                "default": 1800
+            },
+            "sessionLifetime": {
+        
+                "description": "Max age of a session in seconds. After a session reaches this age, it will be destoyed",
+                "type": "integer",
+                "default": 86400
+            },
+            "autoLoginTimeout": {
+
+                "description": "Seconds after which an auto login token is invalid",
+                "type": "integer",
+                "default": 2592000
+            },
+            "loginDelay": {
+
+                "description": "Login result delivery delay to add to the next try when a user login fails in seconds",
+                "type": "integer",
+                "default": 1
+            },
+            "maxLoginDelay": {
+
+                "description": "Maximum delay for the login result delivery delay",
+                "type": "integer",
+                "default": 3600
+            },
+            "STSTimeout": {
+
+                "description": "Maximum age for the HTTPS strict-transport-security. Will only be available for HTTPS",
+                "type": "integer",
+                "default": 60000
+            },
+            "STSIncludeSubDomains": {
+
+                "description": "Set HTTPS strict-transport-security for subdomains, too (recommended)",
+                "type": "boolean",
+                "default": true
+            },
+            "saltRounds": { 
+
+                "description": "How many rounds should be used to generate a salt? The more rounds, the more secure and the longer login takes",
+                "type": "integer",
+                "default": 11
+            }
+        }
+    }
+}

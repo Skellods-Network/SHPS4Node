@@ -21,7 +21,7 @@ module.exports.__proto__.init = function () {
     };
 
     internalRS.COOKIE = libs.cookie.newCookieJar(internalRS);
-    internalRS.config = libs.default.config;
+    internalRS.config = null;
     internalRS._domain = new libs.helper.SHPS_domain('localhost');
     internalRS.dummy = true;
     sb = libs.sandbox.newSandbox(internalRS);
@@ -138,14 +138,14 @@ me.on('line', function ($line) {
             break;
         }
 
-        case /^\s*?!.*/i.test($line)
-            ? $line
-            : undefined
-            : {
+        default: {
+
+            var toEval = $line.match(/^\s*?!(.*)/i);
+            if (toEval) {
 
                 try {
 
-                    sb.run(libs.sandbox.newScript($line.replace(/^\s*?!/, ''))).done(function ($res) {
+                    sb.run(libs.sandbox.newScript(toEval)).done(function ($res) {
 
                         me.write($res);
                     }, function ($err) {
@@ -157,15 +157,8 @@ me.on('line', function ($line) {
 
                     me.writeError('Your last JS command threw an error:\n' + $e + '\n');
                 }
-                finally {
-
-                    break;
-                }
             }
-
-        default: {
-
-            if ($line !== '' && !libs.plugin.callCommand($line)) {
+            else if ($line !== '' && !libs.plugin.callCommand($line)) {
 
                 me.write('Command not found!\n');
             }
