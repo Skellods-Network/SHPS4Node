@@ -1,15 +1,7 @@
 'use strict';
 
 /**
- * SHPS Main<br>
- * This file is part of the Skellods Homepage System. It must not be distributed
- * without the licence file or without this header text.
- * 
- * 
- * @author Marco Alka <admin@skellods.de>
- * @copyright (c) 2013, Marco Alka
- * @license privat_Licence.txt Privat Licence
- * @link http://skellods.de Skellods
+ * SHPS Main
  */
 
 /**
@@ -38,6 +30,9 @@ GLOBAL.SHPS_DIR_UPLOAD = 4;
 GLOBAL.SHPS_DIR_POOL = 5;
 GLOBAL.SHPS_DIR_LOG = 6;
 GLOBAL.SHPS_DIR_TEMPLATES = 7;
+
+GLOBAL.SHPS_MODULE_STATE_HALT = 17001;
+GLOBAL.SHPS_MODULE_STATE_RUNNING = 17002;
 
 
 var constants = require('constants')
@@ -182,83 +177,26 @@ var _getInstance
 var _init
 = me.init = function f_main_init () {
 
-    if (typeof _init.initialized !== 'undefined') return;
-    
-    _init.initialized = true;
-    libs.coml.write('Please wait while we initialize SHPS for you... it won\'t take long ;)');
+    if (typeof libs.main._state !== 'undefined') return q.promise($res => { $res(); });
+    libs.main._state = SHPS_MODULE_STATE_RUNNING;
 
-    process.title = 'SHPS Terminal';
+    q.longStackSupport = true;
 
-    async.pipeline({
-        
-        'funcs': [
-            
-            function f_init_prepare($_p1, $_p2) {
-                
-                libs.dependency.init();
-                libs.optimize.init();
-                $_p2();
-            }
-            , function f_init_terminal($_p1, $_p2) {
+    var d = q.defer();
 
-                // resolver will receive list of loaded modules
-                libs.coml.init('SHPS'.cyan + '> '.bold).then(function () {
+    // The Init Module initializes itself on creation
+    var init = new libs.init();
+    init.boot().done($res => {
 
-                    $_p2();
-                }, $_p2);
-            }
-            , function f_init_checkUpdate($_p1, $_p2) { _checkUpdate().done($_p2, $_p2); }
-            , function f_init_checkFS($_p1, $_p2) { _checkFS().done($_p2, $_p2); }
-            , function f_init_readConfig($_p1, $_p2) { libs.config.readConfig().done($_p2, $_p2); }
-            , function f_init_loadPlugins($_p1, $_p2) { libs.plugin.loadPluginList().then($_p2, $_p2); }
-            , function f_init_parallelize($_p1, $_p2) {
-                
-                var wc = libs.config.getHPConfig('config', 'workers');
-                if (wc > 0 || wc === -1) {
+        dep = libs.dep;
+        _init.initialized = true;
+        d.resolve($res);
+    }, d.reject);
 
-                    libs.parallel.handle().done($_p2, $_p2);
-                }
-                else {
-                    
-                    $_p2();
-                }
-            }
-            , function f_init_listen($_p1, $_p2) {
-                
-                if (libs.parallel.work()) {
-                
-                  _listen();
-                }
-                
-                process.nextTick($_p2);
-            }
-            , function f_init_event($_p1, $_p2) {
-                
-                libs.coml.write('');
-                dep = libs.dep;
-                process.on('exit', function ($code) {
-
-                    _killAllServers();
-                });
-
-                libs.schedule.sendSignal('onMainInit', $_p1);
-                process.nextTick($_p2);
-            }
-        ]
-    }, function func_init_done ($err, $res) {
-        
-        if ($err) {
-
-            libs.coml.writeFatal('\nCould not fully initialize SHPS!\nError: ' + $err);
-        }
-        else {
-
-            libs.coml.write('\nWe done here! SHPS at your service - what can we do for you?\n'.bold);
-        }
-    });
+    return d.promise;
 }
 
-var _checkUpdate = function f_main_checkUpdate() {
+var _checkUpdate = me.checkUpdate = function f_main_checkUpdate() {
 
     var defer = q.defer();
 

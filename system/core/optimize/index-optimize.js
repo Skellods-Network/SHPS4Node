@@ -6,6 +6,7 @@ var os = require('os');
 var zlib = require('zlib');
 
 var libs = require('node-mod-load').libs;
+var q = require('q');
 
 var self = this;
 
@@ -196,6 +197,9 @@ var _checkConfigForRisks
 var _init =
     me.init = function f_optimize_init() {
 
+        if (typeof libs.optimize._state !== 'undefined') return q.promise($res => { $res(); });
+        libs.optimize._state = SHPS_MODULE_STATE_RUNNING;
+
         libs.schedule.addSlot('onListenStart', function ($protocol, $port) {
 
             if ($protocol.match(/HTTP\/1.[0,1]/i)) {
@@ -277,4 +281,6 @@ var _init =
             var msg = 'The module `' + $module + '` could not be loaded. It is an optional dependency, though. SHPS can start without it.' + $text + '\nConsider installing `' + $module + '`.';
             libs.coml.writeHint(msg);
         });
+
+        return q.promise($res => { $res(); });
     };

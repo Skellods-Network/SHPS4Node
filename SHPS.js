@@ -6,7 +6,15 @@
 GLOBAL.__debug__ = false;
 ////// ONLY FOR DEVELOPMENT PURPOSES \\\\\\
 
-
+/**
+ * The SHPS bootstrapper
+ * It will do the following:
+ *  1) Load all modules, making sure all modules could be loaded successfully, else EOP
+ *  2) Check start parameters and configure SHPS. If certain parameters are missing, SHPS will be restarted in a new process with missing parameters, same I/O-Stream
+ *  3) Start SHPS
+ *
+ * @todo: swap 1 and 2
+ */
 (function f_SHPS() {
     
     var cluster = require('cluster');
