@@ -73,7 +73,7 @@ var readDir = function (dir, type, task, regex) {
 };
 
 var readTemplates = function (co, cb) {
-    
+
     var dir = libs.main.getDir(SHPS_DIR_TEMPLATES);
     readDir(dir, 'template', co.task, /\.json$/).then($files => {
 
@@ -240,9 +240,13 @@ var evalConfigs = function (co, cb) {
 
             case 'hp': {
 
+                this[sym.cfg.vhosts][c.generalConfig.URL.value] = c;
                 co.task.interim(TASK_RESULT_WARNING, 'This config file uses a deprecated format: ' + f.toString().yellow.bold);
+                co.task.interim(TASK_RESULT_OK, 'Config loaded: ' + f.toString().green);
                 co.warnings++;
+                break;
             }
+
             case 'vhost': {
 
                 this[sym.cfg.vhosts][c.generalConfig.URL.value] = matchTemplate(this[sym.template.vhost], c);
@@ -258,7 +262,7 @@ var evalConfigs = function (co, cb) {
 require('../interface/config.h.js').prototype.readConfig = function () {
 
     var d = q.defer();
-    
+
     var task = libs.coml.newTask('Detecting Configurations');
 
     async.waterfall([
