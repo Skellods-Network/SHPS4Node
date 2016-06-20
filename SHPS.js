@@ -89,11 +89,7 @@ GLOBAL.__debug__ = false;
             else {
 
                 var cp = require('child_process');
-                var param = ['--expose-gc', '--harmony_proxies'];
-                if (libs.SFFM.isHarmonyActivated()) {
-
-                    param.push('--harmony');
-                }
+                var param = ['--expose-gc'];
 
                 param.push('./SHPS.js');
                 var x = cp.spawn('node', param, { stdio: 'inherit' });
