@@ -124,6 +124,10 @@ me.newRequestState = function f_helper_newRequestState($req, $res) {
 
         host = $req.origin;
     }
+    else if (typeof $req === 'undefined') {
+        
+        host = 'localhost';
+    }
     else {
 
         host = $req.headers.host;
