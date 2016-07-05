@@ -10,7 +10,7 @@ GLOBAL.SHPS_SQL_PERCONA = SHPS_SQL_MYSQL | 0b1000;
 
 GLOBAL.SHPS_ERROR_NO_ROWS = 'No rows were returned!';
 
-var mysql = require('mysql');
+var mysql = require('mysql2');
 var mssql = require('mssql');
 var pooling = require('generic-pool');
 var async = require('vasync');
