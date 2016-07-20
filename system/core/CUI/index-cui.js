@@ -10,6 +10,7 @@ var os = require('os');
 var sd = require('string_decoder').StringDecoder;
 
 var libs = require('node-mod-load').libs;
+var q = require('q');
 
 
 var _init 
@@ -19,12 +20,12 @@ var _init
     //Sidenote: Microsoft is annoying in so many ways and I keep finding more and more problems with their products lately :/
     if (os.platform() === 'win32' || os.type() === 'Windows_NT') {
 
-        return;
+        return q.promise($res => { $res(); });
     }
     
     if (!libs.main.isDebug()) {
 
-        return; // CUI is too unstable atm!
+        return q.promise($res => { $res(); }); // CUI is too unstable atm!
     }
 
     process.stdin.setRawMode(true);
@@ -59,4 +60,6 @@ var _init
     });
     
     process.stdout.write('\u001b[6n');
+
+    return q.promise($res => { $res(); });
 };

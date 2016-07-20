@@ -3,6 +3,7 @@
 var color = require('colors');
 var modLoad = require('node-mod-load');
 var libs = modLoad.libs;
+var q = require('q');
 
 var nat = require('node-app-terminal');
 module.exports = new nat();
@@ -13,21 +14,31 @@ var sb = null;
 var originalInit = module.exports.__proto__.init;
 module.exports.__proto__.init = function () {
     
-    var internalRS = new libs.helper.requestState();
-    internalRS.request = {
+    if (arguments.length == 0) {
 
-        headers: {},
-        connection: { remoteAddress: 'localhost' },
-    };
+        var internalRS = new libs.helper.requestState();
+        internalRS.request = {
 
-    internalRS.COOKIE = libs.cookie.newCookieJar(internalRS);
-    internalRS.config = null;
-    internalRS._domain = new libs.helper.SHPS_domain('localhost');
-    internalRS.dummy = true;
-    sb = libs.sandbox.newSandbox(internalRS);
-    sb.addFeature.allBase();
+            headers: {},
+            connection: { remoteAddress: 'localhost' },
+        };
 
-    return originalInit.apply(me, arguments);
+        internalRS.COOKIE = libs.cookie.newCookieJar(internalRS);
+        internalRS.config = null;
+        internalRS._domain = new libs.helper.SHPS_domain('localhost');
+        internalRS.dummy = true;
+        sb = libs.sandbox.newSandbox(internalRS);
+        sb.addFeature.allBase();
+
+        return q.Promise($res => {
+
+            $res();
+        });
+    }
+    else {
+
+        return originalInit.apply(me, arguments);
+    }
 };
 
 /**
