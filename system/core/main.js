@@ -125,6 +125,9 @@ var _checkFS
     var root = _getDir(SHPS_DIR_ROOT);
     fs.readdir(root, function f_main_checkFS_rd($err, $list) {
         
+        //TODO: analyse template type and version
+        var fileTree = JSON.parse(fs.readFileSync(_getDir(SHPS_DIR_TEMPLATES) + 'fsTree.json')).template.tree;
+        
         var i = 0;
         var l = $list.length;
         while (i < l) {
@@ -134,9 +137,6 @@ var _checkFS
 
             if ($stat.isDirectory()) {
                 
-                //TODO: analyse template type and version
-                var fileTree = JSON.parse(fs.readFileSync(_getDir(SHPS_DIR_TEMPLATES) + 'fsTree.json')).template.tree;
-
                 if (Object.keys(fileTree).indexOf(entry) < 0) {
 
                     libs.schedule.sendSignal('onPollution', root, 'SHPS root', entry);
