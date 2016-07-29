@@ -4,6 +4,7 @@ var me = module.exports;
 
 GLOBAL.SHPS_SQL_MYSQL = 0b10;
 GLOBAL.SHPS_SQL_MSSQL = 0b10000;
+GLOBAL.SHPS_SQL_SQLITE = 0b100000;
 
 GLOBAL.SHPS_SQL_MARIA = SHPS_SQL_MYSQL | 0b100;
 GLOBAL.SHPS_SQL_PERCONA = SHPS_SQL_MYSQL | 0b1000;
@@ -15,8 +16,8 @@ var mssql = require('mssql');
 var pooling = require('generic-pool');
 var async = require('vasync');
 var q = require('q');
-
 var libs = require('node-mod-load').libs;
+var sqlite = require('./sqlite-helper');
 
 var _sqlConnectionPool = {};
 var mp = {
@@ -32,6 +33,7 @@ var _stringdeterminator = {};
 _stringdeterminator[SHPS_SQL_MYSQL] = '\'';
 _stringdeterminator[SHPS_SQL_MARIA] = '\'';
 _stringdeterminator[SHPS_SQL_MSSQL] = '\'';
+_stringdeterminator[SHPS_SQL_SQLITE] = '\'';
 
 /**
  * SQL variable determinators
@@ -42,6 +44,7 @@ var _variabledeterminator = {};
 _variabledeterminator[SHPS_SQL_MYSQL] = ['`', '`'];
 _variabledeterminator[SHPS_SQL_MARIA] = ['`', '`'];
 _variabledeterminator[SHPS_SQL_MSSQL] = ['[', ']'];
+_variabledeterminator[SHPS_SQL_SQLITE] = ['[', ']'];
 
 /**
  * Alias Connections
@@ -486,7 +489,29 @@ var _SQL = function ($dbConfig, $connection) {
 
             query += ';';
 
-            return _query(query);
+            var r = null;
+            if (_dbType === SHPS_SQL_SQLITE) {
+
+                var d = q.defer();
+                _query(query).done($r => {
+
+                    $connection.flush().then(() => {
+
+                        d.resolve($r);
+                    }, $e => {
+
+                        d.reject($e);
+                    });
+                }, d.reject);
+
+                r = d.promise;
+            }
+            else {
+
+                r = _query(query);
+            }
+
+            return r;
         };
     
     /**
@@ -500,6 +525,14 @@ var _SQL = function ($dbConfig, $connection) {
         return _dbType;
     }
     
+    this.flush = function () {
+
+        if ($connection.flush) {
+
+            return $connection.flush();
+        }
+    };
+
     /**
      * Return table object
      * 
@@ -571,6 +604,7 @@ var _SQL = function ($dbConfig, $connection) {
                 break;
             }
             
+            case SHPS_SQL_SQLITE:
             case SHPS_SQL_MARIA:
             case SHPS_SQL_MYSQL: {
 
@@ -675,11 +709,14 @@ var _getConnectionCount
 
 var _makePoolName = function f_sql_makePoolName($dbConfig) {
 
-    return $dbConfig.host.value +
-        $dbConfig.port.value +
+    var tmp = 
+        $dbConfig.type.value.toString() +
+        $dbConfig.host.value +
+        $dbConfig.port.value.toString() +
         $dbConfig.name.value +
         $dbConfig.user.value +
         $dbConfig.prefix.value;
+    return tmp;
 };
 
 var _makeErrorObject = function f_sql_makeErrorObject ($dbConfig, $err) {
@@ -775,6 +812,41 @@ var _newSQL
                 break;
             }
 
+            case SHPS_SQL_SQLITE: {
+
+                _sqlConnectionPool[poolName] = nPool = pooling.Pool({
+
+                    name: poolName,
+                    create: function f_sql_newSQL_create_SQLITE_pool($cb) {
+
+                        $cb(null, new sqlite(dbConfig.host.value));
+                    },
+                    destroy: function f_sql_newSQL_destroy_MSSQL_pool($res) {
+
+                        $res.flush();
+                    },
+                    max: dbConfig.connectionLimit.value,
+                    min: 1,
+                    idleTimeoutMillis: 30000,
+                    log: false
+                });
+
+                nPool.acquire(function ($err, $client) {
+
+                    if ($err === null) {
+
+                        defer.resolve(new _SQL(dbConfig, $client));
+                    }
+                    else {
+
+                        defer.reject(_makeErrorObject(dbConfig, $err));
+                    }
+
+                });
+
+                break;
+            }
+
             case SHPS_SQL_MSSQL: {
                 
                 _sqlConnectionPool[poolName] = nPool = pooling.Pool({
@@ -847,6 +919,23 @@ var _newSQL
                     else {
 
                         defer.resolve(new _SQL(dbConfig, $con));
+                    }
+                });
+
+                break;
+            }
+
+            case SHPS_SQL_SQLITE: {
+
+                nPool.acquire(function ($err, $client) {
+
+                    if ($err) {
+
+                        defer.reject(_makeErrorObject(dbConfig, $err));
+                    }
+                    else {
+
+                        defer.resolve(new _SQL(dbConfig, $client));
                     }
                 });
 

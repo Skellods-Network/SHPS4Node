@@ -104,6 +104,12 @@ var _sqlTable = function c_sqlTable($sql, $name) {
                 return $sql.standardizeName($sql.getDB()) + '..' + $sql.standardizeName(_getFullName());
                 break;
             }
+
+            case SHPS_SQL_SQLITE: {
+
+                return $sql.standardizeName(_getFullName());
+                break;
+            }
             
             case SHPS_SQL_MYSQL:
             default: {
@@ -291,7 +297,17 @@ var _sqlTable = function c_sqlTable($sql, $name) {
             }
         }
 
-        $sql.query('INSERT INTO ' + _getAbsoluteName() + ' (' + keys + ') VALUES (' + vals + ');').then(defer.resolve, defer.reject);
+        $sql.query('INSERT INTO ' + _getAbsoluteName() + ' (' + keys + ') VALUES (' + vals + ');').done($r => {
+
+            if ($sql.getServerType() == SHPS_SQL_SQLITE) {
+
+                $sql.flush().then(defer.resolve.bind(null, $r), defer.reject);
+            }
+            else {
+
+                defer.resolve($r);
+            }
+        }, defer.reject);
 
         return defer.promise;
     };
