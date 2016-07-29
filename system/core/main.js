@@ -326,7 +326,7 @@ var _listen
                     honorCipherOrder: true,
                 };
                 
-                if (configs[$c].TLSConfig.key.value != '' && configs[$c].TLSConfig.cert.value != '') {
+                if (configs[$c].TLSConfig.key.value !== '' && configs[$c].TLSConfig.cert.value !== '') {
 
                     options.key = fs.readFileSync(_getDir(SHPS_DIR_CERTS) + configs[$c].TLSConfig.key.value);
                     options.cert = fs.readFileSync(_getDir(SHPS_DIR_CERTS) + configs[$c].TLSConfig.cert.value);
@@ -336,17 +336,17 @@ var _listen
                     options.pfx = fs.readFileSync(_getDir(SHPS_DIR_CERTS) + configs[$c].TLSConfig.pfx.value);
                 }
                 
-                if (configs[$c].TLSConfig.ca.value != '') {
+                if (configs[$c].TLSConfig.ca.value !== '') {
 
                     options.ca = fs.readFileSync(_getDir(SHPS_DIR_CERTS) + configs[$c].TLSConfig.ca.value);
                 }
                 
-                if (configs[$c].TLSConfig.passphrase.value != '') {
+                if (configs[$c].TLSConfig.passphrase.value !== '') {
                     
                     options.passphrase = configs[$c].TLSConfig.passphrase.value;
                 }
                 
-                if (configs[$c].TLSConfig.dhParam.value != '') {
+                if (configs[$c].TLSConfig.dhParam.value !== '') {
                     
                     options.dhparam = _getDir(SHPS_DIR_CERTS) + configs[$c].TLSConfig.dhParam.value
                 }
