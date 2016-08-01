@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 
 var me = module.exports;
 
@@ -744,12 +744,20 @@ var _newSQL
     var defer = q.defer();
     if (typeof $requestState === 'undefined') {
         
-        var str = 'Cannot connect with undefined requestState!';
+        var str = 'Cannot connect to DB with undefined requestState!';
         defer.reject(str);
 
         return defer.promise;
     }
 
+    if (typeof $requestState.config === 'undefined') {
+
+        var str = 'Cannot connect to DB without known configuration for ' + $requestState.uri + '!';
+        defer.reject(str);
+
+        return defer.promise;
+    }
+    
     
     if (!$requestState.config.databaseConfig[$alias]) {
 

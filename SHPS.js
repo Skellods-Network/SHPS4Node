@@ -63,6 +63,8 @@ GLOBAL.__debug__ = false;
         }
         else {
 
+            modLoad.addMeta('config', new (require('SHPS4Node-Config'))(libs));
+        
             modLoad.addMeta('dep', libs.dependency);
             modLoad.addMeta('coml', libs.commandline);
             modLoad.addMeta('cl', libs.componentLibrary);
