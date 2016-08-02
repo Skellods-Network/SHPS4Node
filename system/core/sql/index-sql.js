@@ -20,7 +20,7 @@ GLOBAL.SHPS_DB_KEY_PRIMARY = 'PRIMARY KEY';
 
 GLOBAL.SHPS_ERROR_NO_ROWS = 'No rows were returned!';
 
-var mysql = require('mysql');
+var mysql = require('mysql2');
 var mssql = require('mssql');
 var pooling = require('generic-pool');
 var async = require('vasync');
