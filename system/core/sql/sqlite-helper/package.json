@@ -1,0 +1,7 @@
+﻿{
+    "name": "sqlite-helper",
+    "version": "0.1.0",
+    "description": "Helper for SQLite DB connection. Basically this helper exposes an asynchronously reuseable interface over just one connection.\nDownside: This still only works with 1(!) connection per DB (else expect inconsistencies)!",
+    "author": "Marco Alka <me@marco-alka.de>",
+    "main": "index-sqlite-helper.js"
+}

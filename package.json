@@ -53,6 +53,7 @@
         "terminal-menu": "^2.1.0",
         "busboy": "^0.2.0",
         "qs": "^6.0.0",
-        "SHPS4Node-config": "^1.0.0"
+        "sql.js": "^0.3.0",
+        "SHPS4Node-Config": "^1.0.0"
     }
 }
