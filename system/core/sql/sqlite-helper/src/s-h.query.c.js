@@ -11,13 +11,19 @@ require('../interface/s-h.h.js').prototype.query = function ($str, $bindVals, $c
         if (arguments.length < 3) {
 
             $cb = $bindVals;
-            $bindVals = {};
+            $bindVals = undefined;
         }
 
         stmt = this.db.prepare($str);
-        $cb(null, stmt.getAsObject($bindVals));
-        //$cb(null, this.db.run($str));
-        //$cb(null, this.db.exec($str));
+        
+        var arr = [];
+        while (stmt.step()) {
+
+            arr.push(stmt.getAsObject($bindVals));
+        }
+
+        stmt.free();
+        $cb(null, arr);
     }
     catch ($e) {
 

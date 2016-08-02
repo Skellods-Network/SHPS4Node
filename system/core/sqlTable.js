@@ -328,7 +328,22 @@ var _sqlTable = function c_sqlTable($sql, $name) {
             return libs.sqlQueryBuilder.newSQLQueryBuilder($sql).delete(this).fulfilling();
         }
 
-        return $sql.query('DELETE FROM ' + _getAbsoluteName() + ' WHERE ' + $conditions.toString());
+        var query = 'DELETE FROM ' + _getAbsoluteName() + ' WHERE ' + $conditions.toString();
+
+        var defer = q.defer();
+        $sql.query(query).done($r => {
+
+            if ($sql.getServerType() == SHPS_SQL_SQLITE) {
+
+                $sql.flush().then(defer.resolve.bind(null, $r), defer.reject);
+            }
+            else {
+
+                defer.resolve($r);
+            }
+        }, defer.reject);
+
+        return defer.promise;
     };
     
     /**
@@ -393,6 +408,20 @@ var _sqlTable = function c_sqlTable($sql, $name) {
         
 
         var query = 'UPDATE ' + _getAbsoluteName() + ' SET ' + newVals + ' WHERE ' + $conditions.toString();
-        return $sql.query(query);
+
+        var defer = q.defer();
+        $sql.query(query).done($r => {
+
+            if ($sql.getServerType() == SHPS_SQL_SQLITE) {
+
+                $sql.flush().then(defer.resolve.bind(null, $r), defer.reject);
+            }
+            else {
+
+                defer.resolve($r);
+            }
+        }, defer.reject);
+
+        return defer.promise;
     };
 };

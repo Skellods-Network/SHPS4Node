@@ -9,6 +9,15 @@ GLOBAL.SHPS_SQL_SQLITE = 0b100000;
 GLOBAL.SHPS_SQL_MARIA = SHPS_SQL_MYSQL | 0b100;
 GLOBAL.SHPS_SQL_PERCONA = SHPS_SQL_MYSQL | 0b1000;
 
+GLOBAL.SHPS_DB_COLTYPE_INT = 'INTEGER';
+GLOBAL.SHPS_DB_COLTYPE_STRING = 'VARCHAR';
+GLOBAL.SHPS_DB_COLTYPE_DECIMAL = 'DECIMAL';
+GLOBAL.SHPS_DB_COLTYPE_REAL = 'REAL';
+GLOBAL.SHPS_DB_COLTYPE_FLOAT = 'FLOAT';
+GLOBAL.SHPS_DB_COLTYPE_DOUBLE = 'DOUBLE';
+
+GLOBAL.SHPS_DB_KEY_PRIMARY = 'PRIMARY KEY';
+
 GLOBAL.SHPS_ERROR_NO_ROWS = 'No rows were returned!';
 
 var mysql = require('mysql');
@@ -449,7 +458,14 @@ var _SQL = function ($dbConfig, $connection) {
 
                 if (fieldset[i].autoincrement) {
 
-                    query += ' AUTO_INCREMENT';
+                    if (_dbType === SHPS_SQL_SQLITE) {
+
+                        fieldset[i].key = SHPS_DB_KEY_PRIMARY;
+                    }
+                    else {
+
+                        query += ' AUTO_INCREMENT';
+                    }
                 }
 
                 if (typeof fieldset[i].key !== 'undefined') {
@@ -598,13 +614,13 @@ var _SQL = function ($dbConfig, $connection) {
         
         switch ($dbConfig.type.value) {
 
+            case SHPS_SQL_SQLITE:
             case SHPS_SQL_MSSQL: {
 
                 _sqlConnectionPool[_makePoolName($dbConfig)].release($connection);
                 break;
             }
             
-            case SHPS_SQL_SQLITE:
             case SHPS_SQL_MARIA:
             case SHPS_SQL_MYSQL: {
 
