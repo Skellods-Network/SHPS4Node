@@ -1,4 +1,4 @@
-Copyright © 2014, Marco Alka
+Copyright © 2014-2016, Marco Alka
 All rights reserved.
 
 Redistribution and use in source and binary forms, without modification, are permitted provided that the following conditions are met:

@@ -1,15 +1,7 @@
 'use strict';
 
 /**
- * SHPS Main<br>
- * This file is part of the Skellods Homepage System. It must not be distributed
- * without the licence file or without this header text.
- *
- *
- * @author Marco Alka <admin@skellods.de>
- * @copyright (c) 2013, Marco Alka
- * @license privat_Licence.txt Privat Licence
- * @link http://skellods.de Skellods
+ * SHPS Main
  */
 
 /**
@@ -22,8 +14,8 @@ var me = module.exports;
 
 GLOBAL.SHPS_ = 1;
 GLOBAL.SHPS_MAJOR_VERSION = 4;
-GLOBAL.SHPS_MINOR_VERSION = 2;
-GLOBAL.SHPS_PATCH_VERSION = 1;
+GLOBAL.SHPS_MINOR_VERSION = 3;
+GLOBAL.SHPS_PATCH_VERSION = 0;
 GLOBAL.SHPS_BUILD = '';
 GLOBAL.SHPS_INTERNAL_NAME = 'IROKOKOU';
 GLOBAL.SHPS_VERSION = SHPS_MAJOR_VERSION + '.' + SHPS_MINOR_VERSION + '.' + SHPS_PATCH_VERSION;
@@ -38,6 +30,10 @@ GLOBAL.SHPS_DIR_UPLOAD = 4;
 GLOBAL.SHPS_DIR_POOL = 5;
 GLOBAL.SHPS_DIR_LOG = 6;
 GLOBAL.SHPS_DIR_TEMPLATES = 7;
+GLOBAL.SHPS_DIR_DB = 8;
+
+GLOBAL.SHPS_MODULE_STATE_HALT = 17001;
+GLOBAL.SHPS_MODULE_STATE_RUNNING = 17002;
 
 
 var constants = require('constants')
@@ -86,6 +82,7 @@ var _getDir
         case SHPS_DIR_POOL: r = path.dirname(require.main.filename) + path.sep + 'pool' + path.sep; break;
         case SHPS_DIR_LOG: r = path.dirname(require.main.filename) + path.sep + 'log' + path.sep; break;
         case SHPS_DIR_TEMPLATES: r = path.dirname(require.main.filename) + path.sep + 'system' + path.sep + 'templates' + path.sep; break;
+        case SHPS_DIR_DB: r = path.dirname(require.main.filename) + path.sep + 'db' + path.sep; break;
     }
 
     if (r !== null) {
@@ -183,83 +180,26 @@ var _getInstance
 var _init
 = me.init = function f_main_init () {
 
-    if (typeof _init.initialized !== 'undefined') return;
+    if (typeof libs.main._state !== 'undefined') return q.promise($res => { $res(); });
+    libs.main._state = SHPS_MODULE_STATE_RUNNING;
 
-    _init.initialized = true;
-    libs.coml.write('Please wait while we initialize SHPS for you... it won\'t take long ;)');
+    q.longStackSupport = true;
 
-    process.title = 'SHPS Terminal';
+    var d = q.defer();
 
-    async.pipeline({
+    // The Init Module initializes itself on creation
+    var init = new libs.init();
+    init.boot().done($res => {
 
-        'funcs': [
+        dep = libs.dep;
+        _init.initialized = true;
+        d.resolve($res);
+    }, d.reject);
 
-            function f_init_prepare($_p1, $_p2) {
-
-                libs.dependency.init();
-                libs.optimize.init();
-                $_p2();
-            }
-            , function f_init_terminal($_p1, $_p2) {
-
-                // resolver will receive list of loaded modules
-                libs.coml.init('SHPS'.cyan + '> '.bold).then(function () {
-
-                    $_p2();
-                }, $_p2);
-            }
-            , function f_init_checkUpdate($_p1, $_p2) { _checkUpdate().done($_p2, $_p2); }
-            , function f_init_checkFS($_p1, $_p2) { _checkFS().done($_p2, $_p2); }
-            , function f_init_readConfig($_p1, $_p2) { libs.config.readConfig().done($_p2, $_p2); }
-            , function f_init_loadPlugins($_p1, $_p2) { libs.plugin.loadPluginList().then($_p2, $_p2); }
-            , function f_init_parallelize($_p1, $_p2) {
-
-                var wc = libs.config.getHPConfig('config', 'workers');
-                if (wc > 0 || wc === -1) {
-
-                    libs.parallel.handle().done($_p2, $_p2);
-                }
-                else {
-
-                    $_p2();
-                }
-            }
-            , function f_init_listen($_p1, $_p2) {
-
-                if (libs.parallel.work()) {
-
-                  _listen();
-                }
-
-                process.nextTick($_p2);
-            }
-            , function f_init_event($_p1, $_p2) {
-
-                libs.coml.write('');
-                dep = libs.dep;
-                process.on('exit', function ($code) {
-
-                    _killAllServers();
-                });
-
-                libs.schedule.sendSignal('onMainInit', $_p1);
-                process.nextTick($_p2);
-            }
-        ]
-    }, function func_init_done ($err, $res) {
-
-        if ($err) {
-
-            libs.coml.writeFatal('\nCould not fully initialize SHPS!\nError: ' + $err);
-        }
-        else {
-
-            libs.coml.write('\nWe done here! SHPS at your service - what can we do for you?\n'.bold);
-        }
-    });
+    return d.promise;
 }
 
-var _checkUpdate = function f_main_checkUpdate() {
+var _checkUpdate = me.checkUpdate = function f_main_checkUpdate() {
 
     var defer = q.defer();
 
@@ -388,8 +328,8 @@ var _listen
                     ciphers: 'ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS -AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:CAMELLIA:DES-CBC3-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA',
                     honorCipherOrder: true,
                 };
-
-                if (configs[$c].TLSConfig.key.value != '' && configs[$c].TLSConfig.cert.value != '') {
+                
+                if (configs[$c].TLSConfig.key.value !== '' && configs[$c].TLSConfig.cert.value !== '') {
 
                     options.key = fs.readFileSync(_getDir(SHPS_DIR_CERTS) + configs[$c].TLSConfig.key.value);
                     options.cert = fs.readFileSync(_getDir(SHPS_DIR_CERTS) + configs[$c].TLSConfig.cert.value);
@@ -398,19 +338,19 @@ var _listen
 
                     options.pfx = fs.readFileSync(_getDir(SHPS_DIR_CERTS) + configs[$c].TLSConfig.pfx.value);
                 }
-
-                if (configs[$c].TLSConfig.ca.value != '') {
+                
+                if (configs[$c].TLSConfig.ca.value !== '') {
 
                     options.ca = fs.readFileSync(_getDir(SHPS_DIR_CERTS) + configs[$c].TLSConfig.ca.value);
                 }
-
-                if (configs[$c].TLSConfig.passphrase.value != '') {
-
+                
+                if (configs[$c].TLSConfig.passphrase.value !== '') {
+                    
                     options.passphrase = configs[$c].TLSConfig.passphrase.value;
                 }
-
-                if (configs[$c].TLSConfig.dhParam.value != '') {
-
+                
+                if (configs[$c].TLSConfig.dhParam.value !== '') {
+                    
                     options.dhparam = _getDir(SHPS_DIR_CERTS) + configs[$c].TLSConfig.dhParam.value
                 }
 

@@ -24,7 +24,7 @@
 		},
 		"host": {
 
-            "description": "DB host",
+            "description": "DB host; insert file path in case of SQLite",
             "default": "localhost"
         },
         "port": {
@@ -55,10 +55,11 @@
         "type": {
 
            "description": "Type of DB",
-           "default": 2,
+           "default": 32,
             "options": {
                 "MySQL": 2,
-                "MSSQL": 16
+                "MSSQL": 16,
+                "SQLite": 32
             }
         },
         "connectionLimit": {

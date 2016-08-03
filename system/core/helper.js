@@ -11,6 +11,7 @@ var q = require('q');
 
 var libs = require('node-mod-load').libs;
 
+var isInitialized = false;
 var mp = {
     self: this
 };
@@ -144,4 +145,18 @@ me.newRequestState = function f_helper_newRequestState($req, $res) {
     return rs;
 };
 
-u.inherits(me.requestState, events.EventEmitter);
+me.init = function () {
+
+    if (!isInitialized) {
+
+        u.inherits(me.requestState, events.EventEmitter);
+        isInitialized = true;
+    }
+
+    libs.auth._state = SHPS_MODULE_STATE_RUNNING;
+
+    return q.Promise($res => {
+
+        $res();
+    });
+};

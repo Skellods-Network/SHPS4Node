@@ -6,6 +6,7 @@
 var cp = require('child_process');
 
 var libs = require('node-mod-load').libs;
+var q = require('q');
 
 var me = module.exports;
 var bcryptModule = undefined;
@@ -47,6 +48,9 @@ var description = undefined;
 
 
 me.init = function () {
+
+    if (typeof libs.dependency._state !== 'undefined') return q.promise($res => { $res(); });
+    libs.dependency._state = SHPS_MODULE_STATE_RUNNING;
 
     /**
      * Handlers
@@ -127,4 +131,5 @@ me.init = function () {
     
     description = undefined;
 
+    return q.promise($res => { $res(); });
 };
