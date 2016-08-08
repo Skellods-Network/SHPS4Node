@@ -55,6 +55,12 @@ _variabledeterminator[SHPS_SQL_MARIA] = ['`', '`'];
 _variabledeterminator[SHPS_SQL_MSSQL] = ['[', ']'];
 _variabledeterminator[SHPS_SQL_SQLITE] = ['[', ']'];
 
+var _paramDeclarator = {};
+_paramDeclarator[SHPS_SQL_MYSQL] = ':';
+_paramDeclarator[SHPS_SQL_MARIA] = ':';
+_paramDeclarator[SHPS_SQL_MSSQL] = '@';
+_paramDeclarator[SHPS_SQL_SQLITE] = ':';
+
 /**
  * Alias Connections
  * 
@@ -221,6 +227,7 @@ var _SQL = function ($dbConfig, $connection) {
      * 
      * @param string $query OPTIONAL
      * @param string $domain Needed for $param
+     *   // Deprecated since v4.3.1
      * @param mixed $param several parameters for SQL statement
      * @return mixed
      *   Promise([]) if a query was given, else a queryBuilder object is returned
@@ -231,43 +238,110 @@ var _SQL = function ($dbConfig, $connection) {
         _free = false;
         _fetchIndex = -1;
         
+        if (typeof $query === 'undefined') {
+
+            return libs.sqlQueryBuilder.newSQLQueryBuilder(this);
+        }
+
+        console.log($query);
+
+        if ($domain && !$param) {
+        
+            $param = $domain;
+        }
+    
+        _lastQuery = $query;
+        _queryCount++;
+        
+        var defer = q.defer();
+        var start = process.hrtime();
+        var cb = ($err, $rows, $fields) => {
+            
+            var t = process.hrtime(start);
+            _lastQueryTime = t[0] + (t[1] / 1000000000);
+            _queryTime += _lastQueryTime;
+            
+            if ($err) {
+                
+                defer.reject(new Error($err));
+            }
+            else {
+                
+                _resultRows = $rows;
+                _resultFields = $fields;
+                defer.resolve($rows);
+            }
+        };
         
         if (typeof $param !== 'undefined') {
-            
-            $query = mysql.format($query, $param, true, libs.config.getHPConfig('generalConfig', 'timezone', $domain));
-            mysql.createQuery($query, cb);
-        }
         
-        if (typeof $query !== 'undefined') {
-            
-            _lastQuery = $query;
-            _queryCount++;
-            var start = process.hrtime();
-            
-            var defer = q.defer();
-            $connection.query($query, function ($err, $rows, $fields) {
+            switch(_dbType) {
                 
-                var t = process.hrtime(start);
-                _lastQueryTime = t[0] + (t[1] / 1000000000);
-                _queryTime += _lastQueryTime;
-                
-                if ($err) {
-                    
-                    defer.reject(new Error($err));
-                }
-                else {
-                    
-                    _resultRows = $rows;
-                    _resultFields = $fields;
-                    defer.resolve($rows);
-                }
-            });
+                case SHPS_SQL_MARIA:
+                case SHPS_SQL_MYSQL: {
 
-            return defer.promise;
+                    //TODO
+                    // This is the reference implementation for custom params from https://www.npmjs.com/package/mysql#custom-format
+                    // I am pretty sure it can be enhanced a lot (e.g. when strings contain `:param`)
+                    $connection.config.queryFormat = function ($query, $values) {
+
+                        if (!$values) return $query;
+
+                        //TODO cache prepared regex somewhere
+                        return $query.replace(new RegExp('\\' + _getParamDeclarator() + '(\\w+)', 'g'), ($txt, $key) => {
+
+                            if ($values.hasOwnProperty($key)) {
+
+                                return this.escape($values[$key]);
+                            }
+
+                            return $txt;
+                        });
+                    };
+
+                    var query = mysql.format($query, $param/*, true, libs.config.getHPConfig('generalConfig', 'timezone', $domain)*/);
+                    $connection.query(query, $param, cb);
+                    break;
+                }
+                
+                case SHPS_SQL_MSSQL: {
+                    
+                    var ps = new mssql.PreparedStatement($connection);
+                    ps.prepare($query, $err => {
+                        
+                        if ($err) {
+                            
+                            defer.reject($err);
+                            return;
+                        }
+                     
+                        ps.execute({param: 12345}, function(err, recordset) {
+                            // ... error checks 
+                     
+                            ps.unprepare(function(err) {
+                                // ... error checks 
+                     
+                            });
+                        });
+                    });
+                    
+                    break;
+                }
+                
+                case SHPS_SQL_SQLITE: {
+                    
+                    $connection.query(query, $param, cb);
+                    break;
+                }
+            }
+        }
+        else {
+            
+            $connection.query($query, cb);
         }
         
-        return libs.sqlQueryBuilder.newSQLQueryBuilder(this);
-    }
+        return defer.promise;
+    };
     
     /**
      * Standardizes names in a SQL query by adding determinators
@@ -289,6 +363,12 @@ var _SQL = function ($dbConfig, $connection) {
         
         return $var;
     }
+    
+    var _getParamDeclarator
+    = this.getParamDeclarator = function f_sql_getParamDeclarator() {
+        
+        return _paramDeclarator[_dbType];
+    };
     
     /**
      * Standardizes strings in a SQL query by adding determinators
@@ -546,6 +626,10 @@ var _SQL = function ($dbConfig, $connection) {
         if ($connection.flush) {
 
             return $connection.flush();
+        }
+        else {
+            
+            return Promise.resolve();
         }
     };
 
@@ -811,7 +895,7 @@ var _newSQL
                 nPool.on('connection', function ($con) {
                         
                     $con.on('error', function ($err) {
-                                            
+
                         libs.coml.writeError('DB ERROR: ' + $err.code);
                     });
                 });
@@ -824,8 +908,9 @@ var _newSQL
                 nPool.getConnection(function ($err, $con) {
                     
                     if (!$err) {
-
-                        defer.resolve(new _SQL(dbConfig, $con));
+                        
+                        var sql = new _SQL(dbConfig, $con);
+                        defer.resolve(sql);
                     }
                     else {
 

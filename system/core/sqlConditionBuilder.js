@@ -1,12 +1,9 @@
-﻿'use strict';
+'use strict';
 
 var me = module.exports;
 
+var LinkedList = require('linkedlist');
 var libs = require('node-mod-load').libs;
-
-var mp = {
-    self: this,
-};
 
 
 /**
@@ -24,19 +21,9 @@ var _newSQLConditionBuilder
 
 var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
     
-    var _mp = {
-        self: this
-    };
+    var _conditions = new LinkedList();
+    var _lastParamNum = 0;
     
-    var _conditions = '';
-
-    /**
-     * Is the current condition the first in the string?
-     * 
-     * @var boolean
-     */
-    var _firstCondition = true;
-
     /**
      * Bind a QueryBuilder to this ConditionBuilder
      * A ConditionBuilder must always be attached to a QueryBuilder!
@@ -50,59 +37,202 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
         $sqb = $qb;
         return this;
     };
+
+    //TODO move this into SQL prototype since it is needed by the sqlTable as well (for INSERT and UPDATE)
+    var _genParamName = function f_sqlConditionBuilder_genParamName ($prefix, $reset) {
+        
+        if ($reset) {
+            
+            _lastParamNum = 0;
+        }
+        
+        var p = $prefix;
+        if (!p) {
+            
+            p = '';
+        }
+        
+        return $sqb.getSQL().getParamDeclarator() + p + 'p' + _lastParamNum++;
+    };
     
     /**
-     * Query-conformant serialization
+     * Query-conformant serialization (sanitized and prepared with parameters)
+     * 
      * For example:
-     *   `SHPS_test`.`user`.`user`='admin' OR `SHPS_test`.`user`.`user`='root'
+     *   `SHPS_test`.`user`.`user`= :cp1 OR `SHPS_test`.`user`.`user`= :cp2
      *   
      * @result string
      */
     var _toString =
-    this.toString = function f_sqlConditionBuilder_toString() {
-    
-        return _conditions;    
-    };
-    
-    /**
-     * Turn cols, strings and integers into proper SQL queryable values
-     * 
-     * @param mixed $value
-     * @return string
-     */
-    var _prepare = function f_sqlConditionBuilder_sqlConditionBuilder_prepare($value) {
+    this.toString = function f_sqlConditionBuilder_toString($paramNumOffset, $getNewOffset) {
         
-        var errorFun = function () {
-
-            $value = 'NULL';
-            throw ('Value Type mismatch in sqlConditionsBuilder_prepare!');
+        var r = '';
+        
+        _conditions.resetCursor();
+        _lastParamNum = 0;
+        if ($paramNumOffset) {
+            
+            _lastParamNum = $paramNumOffset;
         }
         
-        if (typeof $value === 'undefined') {
+        var item;
+        var tmp;
+        while (item = _conditions.next()) {
             
-            errorFun();
+            if (!item.col) {
+                
+                //TODO check if of type sqlConditionBuilder
+                if (typeof item.left === 'object') {
+                    
+                    tmp = item.left.toString(_lastParamNum, true);
+                    r += tmp.string || tmp;
+                    _lastParamNum = tmp.offset || _lastParamNum;
+                }
+                else {
+                    
+                    r += ' ' + _genParamName('c') + ' ';
+                }
+                
+                r += item.op;
+                
+                //TODO check if of type sqlConditionBuilder
+                if (typeof item.right !== 'object') {
+                    
+                    r += ' ' + _genParamName('c') + ' ';
+                }
+                else {
+                    
+                    tmp = item.right.toString(_lastParamNum, true);
+                    r += tmp.string || tmp;
+                    _lastParamNum = tmp.offset || _lastParamNum;
+                }
+            }
+            else {
+                
+                r += item.col.toString() + item.op;
+                
+                //TODO check if of type sqlConditionBuilder
+                if (typeof item.left === 'object') {
+                    
+                    tmp = item.left.toString(_lastParamNum, true);
+                    r += tmp.string || tmp;
+                    _lastParamNum = tmp.offset || _lastParamNum;
+                }
+                else {
+                    
+                    r += ' ' + _genParamName('c') + ' ';
+                }
+                
+                r += ' AND ';
+                
+                //TODO check if of type sqlConditionBuilder
+                if (typeof item.right !== 'object') {
+                    
+                    r += ' ' + _genParamName('c') + ' ';
+                }
+                else {
+                    
+                    tmp = item.right.toString(_lastParamNum, true);
+                    r += tmp.string || tmp;
+                    _lastParamNum = tmp.offset || _lastParamNum;
+                }
+            }
+            
+            r += ' AND ';
+        }
+        
+        // If I just could use ES6 destructuring~
+        // Really looking forward to switching to Node.JS v6 as LTS
+        if (r.length >= 4) {
+            
+            if ($getNewOffset) {
+                
+                return { string: r.slice(0, -4), offset: _lastParamNum, };  
+            }
+            else {
+                
+                return r.slice(0, -4);  
+            }
         }
         else {
             
-            if (typeof $value === 'string') {
+            if ($getNewOffset) {
                 
-                $value = $sqb.getSQL().standardizeString($value);
-            }
-            else if (typeof $value === 'number') {
-
-                // Do nothing. I really have to think about a better solution for this...
-            }
-            else if ($value.toString !== 'undefined') {
-                
-                $value = $value.toString();
+                return { string: r, offset: _lastParamNum, };  
             }
             else {
-
-                errorFun();
+                
+                return r;
             }
         }
+    };
+    
+    var _getParamValues =
+    this.getParamValues = function f_sqlConditionBuilder_getParamValues($paramNumOffset, $getNewOffset) {
+        
+        var r = {};
+        
+        _conditions.resetCursor();
+        _lastParamNum = 0;
+        if ($paramNumOffset) {
+            
+            _lastParamNum = $paramNumOffset;
+        }
 
-        return $value;
+        var item;
+        var tmp;
+        while (item = _conditions.next()) {
+
+            if (item.left.getParamValues) {
+                    
+                tmp = item.left.getParamValues(_lastParamNum, true);
+                r = Object.assign(r, tmp.vals);
+                _lastParamNum = tmp.offset;
+            }
+            else if (typeof item.left !== 'object') {
+
+                r[_genParamName('c').substr(1)] = item.left;
+            }
+
+            if (typeof item.right !== 'object') {
+
+                r[_genParamName('c').substr(1)] = item.right;
+            }
+            else if (item.right.getParamValues) {
+
+                tmp = item.right.getParamValues(_lastParamNum, true);
+                r = Object.assign(r, tmp.vals);
+                _lastParamNum = tmp.offset;
+            }
+        }
+        
+        if ($getNewOffset) {
+            
+            return { vals: r, offset: _lastParamNum, };
+        }
+        else {
+            
+            return r;
+        }
+    };
+    
+    var _connect = function f_sqlConditionBuilder_connect($left, $connection, $right) {
+        
+        if (typeof $left !== 'undefined' && typeof $right !== 'undefined') {
+
+            _conditions.push({
+            
+                left: $left(_newSQLConditionBuilder()),
+                op: $connection,
+                right: $right(_newSQLConditionBuilder()),
+            });
+        }
+        else {
+
+            throw ('Value Type mismatch in sqlConditionsBuilder_and!');
+        }
+        
+        return this;
     };
     
     /**
@@ -129,25 +259,7 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
     var _and =
     this.and = function f_sqlConditionBuilder_sqlConditionBuilder_and($left, $right) {
     
-        if (typeof $left !== 'undefined' && typeof $right !== 'undefined') {
-
-            if (_firstCondition) {
-                
-                _firstCondition = false;
-            }
-            else {
-                
-                _conditions += ' AND ';
-            }
-
-            _conditions += '(' + _prepare($left(_newSQLConditionBuilder())) + ' AND ' + _prepare($right(_newSQLConditionBuilder())) + ')';
-        }
-        else {
-
-            throw ('Value Type mismatch in sqlConditionsBuilder_and!');
-        }
-
-        return this;
+        return _connect($left, ' AND ', $right);
     };
     
     /**
@@ -174,59 +286,42 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
     var _or =
     this.or = function f_sqlConditionBuilder_sqlConditionBuilder_or($left, $right) {
     
-        if (typeof $left !== 'undefined' && typeof $right !== 'undefined') {
-            
-            if (_firstCondition) {
-                
-                _firstCondition = false;
-            }
-            else {
-                
-                _conditions += ' AND ';
-            }
-            
-            _conditions += '(' + _prepare($left(_newSQLConditionBuilder($sqb))) + ' OR ' + _prepare($right(_newSQLConditionBuilder($sqb))) + ')';
-        }
-        else {
-            
-            throw ('Value Type mismatch in sqlConditionsBuilder_and!');
-        }
-        
-        return this;
+        return _connect($left, ' OR ', $right);
     };
     
     var _comparison = function f_sqlConditionBuilder_sqlConditionBuilder_equal($left, $operator, $right) {
         
-        if (_firstCondition) {
+        var l = $left;
+        var r = $right;
+        
+        //TODO Check if object of type sqlConditionBuilder
+        if (typeof l === 'object') {
             
-            _firstCondition = false;
-        }
-        else {
-            
-            _conditions += ' AND ';
+            $sqb.addTable(l.getTable());
         }
         
-        if (typeof $left === 'object') {
+        //TODO Check if object of type sqlConditionBuilder
+        if (typeof r === 'object') {
             
-            $sqb.addTable($left.getTable());
+            $sqb.addTable(r.getTable());
         }
         
-        if (typeof $right === 'object') {
+        if (l === 'NULL') {
             
-            $sqb.addTable($right.getTable());
+            l = null;
         }
         
-        if ($left !== 'NULL') {
+        if (r === 'NULL') {
             
-            $left = _prepare($left);
+            r = null;
         }
-
-        if ($right !== 'NULL') {
-
-            $right = _prepare($right);
-        }
-
-        _conditions += $left + $operator + $right;
+        
+        _conditions.push({
+            
+            left: l,
+            op: $operator,
+            right: r,
+        });
     };
     
     /**
@@ -240,21 +335,18 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
     var _between =
     this.between = function f_sqlConditionBuilder_sqlConditionBuilder_between($col, $left, $right) {
         
-        if (_firstCondition) {
-            
-            _firstCondition = false;
-        }
-        else {
-            
-            _conditions += ' AND ';
-        }
-        
         if ($col.getTable) {
 
             $sqb.addTable($col.getTable());
         }
 
-        _conditions += _prepare($col) + ' BETWEEN ' + _prepare($left) + ' AND ' + _prepare($right);
+        _conditions.push({
+            
+            col: $col,
+            left: $left,
+            op: ' BETWEEN ',
+            right: $right,
+        });
 
         return this;
     };

@@ -15,7 +15,7 @@ require('../interface/s-h.h.js').prototype.query = function ($str, $bindVals, $c
         }
 
         stmt = this.db.prepare($str);
-        
+
         var arr = [];
         while (stmt.step()) {
 

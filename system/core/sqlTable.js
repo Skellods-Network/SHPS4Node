@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 
 var me = module.exports;
 
@@ -200,9 +200,9 @@ var _sqlTable = function c_sqlTable($sql, $name) {
             : sql = libs.sql.newSQL($sql);
         
         var defer = q.defer();
-        sql.query('DROP TABLE ?;', _getAbsoluteName()).done(function ($r) {
+        sql.query('DROP TABLE ' + _getAbsoluteName() + ';').done(function ($r) {
             
-            defer.resolve($r);
+            sql.flush().then(defer.resolve.bind(null, $r), defer.reject);
             sql.free();
         }, function ($err) {
         
@@ -299,14 +299,7 @@ var _sqlTable = function c_sqlTable($sql, $name) {
 
         $sql.query('INSERT INTO ' + _getAbsoluteName() + ' (' + keys + ') VALUES (' + vals + ');').done($r => {
 
-            if ($sql.getServerType() == SHPS_SQL_SQLITE) {
-
-                $sql.flush().then(defer.resolve.bind(null, $r), defer.reject);
-            }
-            else {
-
-                defer.resolve($r);
-            }
+            $sql.flush().then(defer.resolve.bind(null, $r), defer.reject);
         }, defer.reject);
 
         return defer.promise;
@@ -331,16 +324,9 @@ var _sqlTable = function c_sqlTable($sql, $name) {
         var query = 'DELETE FROM ' + _getAbsoluteName() + ' WHERE ' + $conditions.toString();
 
         var defer = q.defer();
-        $sql.query(query).done($r => {
+        $sql.query(query, $conditions.getParamValues()).done($r => {
 
-            if ($sql.getServerType() == SHPS_SQL_SQLITE) {
-
-                $sql.flush().then(defer.resolve.bind(null, $r), defer.reject);
-            }
-            else {
-
-                defer.resolve($r);
-            }
+            $sql.flush().then(defer.resolve.bind(null, $r), defer.reject);
         }, defer.reject);
 
         return defer.promise;
@@ -405,21 +391,12 @@ var _sqlTable = function c_sqlTable($sql, $name) {
             i++;
         }
         
-        
-
         var query = 'UPDATE ' + _getAbsoluteName() + ' SET ' + newVals + ' WHERE ' + $conditions.toString();
 
         var defer = q.defer();
-        $sql.query(query).done($r => {
+        $sql.query(query, $conditions.getParamValues()).done($r => {
 
-            if ($sql.getServerType() == SHPS_SQL_SQLITE) {
-
-                $sql.flush().then(defer.resolve.bind(null, $r), defer.reject);
-            }
-            else {
-
-                defer.resolve($r);
-            }
+            $sql.flush().then(defer.resolve.bind(null, $r), defer.reject);
         }, defer.reject);
 
         return defer.promise;

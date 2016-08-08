@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 
 var me = module.exports;
 
@@ -25,7 +25,7 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
         log.error('The queryBuilder needs a valid sql object!');
         return;
     }*/
-    
+
 
     var mp = {
         self: this
@@ -41,7 +41,7 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
      * @var int
      */
     var operation = 0;
-    
+
     /**
      * Data to work with
      * GET: cols to get
@@ -50,28 +50,28 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
      * @var [] of sql_col
      */
     var buf = [];
-    
+
     /**
      * Table to use for set or delete operations
      * 
      * @var sqlTable
      */
     var table = null;
-    
+
     /**
      * Col by which the result is sorted
      * 
      * @var sqlCol
      */
     var orderCol = null;
-    
+
     /**
      * Order ascending (descending if false)
      * 
      * @var boolean
      */
     var orderASC = true;
-    
+
     /**
      * Additional tables which need to be listed in the SQL query
      * 
@@ -79,7 +79,7 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
      */
     var additionalTables = [];
 
-    
+
     /**
      * Reset this builder
      * The builder is reset whenever a mode-setting method is called
@@ -90,7 +90,7 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
         operation = 0;
         buf = [];
     };
-    
+
     /**
      * Fetch data from the DB (SELECT Mode)
      * 
@@ -100,14 +100,14 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
      */
     var _get =
     this.get = function f_sqlQueryBuilder_get(/* ... */) {
-    
+
         _reset();
         operation = 1;
 
         var i = 0;
         var l = arguments.length;
         while (i < l) {
-            
+
             if (u.isArray(arguments[i])) {
 
                 var j = 0;
@@ -129,7 +129,7 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
 
         return this;
     };
-    
+
     /**
      * Upload data to the database
      * If no conditions are defined, the data will be uploaded as new data (INSERT mode)
@@ -146,7 +146,7 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
      */
     var _set =
     this.set = function f_sqlQueryBuilder_set($table, $data) {
-    
+
         _reset();
         operation = 2;
 
@@ -155,7 +155,7 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
 
         return this;
     };
-    
+
     /**
      * Delete rows from a table
      * Must have conditions!
@@ -165,7 +165,7 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
      */
     var _delete =
     this.delete = function f_sqlQueryBuilder_delete($table) {
-    
+
         _reset();
         operation = 3;
 
@@ -284,7 +284,15 @@ var _SQLQueryBuilder = function f_sql_sqlQueryBuilder($sql) {
         }
         
         query += ';';
-        return $sql.query(query);
+
+        if ($conditions && $conditions.getParamValues) {
+
+            return $sql.query(query, $conditions.getParamValues());
+        }
+        else {
+
+            return $sql.query(query);
+        }
     };
 
     /**
