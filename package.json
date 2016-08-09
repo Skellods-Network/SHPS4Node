@@ -55,6 +55,7 @@
         "qs": "^6.0.0",
         "semver": "^5.1.0",
         "sql.js": "^0.3.0",
-        "SHPS4Node-Config": "^1.0.0"
+        "SHPS4Node-Config": "^1.0.0",
+        "linkedlist": "^1.0.0"
     }
 }

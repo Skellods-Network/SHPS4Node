@@ -285,7 +285,10 @@ var _SQL = function ($dbConfig, $connection) {
                     // I am pretty sure it can be enhanced a lot (e.g. when strings contain `:param`)
                     $connection.config.queryFormat = function ($query, $values) {
 
-                        if (!$values) return $query;
+                        if (!$values) {
+
+                            return $query;
+                        }
 
                         //TODO cache prepared regex somewhere
                         return $query.replace(new RegExp('\\' + _getParamDeclarator() + '(\\w+)', 'g'), ($txt, $key) => {
@@ -307,6 +310,38 @@ var _SQL = function ($dbConfig, $connection) {
                 case SHPS_SQL_MSSQL: {
                     
                     var ps = new mssql.PreparedStatement($connection);
+
+                    for (var key in $param) {
+
+                        if (!$param.hasOwnProperty(key)) {
+
+                            continue;
+                        }
+
+                        //TODO check fields against table's fieldcat (retrived from DB server) in order to get the right type and length
+                        //For now I will just guess everything from the value (which is highly suboptimal)
+                        switch (typeof $param[key]) {
+
+                            case 'number': {
+
+                                if ($param[key] % 1 === 0) {
+
+                                    ps.input(key, mssql.Int);
+                                }
+                                else {
+
+                                    ps.input(key, mssql.Decimal);
+                                }
+
+                                break;
+                            }
+
+                            case 'string': ps.input(key, mssql.VarChar); break;
+                            case 'boolean': ps.input(key, mssql.TinyInt); break;
+                        }
+
+                    }
+
                     ps.prepare($query, $err => {
                         
                         if ($err) {
@@ -315,12 +350,23 @@ var _SQL = function ($dbConfig, $connection) {
                             return;
                         }
                      
-                        ps.execute({param: 12345}, function(err, recordset) {
-                            // ... error checks 
+                        ps.execute($param, function($err, $recordset) {
+
+                            if ($err) {
+
+                                defer.reject($err);
+                            }
+                            else {
+
+                                defer.resolve($recordset);
+                            }
                      
-                            ps.unprepare(function(err) {
-                                // ... error checks 
-                     
+                            ps.unprepare(function($err) {
+
+                                if ($err) {
+
+                                    defer.reject($err);
+                                }
                             });
                         });
                     });
@@ -330,7 +376,7 @@ var _SQL = function ($dbConfig, $connection) {
                 
                 case SHPS_SQL_SQLITE: {
                     
-                    $connection.query(query, $param, cb);
+                    $connection.query($query, $param, cb);
                     break;
                 }
             }
@@ -342,7 +388,7 @@ var _SQL = function ($dbConfig, $connection) {
         
         return defer.promise;
     };
-    
+
     /**
      * Standardizes names in a SQL query by adding determinators
      * 
@@ -362,7 +408,25 @@ var _SQL = function ($dbConfig, $connection) {
         }
         
         return $var;
-    }
+    };
+
+    var _genParamName
+    = this.genParamName = function f_sql_genParamName ($prefix, $paramNum) {
+
+        var p = $prefix;
+        if (!p) {
+
+            p = '';
+        }
+
+        var n = $paramNum;
+        if (!n) {
+
+            n = 0;
+        }
+
+        return _getParamDeclarator() + p + 'p' + n;
+    };
     
     var _getParamDeclarator
     = this.getParamDeclarator = function f_sql_getParamDeclarator() {

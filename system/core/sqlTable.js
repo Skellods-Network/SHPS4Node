@@ -257,47 +257,19 @@ var _sqlTable = function c_sqlTable($sql, $name) {
         }
 
         var vals = [];
+        var params = {};
+        var paramNum = 0;
         var keys = [];
+        var param;
         for (var key in $vals) {
             
             keys.push($sql.standardizeName(key));
-            if (typeof $vals[key] === 'string') {
-
-                vals.push($sql.standardizeString($vals[key]));
-            }
-            else if (typeof $vals[key] === 'boolean') {
-
-                vals.push(
-                    $vals[key]
-                        ? 1
-                        : 0
-                );
-            }
-            else {
-
-                vals.push($vals[key]);
-            }
-        }
-        
-        // TODO: clean this and confirm that SQL-Injection is not possible!
-        var qmark = '';
-        var i = 0;
-        var l = keys.length;
-        while (true) {
-            
-            qmark += '?';
-            i++;
-            if (i < l) {
-
-                qmark += ',';
-            }
-            else {
-
-                break;
-            }
+            param = $sql.genParamName('v', paramNum++);
+            params[param.substr(1)] = $vals[key];
+            vals.push(param);
         }
 
-        $sql.query('INSERT INTO ' + _getAbsoluteName() + ' (' + keys + ') VALUES (' + vals + ');').done($r => {
+        $sql.query('INSERT INTO ' + _getAbsoluteName() + ' (' + keys + ') VALUES (' + vals + ');', params).done($r => {
 
             $sql.flush().then(defer.resolve.bind(null, $r), defer.reject);
         }, defer.reject);
@@ -339,7 +311,7 @@ var _sqlTable = function c_sqlTable($sql, $name) {
      * @param string $conditions
      *   If not set, a sqlConditionBuilder will be returned
      *   Default: undefined
-     * @result Promise()|sqlConitionBuilder
+     * @result Promise()|sqlConditionBuilder
      */
     var _update =
     this.update = function f_sqlTable_update($values, $conditions) {
@@ -349,35 +321,13 @@ var _sqlTable = function c_sqlTable($sql, $name) {
             return libs.sqlQueryBuilder.newSQLQueryBuilder($sql).set(this, $values).fulfilling();
         }
 
-        var vals = [];
-        var keys = [];
-        for (var key in $values) {
-            
-            keys.push(key);
-            if (typeof $values[key] === 'string') {
-                
-                vals.push($sql.standardizeString($values[key]));
-            }
-            else if (typeof $values[key] === 'boolean') {
-                
-                vals.push(
-                    $values[key]
-                        ? 1
-                        : 0
-                );
-            }
-            else {
-                
-                vals.push($values[key]);
-            }
-        }
-        
         var newVals = '';
         var first = true;
-        var i = 0;
-        var l = keys.length;
-        while (i < l) {
-            
+        var params = {};
+        var paramNum = 0;
+        var param;
+        for (var key in $values) {
+
             if (first) {
 
                 first = false;
@@ -387,14 +337,16 @@ var _sqlTable = function c_sqlTable($sql, $name) {
                 newVals += ',';
             }
 
-            newVals += keys[i] + '=' + vals[i]; //TODO: Clean this!
-            i++;
+            param = $sql.genParamName('v', paramNum++);
+            newVals += key + '=' + param;
+            params[param.substr(1)] = $values[key];
         }
-        
-        var query = 'UPDATE ' + _getAbsoluteName() + ' SET ' + newVals + ' WHERE ' + $conditions.toString();
+
+        params = Object.assign(params, $conditions.getParamValues());
+        var query = 'UPDATE ' + _getAbsoluteName() + ' SET ' + newVals + ' WHERE ' + $conditions.toString() + ';';
 
         var defer = q.defer();
-        $sql.query(query, $conditions.getParamValues()).done($r => {
+        $sql.query(query, params).done($r => {
 
             $sql.flush().then(defer.resolve.bind(null, $r), defer.reject);
         }, defer.reject);

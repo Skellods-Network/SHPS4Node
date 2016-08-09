@@ -38,28 +38,11 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
         return this;
     };
 
-    //TODO move this into SQL prototype since it is needed by the sqlTable as well (for INSERT and UPDATE)
-    var _genParamName = function f_sqlConditionBuilder_genParamName ($prefix, $reset) {
-        
-        if ($reset) {
-            
-            _lastParamNum = 0;
-        }
-        
-        var p = $prefix;
-        if (!p) {
-            
-            p = '';
-        }
-        
-        return $sqb.getSQL().getParamDeclarator() + p + 'p' + _lastParamNum++;
-    };
-    
     /**
      * Query-conformant serialization (sanitized and prepared with parameters)
      * 
      * For example:
-     *   `SHPS_test`.`user`.`user`= :cp1 OR `SHPS_test`.`user`.`user`= :cp2
+     *   `SHPS_test`.`user`.`user`= :cp0 OR `SHPS_test`.`user`.`user`= :cp1
      *   
      * @result string
      */
@@ -90,7 +73,7 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
                 }
                 else {
                     
-                    r += ' ' + _genParamName('c') + ' ';
+                    r += $sqb.getSQL().genParamName('c', _lastParamNum++);
                 }
                 
                 r += item.op;
@@ -98,7 +81,7 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
                 //TODO check if of type sqlConditionBuilder
                 if (typeof item.right !== 'object') {
                     
-                    r += ' ' + _genParamName('c') + ' ';
+                    r += $sqb.getSQL().genParamName('c', _lastParamNum++);
                 }
                 else {
                     
@@ -120,7 +103,7 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
                 }
                 else {
                     
-                    r += ' ' + _genParamName('c') + ' ';
+                    r += $sqb.getSQL().genParamName('c', _lastParamNum++);
                 }
                 
                 r += ' AND ';
@@ -128,7 +111,7 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
                 //TODO check if of type sqlConditionBuilder
                 if (typeof item.right !== 'object') {
                     
-                    r += ' ' + _genParamName('c') + ' ';
+                    r += $sqb.getSQL().genParamName('c', _lastParamNum++);
                 }
                 else {
                     
@@ -191,12 +174,12 @@ var _sqlConditionBuilder = function c_sqlConditionBuilder($sqb) {
             }
             else if (typeof item.left !== 'object') {
 
-                r[_genParamName('c').substr(1)] = item.left;
+                r[$sqb.getSQL().genParamName('c', _lastParamNum++).substr(1)] = item.left;
             }
 
             if (typeof item.right !== 'object') {
 
-                r[_genParamName('c').substr(1)] = item.right;
+                r[$sqb.getSQL().genParamName('c', _lastParamNum++).substr(1)] = item.right;
             }
             else if (item.right.getParamValues) {
 
