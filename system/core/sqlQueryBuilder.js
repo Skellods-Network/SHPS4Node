@@ -2,7 +2,7 @@
 
 var me = module.exports;
 
-var mysql = require('mysql');
+var mysql = require('mysql2');
 var oa = require('object-assign');
 var u = require('util');
 
