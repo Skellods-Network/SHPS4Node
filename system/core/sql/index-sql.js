@@ -243,8 +243,6 @@ var _SQL = function ($dbConfig, $connection) {
             return libs.sqlQueryBuilder.newSQLQueryBuilder(this);
         }
 
-        console.log($query);
-
         if ($domain && !$param) {
         
             $param = $domain;
