@@ -1,7 +1,0 @@
-﻿{
-    "name": "sandbox",
-    "version": "0.1.0",
-    "description": "Sandbox Module for Improved Security used by SHPS",
-    "author": "Marco Alka <me@marco-alka.de>",
-    "main": "index-sandbox.js"
-}

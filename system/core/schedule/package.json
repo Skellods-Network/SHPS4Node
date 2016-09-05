@@ -1,7 +1,0 @@
-﻿{
-    "name": "schedule",
-    "version": "0.1.0",
-    "description": "Task Scheduler used by SHPS",
-    "author": "Marco Alka <me@marco-alka.de>",
-    "main": "index-schedule.js"
-}

@@ -1,7 +1,0 @@
-﻿{
-    "name": "dependency",
-    "version": "0.1.0",
-    "description": "Dynamic Dependency Relay used by SHPS",
-    "author": "Marco Alka <me@marco-alka.de>",
-    "main": "index-dependency.js"
-}

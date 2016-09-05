@@ -1,7 +1,0 @@
-﻿{
-    "name": "language",
-    "version": "0.1.0",
-    "description": "Language Manager used by SHPS",
-    "author": "Marco Alka <me@marco-alka.de>",
-    "main": "index-language.js"
-}

@@ -1,7 +1,0 @@
-﻿{
-    "name": "css",
-    "version": "0.1.0",
-    "description": "CSS Handler used by SHPS",
-    "author": "Marco Alka <me@marco-alka.de>",
-    "main": "index-css.js"
-}

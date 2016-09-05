@@ -1,7 +1,0 @@
-﻿{
-    "name": "error",
-    "version": "0.1.0",
-    "description": "Error Handling and (Re-)Stabilization Module used by SHPS",
-    "author": "Marco Alka <me@marco-alka.de>",
-    "main": "index-error.js"
-}

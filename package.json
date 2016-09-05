@@ -1,8 +1,8 @@
 {
     "name": "SHPS",
-    "version": "4.3.3",
+    "version": "4.4.0",
     "description": "SHPS",
-    "main": "system/core/main.js",
+    "main": "SHPS.js",
     "homepage": "https://shps.io",
     "author": {
         "name": "Marco Alka",
@@ -13,25 +13,6 @@
 		"type" : "git",
 		"url" : "https://github.com/Skellods-Network/SHPS4Node.git"
 	},
-    "files": [
-        "./SHPS.js",
-        "./LICENCE.md",
-        "./README.md",
-        "./package.json",
-        "./system"
-    ],
-    "engines": {
-        "node" : ">=4.0.0",
-        "npm" : ">=2.5.0"
-    },
-    "os": [
-        "linux",
-        "win32"
-    ],
-    "scripts": {
-        "start": "node --expose-gc --harmony_proxies SHPS.js"
-    },
-    "preferGlobal":  true,
     "dependencies": {
         "vasync": "^1.6.0",
         "colors": ">=0.6.0 < 2",
@@ -55,7 +36,27 @@
         "qs": "^6.0.0",
         "semver": "^5.1.0",
         "sql.js": "^0.3.0",
+        "linkedlist": "^1.0.0",
+        "SHPS4Node-auth": "^1.0.0",
+        "SHPS4Node-cache": "^1.0.0",
+        "SHPS4Node-commandline": "^1.0.0",
         "SHPS4Node-Config": "^1.0.0",
-        "linkedlist": "^1.0.0"
+        "SHPS4Node-cookie": "^1.0.0",
+        "SHPS4Node-CSS": "^1.0.0",
+        "SHPS4Node-dependency": "^1.0.0",
+        "SHPS4Node-error": "^1.0.0",
+        "SHPS4Node-file": "^1.0.0",
+        "SHPS4Node-frontend": "^1.0.0",
+        "SHPS4Node-init": "^1.0.0",
+        "SHPS4Node-language": "^1.0.0",
+        "SHPS4Node-log": "^1.0.0",
+        "SHPS4Node-make": "^1.0.0",
+        "SHPS4Node-optimize": "^1.0.0",
+        "SHPS4Node-parallel": "^1.0.0",
+        "SHPS4Node-plugin": "^1.0.0",
+        "SHPS4Node-sandbox": "^1.0.0",
+        "SHPS4Node-schedule": "^1.0.0",
+        "SHPS4Node-session": "^1.0.0",
+        "SHPS4Node-SQL": "^1.0.0"
     }
 }
