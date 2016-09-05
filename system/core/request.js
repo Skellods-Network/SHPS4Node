@@ -37,37 +37,80 @@ var _parseRequestBody
         return d.promise;
     }
 
-    var bb = new Busboy({
-
-        headers: $requestState.request.headers,
-    });
-    
-    bb.on('field', function ($fieldname, $val, $fieldnameTruncated, $valTruncated, $encoding, $mimetype) {
-
-        // The reference implementation cannot handle serialized objects, so regex for the rescue
-        var m = $fieldname.match(/^(\w+)\[(\w+)\]$/);
-        if (!m) {
-
-            $requestState.POST[$fieldname] = $val;
-        }
-        else {
+    switch ($requestState.request.headers['Content-Type']) {
+        
+        case 'application/json': {
             
-            if (!$requestState.POST[m[1]]) {
-
-                $requestState.POST[m[1]] = {};
-            }
-
-            $requestState.POST[m[1]][m[2]] = $val;
+            //TODO: santitze and make sure POST body, add entry to config file for max. payload size
+            var body = '';
+            var dataHandler = $data => {
+                
+                body += $data;
+                
+                // Too much POST data, kill the connection!
+                // 1e6 === 1 * Math.pow(10, 6) === 1 * 1000000 ~~~ 1MB
+                if (body.length > 1e6) {
+                    
+                    request.connection.destroy();
+                }
+            };
+            
+            $requestState.request.on('data', dataHandler);
+            $requestState.request.once('end', () => {
+                
+                $requestState.request.removeListener('data', dataHandler);
+                $requestState.POST = JSON.parse(body);
+            });
+            
+            break;
         }
-    });
+        
+        case 'application/x-www-form-urlencoded':
+        case 'multipart/form-data': {
+            
+            var bb = new Busboy({
 
-    bb.on('finish', function () {
+                headers: $requestState.request.headers,
+            });
+    
+            // The reference implementation cannot handle serialized objects, so regex for the rescue
+            var m = $fieldname.match(/^(\w+)\[(\w+)\]$/);
+            if (!m) {
 
-        d.resolve();
-    });
+                $requestState.POST[$fieldname] = $val;
+            }
+            else {
+                
+                if (!$requestState.POST[m[1]]) {
 
-    $requestState.request.pipe(bb);
+                    $requestState.POST[m[1]] = {};
+                }
 
+                $requestState.POST[m[1]][m[2]] = $val;
+            }
+            
+            bb.on('field', function ($fieldname, $val, $fieldnameTruncated, $valTruncated, $encoding, $mimetype) {
+
+        
+            });
+
+            bb.on('finish', function () {
+
+                d.resolve();
+            });
+
+            $requestState.request.pipe(bb);
+    
+            break;
+        }
+        
+        default: {
+            
+            d.reject(new Error('Content-Type `' + $requestState.request.headers['Content-Type'] + '` not supported!'));
+            break;
+        }
+    }
+    
     return d.promise;
 };
 
