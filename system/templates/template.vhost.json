@@ -34,7 +34,7 @@
             "logCount": {
 
                 "description": "Max number of log entries stored in the DB",
-                "type": "integer",
+                "type": "number",
                 "default": 500
             },
             "timezone": {
@@ -46,13 +46,13 @@
             "uploadQuota": {
 
                 "description": "Maximum amount of data which can be uploaded to this website instance in Bytes (0=infinite)",
-                "type": "string",
+                "type": "number",
                 "default": 0
             },
             "templateTimeout": {
 
                 "description": "Maximum amount of time in seconds a template (partial or content) can take before excution is stopped",
-                "type": "integer",
+                "type": "number",
                 "default": 3
             },
             "indexContent": {
@@ -91,27 +91,27 @@
 
                 "description": "Port to serve HTTP/1.1 on",
                 "dependencies": { "useHTTP1": true },
-                "type": "integer",
+                "type": "number",
                 "default": 1280
             },
             "HTTP2Port": {
 
                 "description": "Port to serve HTTP/2.0 on",
                 "dependencies": { "useHTTP2": true },
-                "type": "integer",
+                "type": "number",
                 "default": 12443
             },
             "timeToCache": {
 
                 "description": "Time for how long content should be cached before it gets refreshed in seconds",
                 "dependencies": { "_or": [ { "useHTTP1": true }, { "useHTTP2": true } ] },
-                "type": "integer",
+                "type": "number",
                 "default": 3600
             },
             "gzipMinSize": {
 
                 "description": "Content (in bytes) which is larger will be gzipped",
-                "type": "integer",
+                "type": "number",
                 "default": 256
             }
         },
@@ -124,21 +124,21 @@
             "key": {
 
                 "description": "Path to key file",
-                "dependencies": { "pfx": "empty" },
+                "dependencies": { "pfx": "_empty" },
                 "type": "string",
                 "default": ""
             },
             "cert": {
 
                 "description": "Path to cert file",
-                "dependencies": { "pfx": "empty" },
+                "dependencies": { "pfx": "_empty" },
                 "type": "string",
                 "default": ""
             },
             "pfx": {
 
                 "description": "Instead of a key/cert combo, using a pfx file is possible as well. If key, cert and pfx defaults are given, the key/cert combo is preferred",
-                "dependencies": { "_and": [ { "key": "empty" }, { "cert": "empty" } ] },
+                "dependencies": { "_and": [ { "key": "_empty" }, { "cert": "_empty" } ] },
                 "type": "string",
                 "default": ""
             },
@@ -175,37 +175,37 @@
             "sessionTimeout": {
 
                 "description": "Seconds after which a session is destroyed due to inactivity",
-                "type": "integer",
+                "type": "number",
                 "default": 1800
             },
             "sessionLifetime": {
         
                 "description": "Max age of a session in seconds. After a session reaches this age, it will be destoyed",
-                "type": "integer",
+                "type": "number",
                 "default": 86400
             },
             "autoLoginTimeout": {
 
                 "description": "Seconds after which an auto login token is invalid",
-                "type": "integer",
+                "type": "number",
                 "default": 2592000
             },
             "loginDelay": {
 
                 "description": "Login result delivery delay to add to the next try when a user login fails in seconds",
-                "type": "integer",
+                "type": "number",
                 "default": 1
             },
             "maxLoginDelay": {
 
                 "description": "Maximum delay for the login result delivery delay",
-                "type": "integer",
+                "type": "number",
                 "default": 3600
             },
             "STSTimeout": {
 
                 "description": "Maximum age for the HTTPS strict-transport-security. Will only be available for HTTPS",
-                "type": "integer",
+                "type": "number",
                 "default": 60000
             },
             "STSIncludeSubDomains": {
@@ -217,7 +217,7 @@
             "saltRounds": { 
 
                 "description": "How many rounds should be used to generate a salt? The more rounds, the more secure and the longer login takes",
-                "type": "integer",
+                "type": "number",
                 "default": 11
             }
         }
