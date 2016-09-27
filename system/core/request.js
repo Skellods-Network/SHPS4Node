@@ -73,25 +73,23 @@ var _parseRequestBody
                 headers: $requestState.request.headers,
             });
     
-            // The reference implementation cannot handle serialized objects, so regex for the rescue
-            var m = $fieldname.match(/^(\w+)\[(\w+)\]$/);
-            if (!m) {
-
-                $requestState.POST[$fieldname] = $val;
-            }
-            else {
-                
-                if (!$requestState.POST[m[1]]) {
-
-                    $requestState.POST[m[1]] = {};
-                }
-
-                $requestState.POST[m[1]][m[2]] = $val;
-            }
-            
             bb.on('field', function ($fieldname, $val, $fieldnameTruncated, $valTruncated, $encoding, $mimetype) {
 
-        
+                // The reference implementation cannot handle serialized objects, so regex for the rescue
+                var m = $fieldname.match(/^(\w+)\[(\w+)\]$/);
+                if (!m) {
+
+                    $requestState.POST[$fieldname] = $val;
+                }
+                else {
+
+                    if (!$requestState.POST[m[1]]) {
+
+                        $requestState.POST[m[1]] = {};
+                    }
+
+                    $requestState.POST[m[1]][m[2]] = $val;
+                }
             });
 
             bb.on('finish', function () {
