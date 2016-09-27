@@ -607,7 +607,7 @@
           "dataRoot":{
             "type": "string",
             "length": 30,
-            "default": "/upload"
+            "default": "/pool"
           }
         }
       },
