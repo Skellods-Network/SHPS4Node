@@ -114,8 +114,36 @@
             "type": "uint",
             "fk": "mediaquery.ID",
             "default": 0
+          },
+          "layer": {
+            "type": "uint",
+            "fk": "cssLayer.ID",
+            "default": 0
           }
         }
+      },
+      "cssLayer": {
+        "fieldcat": {
+          "ID": {
+            "type": "uint",
+            "key": "primary"
+          },
+          "name": {
+            "type": "string",
+            "length": 30
+          },
+          "order": {
+            "type": "int",
+            "default": 0
+          }
+        },
+        "initial": [
+          {
+            "ID": 0,
+            "name": "default",
+            "order": 0
+          }
+        ]
       },
       "filetype": {
         "fieldcat": {
