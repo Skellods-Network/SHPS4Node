@@ -135,6 +135,12 @@ var _handleRequest
             $requestState.response.end('The requested domain is not configured!');
             $requestState.resultPending = false;
         }
+        else if (typeof $requestState.config.generalConfig !== 'object') {
+
+            $requestState.response.writeHead(404, { 'Server': 'SHPS' });
+            $requestState.response.end('The requested vhost is not configured!');
+            $requestState.resultPending = false;
+        }
         else {
             $requestState.site = $requestState.GET['site'] ? $requestState.GET['site']
                 : $requestState.config.generalConfig.indexContent.value;
