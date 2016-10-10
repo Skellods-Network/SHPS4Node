@@ -39,10 +39,10 @@
         "linkedlist": "^1.0.0",
         "SHPS4Node-auth": "1.0.x",
         "SHPS4Node-cache": "1.0.x",
-        "SHPS4Node-commandline": "1.0.x",
-        "SHPS4Node-Config": "1.0.x",
+        "SHPS4Node-commandline": "1.1.x",
+        "SHPS4Node-config": "1.1.x",
         "SHPS4Node-cookie": "1.0.x",
-        "SHPS4Node-CSS": "1.0.x",
+        "SHPS4Node-CSS": "1.1.x",
         "SHPS4Node-dependency": "1.0.x",
         "SHPS4Node-error": "1.0.x",
         "SHPS4Node-file": "1.1.x",
@@ -57,6 +57,6 @@
         "SHPS4Node-sandbox": "1.0.x",
         "SHPS4Node-schedule": "1.0.x",
         "SHPS4Node-session": "1.0.x",
-        "SHPS4Node-SQL": "1.0.x"
+        "SHPS4Node-SQL": "1.1.x"
     }
 }
