@@ -1,7 +1,0 @@
-﻿{
-    "name": "make",
-    "version": "0.1.0",
-    "description": "Script Evaluator used by SHPS",
-    "author": "Marco Alka <me@marco-alka.de>",
-    "main": "index-make.js"
-}

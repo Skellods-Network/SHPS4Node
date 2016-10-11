@@ -25,37 +25,44 @@
 		"host": {
 
             "description": "DB host; insert file path in case of SQLite",
+            "type": "string",
             "default": "localhost"
         },
         "port": {
 
             "description": "DB port",
+            "type": "number",
             "default": 3306
         },
         "name": {
 
             "description": "Name of schema",
+            "type": "string",
             "default": "shps_test"
         },
         "user": {
 
             "description": "DB user",
+            "type": "string",
             "default": "shps"
         },
         "pass": {
 
             "description": "User's password",
+            "type": "string",
             "default": "shps"
         },
         "prefix": {
 
-           "description": "Table prefix",
-           "default": ""
+            "description": "Table prefix",
+            "type": "string",
+            "default": ""
        },
         "type": {
 
-           "description": "Type of DB",
-           "default": 32,
+            "description": "Type of DB",
+            "type": "number",
+            "default": 32,
             "options": {
                 "MySQL": 2,
                 "MSSQL": 16,
@@ -65,6 +72,7 @@
         "connectionLimit": {
 
             "description": "Maximum number of simultaneous connections to the DB server",
+            "type": "number",
             "default": 100
         }
 	}

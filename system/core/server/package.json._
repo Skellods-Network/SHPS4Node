@@ -1,7 +1,0 @@
-﻿{
-    "name": "server",
-    "version": "0.1.0",
-    "description": "Server for Incoming HTTP- and WS-Requests used by SHPS",
-    "author": "Marco Alka <me@marco-alka.de>",
-    "main": "index-server.js"
-}

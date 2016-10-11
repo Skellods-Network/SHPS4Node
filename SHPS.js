@@ -3,18 +3,10 @@
 ////// ONLY FOR DEVELOPMENT PURPOSES \\\\\\
 // This will start SHPS as if it was starting without debug - but it will not reconfigure the start parameters
 // This is important for debugging purposes as I cannot use breakpoints in a child process...
-GLOBAL.__debug__ = false;
+GLOBAL.__debug__ = true;
 ////// ONLY FOR DEVELOPMENT PURPOSES \\\\\\
 
-/**
- * The SHPS bootstrapper
- * It will do the following:
- *  1) Load all modules, making sure all modules could be loaded successfully, else EOP
- *  2) Check start parameters and configure SHPS. If certain parameters are missing, SHPS will be restarted in a new process with missing parameters, same I/O-Stream
- *  3) Start SHPS
- *
- * @todo: swap 1 and 2
- */
+
 (function f_SHPS() {
     
     var cluster = require('cluster');
@@ -63,8 +55,30 @@ GLOBAL.__debug__ = false;
         }
         else {
 
+            // For compatibility
+            modLoad.addMeta('auth', require('SHPS4Node-auth'));
+            modLoad.addMeta('cache', require('SHPS4Node-cache'));
+            modLoad.addMeta('commandline', require('SHPS4Node-commandline'));
+            modLoad.addMeta('config', require('SHPS4Node-config'));
+            modLoad.addMeta('cookie', require('SHPS4Node-cookie'));
+            modLoad.addMeta('css', require('SHPS4Node-CSS'));
+            modLoad.addMeta('dependency', require('SHPS4Node-dependency'));
+            modLoad.addMeta('error', require('SHPS4Node-error'));
+            modLoad.addMeta('file', require('SHPS4Node-file'));
+            modLoad.addMeta('componentLibrary', require('SHPS4Node-frontend'));
+            modLoad.addMeta('init', require('SHPS4Node-init'));
+            modLoad.addMeta('language', require('SHPS4Node-language'));
+            modLoad.addMeta('log', require('SHPS4Node-log'));
+            modLoad.addMeta('make', require('SHPS4Node-make'));
+            modLoad.addMeta('optimize', require('SHPS4Node-optimize'));
+            modLoad.addMeta('parallel', require('SHPS4Node-parallel'));
+            modLoad.addMeta('plugin', require('SHPS4Node-plugin'));
+            modLoad.addMeta('sandbox', require('SHPS4Node-sandbox'));
+            modLoad.addMeta('schedule', require('SHPS4Node-schedule'));
+            modLoad.addMeta('session', require('SHPS4Node-session'));
+            modLoad.addMeta('sql', require('SHPS4Node-SQL'));
             modLoad.addMeta('config', new (require('SHPS4Node-Config'))(libs));
-        
+
             modLoad.addMeta('dep', libs.dependency);
             modLoad.addMeta('coml', libs.commandline);
             modLoad.addMeta('cl', libs.componentLibrary);

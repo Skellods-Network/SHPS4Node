@@ -1,7 +1,0 @@
-﻿{
-    "name": "file",
-    "version": "0.1.0",
-    "description": "File IO Module used by SHPS",
-    "author": "Marco Alka <me@marco-alka.de>",
-    "main": "index-file.js"
-}

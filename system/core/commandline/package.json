@@ -1,7 +1,0 @@
-﻿{
-    "name": "commandline",
-    "version": "0.1.0",
-    "description": "Advanced REPL used by SHPS",
-    "author": "Marco Alka <me@marco-alka.de>",
-    "main": "index-commandline.js"
-}

@@ -299,6 +299,11 @@ var _listen
     var configs = libs.config._getConfigs();
     for (var $c in configs) {
 
+        if (!configs[$c].generalConfig) {
+
+            continue;
+        }
+    
         if (configs[$c].generalConfig.useHTTP1.value) {
 
             var p = configs[$c].generalConfig.HTTP1Port.value;
