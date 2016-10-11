@@ -43,7 +43,7 @@
         "SHPS4Node-optimize": "1.0.x",
         "SHPS4Node-parallel": "1.0.x",
         "SHPS4Node-plugin": "1.0.x",
-        "SHPS4Node-sandbox": "1.0.x",
+        "SHPS4Node-sandbox": "1.1.x",
         "SHPS4Node-schedule": "1.0.x",
         "SHPS4Node-session": "1.0.x",
         "SHPS4Node-SQL": "1.1.x"
