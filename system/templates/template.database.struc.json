@@ -346,7 +346,13 @@
             "type": "string",
             "length": 30
           }
-        }
+        },
+        "initial": [
+          {
+            "ID": 0,
+            "name": "default"
+          }
+        ]
       },
       "oldpassword": {
         "fieldcat": {
