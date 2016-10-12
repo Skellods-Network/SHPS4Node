@@ -3,7 +3,7 @@
 ////// ONLY FOR DEVELOPMENT PURPOSES \\\\\\
 // This will start SHPS as if it was starting without debug - but it will not reconfigure the start parameters
 // This is important for debugging purposes as I cannot use breakpoints in a child process...
-GLOBAL.__debug__ = true;
+GLOBAL.__debug__ = false;
 ////// ONLY FOR DEVELOPMENT PURPOSES \\\\\\
 
 
