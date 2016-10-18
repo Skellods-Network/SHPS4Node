@@ -80,7 +80,8 @@
           {
             "ID": 1,
             "name": "index",
-            "content": "Hello World"
+            "content": "Hello World",
+            "tls": 0
           }
         ]
       },
@@ -239,7 +240,7 @@
       },
       "include": {
         "fieldcat": {
-          "ID": {
+          "file": {
             "type": "uint",
             "key": "primary"
           },
@@ -435,7 +436,7 @@
           "GUID": {
             "type": "string",
             "length": 36,
-            "key": "primary"
+            "key": "unique"
           },
           "name": {
             "type": "string",
