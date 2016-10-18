@@ -466,7 +466,7 @@
           "name": {
             "type": "string",
             "length": 30,
-            "key": "primary"
+            "key": "unique"
           },
           "script": {
             "type": "text"
