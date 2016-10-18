@@ -481,6 +481,11 @@
             "fk": "namespace.ID",
             "default": 0
           },
+          "accesskey": {
+            "type": "uint",
+            "fk": "accesskey.ID",
+            "default": 0
+          },
           "tls": {
             "type": "bool",
             "default": true
