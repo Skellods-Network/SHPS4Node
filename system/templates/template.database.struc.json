@@ -209,7 +209,7 @@
           },
           "to": {
             "type": "uint",
-            "default": 4294967295
+            "default": 2147483647
           },
           "authorizer": {
             "type": "uint",
@@ -234,7 +234,7 @@
           },
           "to": {
             "type": "uint",
-            "default": 4294967295
+            "default": 2147483647
           }
         }
       },
@@ -723,7 +723,7 @@
           },
           "to": {
             "type": "uint",
-            "default": 4294967295
+            "default": 2147483647
           },
           "authorizer": {
             "type": "uint",
