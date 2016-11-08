@@ -57,65 +57,135 @@ me.SHPS_domain = function ($uri, $prependHTTPProtocol/* = false */) {
  * - Domain info
  * - GET and POST variables
  */
-me.requestState = function () {
+ 
+if (parseInt(process.version[0]) <= 4) {
     
-    var self = this;
-    var _GET = null;
-    
-    this.isDataComplete = false;
-    
-    this._COOKIE = {};
-    this._domain = null;
-    this._auth = null;
-    this.cache = {};
-    this.locked = false;
-    this.uri = '';
-    this.path = '/';
-    this.FILE = {};
-    this.SESSION = {};
-    this.POST = {};
-    this.config = null;
-    this.site = '';
-    this.namespace = 'default';
-    this.httpStatus = 500;
-    this.responseType = 'text/plain';
-    this.responseHeaders = {};
-    this.responseTrailers = [];
-    this.isResponseBinary = false;
-    this.responseBody = '';
-    this.responseEncoding = 'identity';
-    this.request = null;
-    this.response = null;
-    this.resultPending = true;
-    this.headerPending = true;
-    
-    this.cache.__defineGetter__('auth', function () {
-
-        if (!self._auth) {
-
-            self._auth = libs.auth.newAuth(self);
-        }
-
-        return self._auth;
-    });
-
-    this.__defineGetter__('GET', function () {
+    me.requestState = function () {
         
-        if (_GET === null) {
+        var self = this;
+        var _GET = null;
+        
+        this.isDataComplete = false;
+        
+        this._COOKIE = {};
+        this._domain = null;
+        this._auth = null;
+        this.cache = {};
+        this.locked = false;
+        this.uri = '';
+        this.path = '/';
+        this.FILE = {};
+        this.SESSION = {};
+        this.POST = {};
+        this.config = null;
+        this.site = '';
+        this.namespace = 'default';
+        this.httpStatus = 500;
+        this.responseType = 'text/plain';
+        this.responseHeaders = {};
+        this.responseTrailers = [];
+        this.isResponseBinary = false;
+        this.responseBody = '';
+        this.responseEncoding = 'identity';
+        this.request = null;
+        this.response = null;
+        this.resultPending = true;
+        this.headerPending = true;
+        
+        this.cache.__defineGetter__('auth', function () {
+
+            if (!self._auth) {
+
+                self._auth = libs.auth.newAuth(self);
+            }
+
+            return self._auth;
+        });
+
+        this.__defineGetter__('GET', function () {
             
-            _GET = libs.SFFM.splitQueryString(self.path);
-        }
+            if (_GET === null) {
+                
+                _GET = libs.SFFM.splitQueryString(self.path);
+            }
+            
+            return _GET;
+        });
         
-        return _GET;
-    });
-    
-    this.__defineSetter__('GET', function ($val) {
-        
-        _GET = $val
-    });
+        this.__defineSetter__('GET', function ($val) {
+            
+            _GET = $val
+        });
 
-    events.EventEmitter.call(this);
-};
+        events.EventEmitter.call(this);
+    };
+
+}
+else {
+    
+    me.requestState = class RequestState extends events {
+        
+        constructor() {
+        
+            super();
+        
+            var self = this;
+            var _GET = null;
+            
+            this.isDataComplete = false;
+            
+            this._COOKIE = {};
+            this._domain = null;
+            this._auth = null;
+            this.cache = {};
+            this.locked = false;
+            this.uri = '';
+            this.path = '/';
+            this.FILE = {};
+            this.SESSION = {};
+            this.POST = {};
+            this.config = null;
+            this.site = '';
+            this.namespace = 'default';
+            this.httpStatus = 500;
+            this.responseType = 'text/plain';
+            this.responseHeaders = {};
+            this.responseTrailers = [];
+            this.isResponseBinary = false;
+            this.responseBody = '';
+            this.responseEncoding = 'identity';
+            this.request = null;
+            this.response = null;
+            this.resultPending = true;
+            this.headerPending = true;
+            
+            this.cache.__defineGetter__('auth', function () {
+
+                if (!self._auth) {
+
+                    self._auth = libs.auth.newAuth(self);
+                }
+
+                return self._auth;
+            });
+
+            this.__defineGetter__('GET', function () {
+                
+                if (_GET === null) {
+                    
+                    _GET = libs.SFFM.splitQueryString(self.path);
+                }
+                
+                return _GET;
+            });
+            
+            this.__defineSetter__('GET', function ($val) {
+                
+                _GET = $val
+            });
+        }
+    };
+}
 
 me.newRequestState = function f_helper_newRequestState($req, $res) {
 
