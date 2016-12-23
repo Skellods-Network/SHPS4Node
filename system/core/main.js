@@ -354,7 +354,7 @@ var _listen
 
                     secureProtocol: 'SSLv23_method',
                     secureOptions: constants.SSL_OP_NO_SSLv3 | constants.SSL_OP_NO_SSLv2,
-                    ciphers: ciphers.join(':');
+                    ciphers: ciphers.join(':'),
                     honorCipherOrder: true,
                 };
                 
