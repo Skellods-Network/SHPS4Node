@@ -2,6 +2,8 @@
 
 [![Join the chat at https://gitter.im/Skellods-Network/SHPS4Node](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/Skellods-Network/SHPS4Node?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Semver](http://img.shields.io/SemVer/2.0.0.png)](http://semver.org/spec/v2.0.0.html)
+[![Known Vulnerabilities](https://snyk.io/test/github/skellods-network/shps4node/badge.svg)](https://snyk.io/test/github/skellods-network/shps4node)
+
 
 ## What exactly is SHPS?
 
@@ -34,7 +36,6 @@ Build your site with SHPS and see if it fits your needs. If your project is non-
 - only use explicitly enabled plugins for defined requests
 - improve logging capabilities
 - guided setup
-- make init module for all startup action
 - include dependency checks into init flow
 - add config file encryption (I think this is a ASVS item... but this will be hard to implement as SHPS should be able to auto-start...)
 - add ipc in local cluster to improve collaboration between processes
@@ -43,10 +44,8 @@ Build your site with SHPS and see if it fits your needs. If your project is non-
 - add auto dependency installation (e.g. download openssl/libressl binaries and install them next to SHPS if missing)
 - improve sandbox security (omfg, this will be a never-ending item)
 - better error detection and management
-- improve HTTPS security
 - stabilize HTTP/2 server
 - certificate based login
-- improve commandline
 - cache requestState cached structures
 - re-enable gzip compression
 - cache DB in local variables on startup; add cache-tools to commandline in order to invalidate cache manually
@@ -55,4 +54,3 @@ Build your site with SHPS and see if it fits your needs. If your project is non-
 - setup plugin repository and add plugin-commands for console (and extend plugins module so it can download and install plugins; from code as well for plugins and GUI :) )
 - add better mimeType management and auto-detection
 - process client hints
-- plugins should get their own namespace in node-mod-load (see node-mod-load issue #5)

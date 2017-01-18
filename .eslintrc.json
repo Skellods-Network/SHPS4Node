@@ -1,0 +1,18 @@
+{
+  "extends": ["eslint:recommended", "google"],
+  "parserOptions": {
+    "ecmaVersion": 6,
+    "sourceType": "module"
+  },
+  "env": {
+    "node": true,
+    "es6": true
+  },
+  "rules": {
+    "eol-last": ["warn", "always"],
+    "newline-before-return": "warn",
+    "newline-after-var": "warn",
+    "linebreak-style": ["warn", "unix"],
+    "padded-blocks": ["warn", "always"]
+  }
+}
