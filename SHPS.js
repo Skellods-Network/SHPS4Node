@@ -6,7 +6,7 @@
 let debug = false;
 
 
-// Firstly, check the script arguments
+// Firstly, check the script arguments:
 if (process.argv.length > 1) {
 
     let i = 0;
@@ -25,7 +25,7 @@ if (process.argv.length > 1) {
     }
 }
 
-// Secondly, check NodeJS features and compare them against the script arguments
+// Secondly, check NodeJS features and compare them against the script arguments:
 if (!debug && !global.gc) {
 
     console.log('Reconfigure NodeJS start parameters...');
@@ -38,7 +38,7 @@ if (!debug && !global.gc) {
 }
 else {
 
-    // Thirdly, start SHPS
+    // Thirdly, start SHPS:
     const nml = require('node-mod-load');
     const boot = require('SHPS4Node-init').boot;
 
