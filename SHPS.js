@@ -9,16 +9,16 @@ let debug = false;
 // Firstly, check the script arguments:
 if (process.argv.length > 1) {
 
-    let i = 0;
+    let i = 2;
     const l = process.argv.length;
 
-    // search for debug switches
+    // search for switches
     while (i < l) {
 
-        if (process.argv[i] === '-debug') {
+        let arg = process.argv[i];
+        if (arg === '-d' || arg === '--debug') {
 
             debug = true;
-            break;
         }
 
         i++;
@@ -44,10 +44,13 @@ else {
 
     const nmlMain = nml('SHPS4Node-main');
 
-    // Throw all the errors which happen during boot
+    // Display all the errors which happen during boot
     // For now, recovering from fatal system errors is not supported
-    nmlMain.addDir('./system/core').then(
-        () => boot().unwrap(),
-        $e => { throw $e; }
+    nmlMain.addPath('./system/core').then(
+        () => boot(debug).then(
+            () => {},
+            $e => { console.error($e); }
+        ),
+        $e => { console.error($e); }
     );
 }
