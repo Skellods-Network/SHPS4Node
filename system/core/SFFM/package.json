@@ -1,7 +1,0 @@
-﻿{
-    "name": "SFFM",
-    "version": "0.1.0",
-    "description": "Collection of Small and Useful Functions used by SHPS",
-    "author": "Marco Alka <me@marco-alka.de>",
-    "main": "index-SFFM.js"
-}
