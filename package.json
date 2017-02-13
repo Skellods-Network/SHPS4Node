@@ -19,7 +19,7 @@
   "dependencies": {
     "node-mod-load": "^3.1.0",
     "mixwith": "^0.1.0",
-    "result-js": "^1.2.0",
+    "result-js": "^2.0.0",
     "SHPS4Node-auth": "^1.0.0",
     "SHPS4Node-cache": "^1.0.0",
     "SHPS4Node-commandline": "^1.1.0",

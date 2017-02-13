@@ -10,8 +10,16 @@ libs['main.h'].init = function () {
 
     process.on('uncaughtException', $err => {
 
-        const str = 'Caught uncaught exception: ' + $err;
-        console.error(str);
+        console.error($err);
+        console.error($err.stack);
+        console.error('\n');
+    });
+
+    process.on('unhandledRejection', $err => {
+
+        console.error($err + ';;; Unhandled promise rejection!');
+        console.error((new Error()).stack);
+        console.error('\n');
     });
 
     // main must return the constructor, not the object!

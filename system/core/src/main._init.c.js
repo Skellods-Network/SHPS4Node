@@ -1,6 +1,10 @@
 'use strict';
 
-require('../interface/main.h').prototype._init = function($isDebug = false) {
+const h = require('../interface/main.h');
+
+h.prototype._init = function($isDebug = false) {
 
     this._isDebug = $isDebug;
+    this.mixins = h.mixins;
+    this.directories = h.directories;
 };
