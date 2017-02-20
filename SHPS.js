@@ -59,7 +59,6 @@ GLOBAL.__debug__ = false;
             modLoad.addMeta('auth', require('SHPS4Node-auth'));
             modLoad.addMeta('cache', require('SHPS4Node-cache'));
             modLoad.addMeta('commandline', require('SHPS4Node-commandline'));
-            modLoad.addMeta('config', require('SHPS4Node-config'));
             modLoad.addMeta('cookie', require('SHPS4Node-cookie'));
             modLoad.addMeta('css', require('SHPS4Node-CSS'));
             modLoad.addMeta('dependency', require('SHPS4Node-dependency'));
@@ -77,7 +76,7 @@ GLOBAL.__debug__ = false;
             modLoad.addMeta('schedule', require('SHPS4Node-schedule'));
             modLoad.addMeta('session', require('SHPS4Node-session'));
             modLoad.addMeta('sql', require('SHPS4Node-SQL'));
-            modLoad.addMeta('config', new (require('SHPS4Node-Config'))(libs));
+            modLoad.addMeta('config', new (require('SHPS4Node-config'))(libs));
 
             modLoad.addMeta('dep', libs.dependency);
             modLoad.addMeta('coml', libs.commandline);
