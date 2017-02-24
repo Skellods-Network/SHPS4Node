@@ -345,6 +345,7 @@ var _listen
                     '!aNULL',
                     '!eNULL',
                     '!MD5',
+                    '!SHA1',
                     '!DES',
                     '!RC4',
                     '!PSK',
