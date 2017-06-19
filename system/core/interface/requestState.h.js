@@ -3,6 +3,7 @@
 const url = require('url');
 
 
+// noinspection JSUnusedLocalSymbols
 module.exports = class RequestState {
 
     /**
@@ -20,22 +21,20 @@ module.exports = class RequestState {
         $session = undefined,
         $namespace = 'default'
     ) {
-        this.auth = {};     //todo: Auth object
+        this.auth = {};     // todo: Auth object
         this.cache = {};    // cache for different modules; only request-specific data and objects are cached here!
         this.namespace = $namespace;// global namespace is use
         this.request = {
-
             _raw: $req,       // raw request provided by server
-            url: url.parse($req.url, true, true),        // UrlObject with options { parseQueryString: true, slashesDenoteHost: true }
+            url: url.parse($req.url, true, true), // UrlObject with options parseQueryString and slashesDenoteHost
         };
 
-        this.config = $config;   //todo: create new config object from url
+        this.config = $config;   // todo: create new config object from url
         this.response = {
-
             _raw: $res,       // raw response object provided by server
         };
 
-        //todo: auto-create new session if not set
+        // todo: auto-create new session if not set
         this.session = $session;  // Session object for this request
-    };
+    }
 };

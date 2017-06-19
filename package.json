@@ -2,7 +2,7 @@
   "name": "SHPS",
   "version": "5.0.0",
   "cycle": "X",
-  "internalName": "Nemo",
+  "internalName": "Saphir",
   "description": "SHPS",
   "license": "MPL-2.0",
   "main": "SHPS.js",
@@ -17,33 +17,33 @@
     "url": "https://github.com/Skellods-Network/SHPS4Node.git"
   },
   "dependencies": {
-    "node-mod-load": "^3.1.0",
-    "mixwith": "^0.1.0",
-    "result-js": "^2.0.0",
+    "SHPS4Node-SQL": "^1.1.0",
     "SHPS4Node-auth": "^1.0.0",
     "SHPS4Node-cache": "^1.0.0",
     "SHPS4Node-commandline": "^1.1.0",
     "SHPS4Node-config": "^1.1.0",
-    "SHPS4Node-cookie": "^1.0.0",
-    "SHPS4Node-CSS": "^1.1.0",
     "SHPS4Node-dependency": "^1.0.0",
     "SHPS4Node-error": "^1.0.0",
-    "SHPS4Node-file": "^1.1.0",
-    "SHPS4Node-frontend": "^1.0.0",
-    "SHPS4Node-init": "^2.0.0",
-    "SHPS4Node-language": "^1.0.0",
+    "SHPS4Node-init": "git+https://github.com/Skellods-Network/SHPS4Node-init.git#c0073d92790db783f4e97cd30576ffb63c42becf",
     "SHPS4Node-log": "^1.0.0",
-    "SHPS4Node-make": "^1.0.0",
     "SHPS4Node-optimize": "^1.0.0",
     "SHPS4Node-parallel": "^1.0.0",
     "SHPS4Node-plugin": "^1.0.0",
     "SHPS4Node-sandbox": "^1.1.0",
     "SHPS4Node-schedule": "^1.0.0",
     "SHPS4Node-session": "^1.0.0",
-    "SHPS4Node-SQL": "^1.1.0"
+    "commander": "^2.9.0",
+    "data-drift": "^1.0.0",
+    "mics": "^0.5.0",
+    "node-mod-load": "^3.1.0",
+    "pretty-error": "^2.1.0",
+    "rustify-js": "^0.1.1"
   },
   "devDependencies": {
     "eslint": "^3.13.0",
     "eslint-config-google": "^0.7.0"
+  },
+  "engines": {
+    "node": ">= 6"
   }
 }

@@ -3,3 +3,23 @@ node_modules
 
 # JetBrains
 .idea/
+
+# SHPS ignore
+cache/*
+cert/*
+config/*
+db/*
+log/*
+pool/*
+upload/*
+system/plugins/*
+
+# SHPS allow
+!cache/deleteme
+!cert/deleteme
+!config/deleteme
+!db/deleteme
+!log/deleteme
+!pool/deleteme
+!upload/deleteme
+!system/plugins/test

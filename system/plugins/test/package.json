@@ -1,7 +1,7 @@
 {
     "name": "SHPS internal Test Plugin",
     "version": "0.1.0",
-    "main": "./test.js",
+    "main": "test.js",
     "author": "Marco Alka <me@marco-alka.de>",
     "website": "https://shps.io",
     "GUID": "77e7eb14-2af2-11e5-bdca-801934e9dffd"

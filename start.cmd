@@ -1,2 +1,0 @@
-node SHPS.js
-PAUSE

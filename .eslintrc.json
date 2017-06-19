@@ -12,7 +12,12 @@
     "eol-last": ["warn", "always"],
     "newline-before-return": "warn",
     "newline-after-var": "warn",
-    "linebreak-style": ["warn", "unix"],
-    "padded-blocks": ["warn", "always"]
+    "linebreak-style": ["warn", "windows"],
+    "padded-blocks": ["warn", "never"],
+    "max-len": [1, {
+      "code": 120
+    }],
+    "arrow-parens": "off",
+    "no-console": "off"
   }
 }

@@ -1,10 +1,10 @@
 'use strict';
 
 const libs = require('node-mod-load')('SHPS4Node-main').libs;
-const Result = require('result-js');
+const Result = require('rustify-js').Result;
 
 
-libs['main.h'].init = function () {
+libs['main.h'].init = function() {
 
     console.log('Set up error management...');
 
