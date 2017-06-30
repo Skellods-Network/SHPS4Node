@@ -4,7 +4,11 @@
 
 'use strict';
 
+const cp = require('child_process');
+
 const commander = require('commander');
+const nml = require('node-mod-load');
+const init = require('SHPS4Node-init');
 
 
 let debug = false;
@@ -29,30 +33,35 @@ if (process.argv.length > 2) {
 if (!debug && !global.gc) {
     console.log('Reconfigure NodeJS start parameters...');
 
-    const cp = require('child_process');
     const params = ['--expose-gc'];
 
     params.push(process.argv.slice(1));
-    cp.spawn(process.argv[0], params, {stdio: 'inherit'});
+    cp.spawn(process.argv[0], params, { stdio: 'inherit' });
 } else {
     // Thirdly, start SHPS:
-    const nml = require('node-mod-load');
-    const boot = require('SHPS4Node-init').boot;
+    const boot = init.boot;
 
     const nmlMain = nml('SHPS4Node-main');
 
     // Display all the errors which happen during boot
     // For now, recovering from fatal system errors is not supported
-    nmlMain.addPath('./system/core').then(
-        () => boot(debug).then(
-            () => {
-            },
-            $e => {
-                console.error($e);
-            }
-        ),
-        $e => {
+    nmlMain
+        .addPath('./system/core')
+        .then(
+            () => boot(debug)
+                .then(() => {
+                    const nmlGlobal = nml('SHPS4Node');
+
+                    nmlGlobal.libs.coml.writeLn('Start System...');
+                    nmlGlobal.libs.main.startSystem();
+                    // nlm('SHPS4Node').coml.startTerminal();
+                })
+                .catch($e => {
+                    console.error($e);
+                // eslint-disable-next-line comma-dangle
+                })
+        )
+        .catch($e => {
             console.error($e);
-        }
-    );
+        });
 }

@@ -18,15 +18,16 @@
   },
   "dependencies": {
     "SHPS4Node-SQL": "^1.1.0",
-    "SHPS4Node-auth": "^1.0.0",
+    "SHPS4Node-auth": "github:Skellods-Network/SHPS4Node-auth#develop",
     "SHPS4Node-cache": "^1.0.0",
-    "SHPS4Node-commandline": "^1.1.0",
-    "SHPS4Node-config": "^1.1.0",
-    "SHPS4Node-dependency": "^1.0.0",
+    "SHPS4Node-commandline": "github:Skellods-Network/SHPS4Node-commandline#develop",
+    "SHPS4Node-config": "github:Skellods-Network/SHPS4Node-config#develop",
+    "SHPS4Node-dependency": "github:Skellods-Network/SHPS4Node-dependency#develop",
     "SHPS4Node-error": "^1.0.0",
-    "SHPS4Node-init": "git+https://github.com/Skellods-Network/SHPS4Node-init.git#c0073d92790db783f4e97cd30576ffb63c42becf",
+    "SHPS4Node-init": "github:Skellods-Network/SHPS4Node-init#develop",
+    "SHPS4Node-language": "^1.0.0",
     "SHPS4Node-log": "^1.0.0",
-    "SHPS4Node-optimize": "^1.0.0",
+    "SHPS4Node-optimize": "github:Skellods-Network/SHPS4Node-optimize#develop",
     "SHPS4Node-parallel": "^1.0.0",
     "SHPS4Node-plugin": "^1.0.0",
     "SHPS4Node-sandbox": "^1.1.0",
@@ -41,7 +42,9 @@
   },
   "devDependencies": {
     "eslint": "^3.13.0",
-    "eslint-config-google": "^0.7.0"
+    "eslint-config-airbnb-base": "^11.2.0",
+    "eslint-config-google": "^0.7.0",
+    "eslint-plugin-import": "^2.6.1"
   },
   "engines": {
     "node": ">= 6"

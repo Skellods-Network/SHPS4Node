@@ -1,8 +1,9 @@
 'use strict';
 
-const h = require('../interface/main.h');
+const H = require('../interface/main.h');
+const sym = require('../interface/main.sym.h');
 
-h.prototype._init = function($isDebug = false) {
+H.prototype[sym.construct] = function mainConstructor($isDebug = false) {
     Object.defineProperty(this, '_isDebug', {
         configurable: false,
         enumerable: false,
@@ -11,7 +12,7 @@ h.prototype._init = function($isDebug = false) {
 
     });
 
-    this.mixins = h.mixins;
-    this.directories = h.directories;
-    this.RequestState = h.RequestState;
+    this.mixins = H.mixins;
+    this.directories = H.directories;
+    this.RequestState = H.RequestState;
 };
