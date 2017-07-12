@@ -35,7 +35,7 @@
     "SHPS4Node-session": "^1.0.0",
     "commander": "^2.9.0",
     "data-drift": "^1.0.0",
-    "mics": "^0.5.0",
+    "mics": "^0.6.3",
     "node-mod-load": "^3.1.0",
     "pretty-error": "^2.1.0",
     "rustify-js": "^0.1.1"

@@ -52,9 +52,8 @@ if (!debug && !global.gc) {
                 .then(() => {
                     const nmlGlobal = nml('SHPS4Node');
 
-                    nmlGlobal.libs.coml.writeLn('Start System...');
+                    nmlGlobal.libs.coml.writeLn('Start system...');
                     nmlGlobal.libs.main.startSystem();
-                    // nlm('SHPS4Node').coml.startTerminal();
                 })
                 .catch($e => {
                     console.error($e);
