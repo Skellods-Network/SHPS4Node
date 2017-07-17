@@ -9,6 +9,7 @@ const cp = require('child_process');
 const commander = require('commander');
 const nml = require('node-mod-load');
 const init = require('SHPS4Node-init');
+const semver = require('semver');
 
 
 let debug = false;
@@ -33,10 +34,24 @@ if (process.argv.length > 2) {
 if (!debug && !global.gc) {
     console.log('Reconfigure NodeJS start parameters...');
 
-    const params = ['--expose-gc'];
+    const params = [
+        '--expose-gc',
+        '--log-colour',
+        '--no-warnings',
+        '--preserve-symlinks',
+        '--use-strict',
+    ];
 
+    if (semver.gte(process.version, '8.0.0')) {
+        params.push('--pending-deprecation');
+    }
+
+    params.push('--');
     params.push(process.argv.slice(1));
-    cp.spawn(process.argv[0], params, { stdio: 'inherit' });
+    const nodePath = process.argv[0];
+
+    console.log(`${nodePath} ${params.join(' ')}`);
+    cp.spawn(nodePath, params, { stdio: 'inherit' });
 } else {
     // Thirdly, start SHPS:
     const boot = init.boot;

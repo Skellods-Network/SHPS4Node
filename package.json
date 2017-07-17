@@ -17,28 +17,24 @@
     "url": "https://github.com/Skellods-Network/SHPS4Node.git"
   },
   "dependencies": {
-    "SHPS4Node-SQL": "^1.1.0",
+    "SHPS4Node-SQL": "github:Skellods-Network/SHPS4Node-SQL#develop",
     "SHPS4Node-auth": "github:Skellods-Network/SHPS4Node-auth#develop",
-    "SHPS4Node-cache": "^1.0.0",
     "SHPS4Node-commandline": "github:Skellods-Network/SHPS4Node-commandline#develop",
     "SHPS4Node-config": "github:Skellods-Network/SHPS4Node-config#develop",
     "SHPS4Node-dependency": "github:Skellods-Network/SHPS4Node-dependency#develop",
-    "SHPS4Node-error": "^1.0.0",
     "SHPS4Node-init": "github:Skellods-Network/SHPS4Node-init#develop",
     "SHPS4Node-language": "^1.0.0",
-    "SHPS4Node-log": "^1.0.0",
     "SHPS4Node-optimize": "github:Skellods-Network/SHPS4Node-optimize#develop",
-    "SHPS4Node-parallel": "^1.0.0",
-    "SHPS4Node-plugin": "^1.0.0",
+    "SHPS4Node-plugin": "github:Skellods-Network/SHPS4Node-plugin#develop",
     "SHPS4Node-sandbox": "^1.1.0",
-    "SHPS4Node-schedule": "^1.0.0",
-    "SHPS4Node-session": "^1.0.0",
     "commander": "^2.9.0",
     "data-drift": "^1.0.0",
     "mics": "^0.6.3",
     "node-mod-load": "^3.1.0",
     "pretty-error": "^2.1.0",
-    "rustify-js": "^0.1.1"
+    "rotating-file-stream": "^1.2.2",
+    "rustify-js": "^0.1.1",
+    "semver": "^5.3.0"
   },
   "devDependencies": {
     "eslint": "^3.13.0",

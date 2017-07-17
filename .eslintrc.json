@@ -20,6 +20,9 @@
     "arrow-parens": "off",
     "no-console": "off",
     "strict": "off",
-    "indent": ["error", 4]
+    "indent": ["error", 4],
+    "no-nested-ternary": "off",
+    "no-bitwise": "off",
+    "comma-dangle": "warn"
   }
 }

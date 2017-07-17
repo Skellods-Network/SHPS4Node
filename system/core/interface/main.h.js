@@ -1,4 +1,4 @@
-/* eslint-disable class-methods-use-this */
+/* eslint-disable class-methods-use-this,no-unused-vars */
 
 'use strict';
 
@@ -58,6 +58,30 @@ module.exports = mix(mixBase, mixInit, superclass => class SHPS extends supercla
     }
 
     /**
+     * Log Levels
+     * @returns {
+     *   {
+     *     trace: {level: number, prefix: string},
+     *     debug: {level: number, prefix: string},
+     *     info: {level: number, prefix: string},
+     *     warning: {level: number, prefix: string},
+     *     error: {level: number, prefix: string},
+     *     fatal: {level: number, prefix: string}
+     *   }
+     * }
+     */
+    static get logLevels() {
+        return {
+            trace: { level: 0, prefix: 'TRC' },
+            debug: { level: 1, prefix: 'DBG' },
+            info: { level: 2, prefix: 'NFO' },
+            warning: { level: 3, prefix: 'WRN' },
+            error: { level: 4, prefix: 'ERR' },
+            fatal: { level: 5, prefix: 'FTL' },
+        };
+    }
+
+    /**
      * Mixins
      *
      * @return {{base: *, init: *}}
@@ -79,13 +103,21 @@ module.exports = mix(mixBase, mixInit, superclass => class SHPS extends supercla
         return RequestState;
     }
 
-    // noinspection JSUnusedGlobalSymbols
     /**
      * Returns debug status
      *
      * @return {boolean} true if debug-mode is enabled
      */
-    isDebug() {}
+    isDebug() { throw new Error('Not implemented: main.isDebug()'); }
 
-    startSystem() {}
+    startSystem() { throw new Error('Not implemented: main.startSystem()'); }
+
+    /**
+     * Write to global logger
+     *
+     * @param {logLevels|number} level
+     * @param {string|{mod:string,msg:string}} message
+     * @param {function} cb
+     */
+    writeLog(level, message, cb) { throw new Error('Not implemented: main.getLogger()'); }
 });
