@@ -12,6 +12,8 @@ H.prototype.startSystem = function mainStartSystem() {
         msg: 'main.startSystem()',
     });
 
+    // todo: make everything sync by waiting for promises
+
     libs.coml.writeLn('Establish process objective in cluster...');
     if (pc.isWorker) {
         // todo: get cluster info and register to get functionality. Do other stuff dependeing on that!
@@ -23,10 +25,11 @@ H.prototype.startSystem = function mainStartSystem() {
     // todo: check FS (r+w on necessary folders, r-only on certain folders)
     this.writeLog(this.logLevels.warning, { mod: 'MAIN', msg: 'fixme: implement FS check!' });
 
-    libs.coml.writeLn('Load plugins...');
-    //libs.plugin.loadPlugins();
+    this.writeLog(this.logLevels.debug, { mod: 'MAIN', msg: `load plugins from "${libs.main.directories.plugins}"` });
+    libs.plugin.loadPlugins(libs.main.directories.plugins);
 
     libs.coml.writeLn('Load configs...');
+    libs.config.loadTemplates(libs.main.directories.templates);
     // todo: load configs
     this.writeLog(this.logLevels.warning, { mod: 'MAIN', msg: 'fixme: load configs!' });
 

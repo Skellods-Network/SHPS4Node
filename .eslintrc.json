@@ -23,6 +23,7 @@
     "indent": ["error", 4],
     "no-nested-ternary": "off",
     "no-bitwise": "off",
+    "no-underscore-dangle": "off",
     "comma-dangle": "warn"
   }
 }

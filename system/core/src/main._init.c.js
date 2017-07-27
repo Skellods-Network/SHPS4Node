@@ -4,15 +4,7 @@ const H = require('../interface/main.h');
 const LogRotate = require('rotating-file-stream');
 const sym = require('../interface/main.sym.h');
 
-H.prototype[sym.construct] = function mainConstructor($isDebug = false) {
-    Object.defineProperty(this, '_isDebug', {
-        configurable: false,
-        enumerable: false,
-        value: $isDebug,
-        writable: false,
-
-    });
-
+H.prototype[sym.construct] = function mainConstructor() {
     this.mixins = H.mixins;
     this.directories = H.directories;
     this.RequestState = H.RequestState;

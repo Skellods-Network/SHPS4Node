@@ -21,9 +21,9 @@ module.exports = mix(mixBase, mixInit, superclass => class SHPS extends supercla
      *
      * @param {boolean} $isDebug
      */
-    constructor($isDebug = false) {
+    constructor() {
         super();
-        this[sym.construct]($isDebug);
+        this[sym.construct]();
     }
 
     /**
@@ -49,10 +49,10 @@ module.exports = mix(mixBase, mixInit, superclass => class SHPS extends supercla
             configs: `${dirRoot}config${path.sep}`,
             dbs: `${dirRoot}db${path.sep}`,
             logs: `${dirRoot}log${path.sep}`,
-            plugins: `${dirRoot}system' + path.sep + 'plugins${path.sep}`,
+            plugins: `${dirRoot}system${path.sep}plugins${path.sep}`,
             pool: `${dirRoot}pool${path.sep}`,
             root: dirRoot,
-            templates: `${dirRoot}system' + path.sep + 'templates${path.sep}`,
+            templates: `${dirRoot}system${path.sep}templates${path.sep}`,
             uploads: `${dirRoot}upload${path.sep}`,
         };
     }
@@ -102,13 +102,6 @@ module.exports = mix(mixBase, mixInit, superclass => class SHPS extends supercla
     static get RequestState() {
         return RequestState;
     }
-
-    /**
-     * Returns debug status
-     *
-     * @return {boolean} true if debug-mode is enabled
-     */
-    isDebug() { throw new Error('Not implemented: main.isDebug()'); }
 
     startSystem() { throw new Error('Not implemented: main.startSystem()'); }
 

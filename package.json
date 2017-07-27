@@ -30,7 +30,7 @@
     "commander": "^2.9.0",
     "data-drift": "^1.0.0",
     "mics": "^0.6.3",
-    "node-mod-load": "^3.1.0",
+    "node-mod-load": "^3.2.2",
     "pretty-error": "^2.1.0",
     "rotating-file-stream": "^1.2.2",
     "rustify-js": "^0.1.1",
@@ -43,6 +43,6 @@
     "eslint-plugin-import": "^2.6.1"
   },
   "engines": {
-    "node": ">= 6"
+    "node": ">= 8"
   }
 }
