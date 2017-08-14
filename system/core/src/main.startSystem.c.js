@@ -6,7 +6,7 @@ const libs = require('node-mod-load')('SHPS4Node').libs;
 
 const H = require('../interface/main.h');
 
-H.prototype.startSystem = function mainStartSystem() {
+H.prototype.startSystem = async function mainStartSystem() {
     this.writeLog(this.logLevels.trace, {
         mod: 'MAIN',
         msg: 'main.startSystem()',
@@ -14,11 +14,14 @@ H.prototype.startSystem = function mainStartSystem() {
 
     // todo: make everything sync by waiting for promises
 
-    libs.coml.writeLn('Establish process objective in cluster...');
+    libs.coml.write('Establish process objective in cluster...');
     if (pc.isWorker) {
         // todo: get cluster info and register to get functionality. Do other stuff dependeing on that!
         this.writeLog(this.logLevels.warning, { mod: 'MAIN', msg: 'fixme: implement clustering!' });
         return;
+    }
+    else {
+        libs.coml.writeLn(' I am Master!');
     }
 
     libs.coml.writeLn('Check filesystem...');
@@ -26,12 +29,12 @@ H.prototype.startSystem = function mainStartSystem() {
     this.writeLog(this.logLevels.warning, { mod: 'MAIN', msg: 'fixme: implement FS check!' });
 
     this.writeLog(this.logLevels.debug, { mod: 'MAIN', msg: `load plugins from "${libs.main.directories.plugins}"` });
-    libs.plugin.loadPlugins(libs.main.directories.plugins);
+    await libs.plugin.loadPlugins(libs.main.directories.plugins);
 
     libs.coml.writeLn('Load configs...');
-    libs.config.loadTemplates(libs.main.directories.templates);
-    // todo: load configs
+    await libs.config.loadTemplates(libs.main.directories.templates);
     this.writeLog(this.logLevels.warning, { mod: 'MAIN', msg: 'fixme: load configs!' });
+    //await libs.config.loadConfigs(libs.main.directories.configs);
 
     libs.coml.writeLn('Check environment...');
     // todo: check env (SQL)
@@ -53,8 +56,5 @@ H.prototype.startSystem = function mainStartSystem() {
     libs.coml.writeLn('\nI am done starting the system!');
     libs.coml.writeLn('If you need help, type `help` and press enter.\n');
 
-    this.writeLog(this.logLevels.trace, {
-        mod: 'MAIN',
-        msg: '\\\\ main.startSystem()',
-    });
+    this.writeLog(this.logLevels.trace, { mod: 'MAIN', msg: '\\\\ main.startSystem()' });
 };
