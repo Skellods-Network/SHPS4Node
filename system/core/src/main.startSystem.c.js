@@ -31,14 +31,15 @@ H.prototype.startSystem = async function mainStartSystem() {
     this.writeLog(this.logLevels.debug, { mod: 'MAIN', msg: `load plugins from "${libs.main.directories.plugins}"` });
     await libs.plugin.loadPlugins(libs.main.directories.plugins);
 
-    libs.coml.writeLn('Load configs...');
     await libs.config.loadTemplates(libs.main.directories.templates);
+    this.writeLog(this.logLevels.warning, { mod: 'MAIN', msg: 'fixme: check if master-config template is available, else download it!' });
     this.writeLog(this.logLevels.warning, { mod: 'MAIN', msg: 'fixme: load configs!' });
     //await libs.config.loadConfigs(libs.main.directories.configs);
+    this.writeLog(this.logLevels.warning, { mod: 'MAIN', msg: 'fixme: check if master-config is available, else create it!' });
 
     libs.coml.writeLn('Check environment...');
     // todo: check env (SQL)
-    this.writeLog(this.logLevels.warning, { mod: 'MAIN', msg: 'fixme: check environment!' });
+    this.writeLog(this.logLevels.warning, { mod: 'MAIN', msg: 'fixme: check environment, e.g. SQL!' });
 
     libs.coml.writeLn('Load pipelines...');
     libs.coml.writeLn('Build pipelines...');

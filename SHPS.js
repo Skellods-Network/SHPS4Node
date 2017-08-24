@@ -44,7 +44,6 @@ if (!debug && !global.gc) {
     const params = [
         '--expose-gc',
         '--log-colour',
-        '--no-warnings',
         '--preserve-symlinks',
         '--use-strict',
     ];
