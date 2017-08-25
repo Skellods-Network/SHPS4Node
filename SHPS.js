@@ -10,6 +10,7 @@ const commander = require('commander');
 const nml = require('node-mod-load');
 const init = require('SHPS4Node-init');
 const prettyError = require('pretty-error');
+const rustify = require('rustify-js');
 const semver = require('semver');
 
 const packageConfig = require('./package.json');
@@ -19,23 +20,21 @@ let debug = false;
 
 
 // Firstly, check the script arguments:
-if (process.argv.length > 2) {
-    commander
-        .allowUnknownOption(false)
-        .description(`
+commander
+    .allowUnknownOption(false)
+    .description(`
   SHPS Application Framework
 
   SHPS exposes a foundation which should be used as base for any kind of server application.
   The main concerns include security, performance and ease-of-use.\n`)
-        .option('-d, --debug', 'start in debug mode, which disables certain run-time optimizations')
-        .option('-p, --prod', 'start SHPS without asking maintenance-related questions')
-        .parse(process.argv);
+    .option('-d, --debug', 'start in debug mode, which disables certain run-time optimizations')
+    .option('-p, --prod', 'start SHPS without asking maintenance-related questions')
+    .parse(process.argv);
 
-    debug = !!commander.debug;
-    SHPS.addMeta('_options', {});
-    SHPS.libs._options.debug = !!commander.debug;
-    SHPS.libs._options.prod = !!commander.prod;
-}
+debug = !!commander.debug;
+SHPS.addMeta('_options', {});
+SHPS.libs._options.debug = !!commander.debug;
+SHPS.libs._options.prod = !!commander.prod;
 
 // Secondly, check NodeJS features and compare them against the script arguments:
 if (!debug && !global.gc) {
@@ -67,6 +66,10 @@ if (!debug && !global.gc) {
     prettyError.start();
     nmlGlobal.addMeta('_config', packageConfig);
 
+    // todo: there seems to be a bug in rustify and the registerAllGlobals() static method is not available. fix it!
+    rustify.Option.registerGlobals();
+    rustify.Result.registerGlobals();
+
     // Display all the errors which happen during boot
     // For now, recovering from fatal system errors is not supported
     nmlMain
@@ -75,15 +78,23 @@ if (!debug && !global.gc) {
             () => boot(debug)
                 .then(() => {
                     nmlGlobal.libs.coml.writeLn('Start system...');
-                    nmlGlobal.libs.main.startSystem();
+                    nmlGlobal
+                        .libs
+                        .main
+                        .startSystem()
+                        .then(() => { /* nothing, the bootstrap successfully ended, init booted and SHPS started */ })
+                        .catch($e => {
+                            nmlGlobal.libs.coml.error('Could not start SHPS!');
+                            throw $e;
+                        });
                 })
                 .catch($e => {
-                    console.error($e);
+                    throw $e;
                 // eslint-disable-next-line comma-dangle
                 })
         )
         .catch($e => {
-            console.error($e);
+            throw $e;
         })
     ;
 }

@@ -7,13 +7,6 @@ const libs = require('node-mod-load')('SHPS4Node').libs;
 const H = require('../interface/main.h');
 
 H.prototype.startSystem = async function mainStartSystem() {
-    this.writeLog(this.logLevels.trace, {
-        mod: 'MAIN',
-        msg: 'main.startSystem()',
-    });
-
-    // todo: make everything sync by waiting for promises
-
     libs.coml.write('Establish process objective in cluster...');
     if (pc.isWorker) {
         // todo: get cluster info and register to get functionality. Do other stuff dependeing on that!
@@ -41,14 +34,15 @@ H.prototype.startSystem = async function mainStartSystem() {
     // todo: check env (SQL)
     this.writeLog(this.logLevels.warning, { mod: 'MAIN', msg: 'fixme: check environment, e.g. SQL!' });
 
+    libs.coml.writeLn('Start sub-processes...');
+    // todo: start sub-processes, establish IPC, distribute tasks, etc.
+
+    this.writeLog(this.logLevels.warning, { mod: 'MAIN', msg: 'fixme: Master should not serve, only build pipeline on slaves!' });
     libs.coml.writeLn('Load pipelines...');
     libs.coml.writeLn('Build pipelines...');
     libs.coml.writeLn('Start pipelines...');
     // todo: build pipelines and start them
     this.writeLog(this.logLevels.warning, { mod: 'MAIN', msg: 'fixme: build pipeline!' });
-
-    libs.coml.writeLn('Start sub-processes...');
-    // todo: start sub-processes, establish IPC, distribute tasks, etc.
 
     libs.coml.writeLn('Start terminal...');
     libs.coml.registerCommand('exit', 'exit', 'Shutdown SHPS', () => libs.init.halt());
@@ -56,6 +50,4 @@ H.prototype.startSystem = async function mainStartSystem() {
 
     libs.coml.writeLn('\nI am done starting the system!');
     libs.coml.writeLn('If you need help, type `help` and press enter.\n');
-
-    this.writeLog(this.logLevels.trace, { mod: 'MAIN', msg: '\\\\ main.startSystem()' });
 };
