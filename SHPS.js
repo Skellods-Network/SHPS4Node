@@ -82,7 +82,10 @@ if (!debug && !global.gc) {
                         .libs
                         .main
                         .startSystem()
-                        .then(() => { /* nothing, the bootstrap successfully ended, init booted and SHPS started */ })
+                        .then(() => {
+                            process.title =
+                                `${packageConfig.name} v${packageConfig.version} ${packageConfig.cycle} Terminal`;
+                        })
                         .catch($e => {
                             nmlGlobal.libs.coml.error('Could not start SHPS!');
                             throw $e;

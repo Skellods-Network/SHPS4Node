@@ -7,6 +7,9 @@ const libs = require('node-mod-load')('SHPS4Node').libs;
 const H = require('../interface/main.h');
 
 H.prototype.startSystem = async function mainStartSystem() {
+    let task;
+    let ok = true;
+
     libs.coml.write('Establish process objective in cluster...');
     if (pc.isWorker) {
         // todo: get cluster info and register to get functionality. Do other stuff dependeing on that!
@@ -24,7 +27,16 @@ H.prototype.startSystem = async function mainStartSystem() {
     this.writeLog(this.logLevels.debug, { mod: 'MAIN', msg: `load plugins from "${libs.main.directories.plugins}"` });
     await libs.plugin.loadPlugins(libs.main.directories.plugins);
 
-    await libs.config.loadTemplates(libs.main.directories.templates);
+    ok = true;
+    task = libs.coml.startTask('Load templates');
+    await libs.config.loadTemplates(libs.main.directories.templates, {
+        fileFoundHandler: $fileName => task.interim(task.result.ok, `Found file "${$fileName}"`),
+        fileLoadedHandler: $templateName => task.interim(task.result.ok, `Loaded template "${$templateName}"`),
+        errorHandler: ($fileName, $err) => { task.interim(task.result.error, `${$fileName}: ${$err.message}`); ok = false; },
+    });
+
+    task.end(ok ? task.result.ok : task.result.error);
+
     this.writeLog(this.logLevels.warning, { mod: 'MAIN', msg: 'fixme: check if master-config template is available, else download it!' });
     this.writeLog(this.logLevels.warning, { mod: 'MAIN', msg: 'fixme: load configs!' });
     //await libs.config.loadConfigs(libs.main.directories.configs);
