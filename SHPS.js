@@ -76,7 +76,8 @@ if (!debug && !global.gc) {
         .addPath('./system/core')
         .then(
             () => boot(debug)
-                .then(() => {
+                // Set timeout to flush warning queue
+                .then(() => setTimeout(() => {
                     nmlGlobal.libs.coml.writeLn('Start system...');
                     nmlGlobal
                         .libs
@@ -90,7 +91,7 @@ if (!debug && !global.gc) {
                             nmlGlobal.libs.coml.error('Could not start SHPS!');
                             throw $e;
                         });
-                })
+                }, 0))
                 .catch($e => {
                     throw $e;
                 // eslint-disable-next-line comma-dangle
