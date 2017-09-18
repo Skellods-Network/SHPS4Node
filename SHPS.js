@@ -13,7 +13,11 @@ const prettyError = require('pretty-error');
 const rustify = require('rustify-js');
 const semver = require('semver');
 
-const packageConfig = require('./package.json');
+const packageConfig = rustify
+    .Result
+    // eslint-disable-next-line global-require
+    .fromTry(() => require('./package.json'))
+    .expect('Could not load package.json! Please make sure it exists.');
 
 const SHPS = nml('SHPS4Node');
 let debug = false;
@@ -88,7 +92,7 @@ if (!debug && !global.gc) {
                                 `${packageConfig.name} v${packageConfig.version} ${packageConfig.cycle} Terminal`;
                         })
                         .catch($e => {
-                            nmlGlobal.libs.coml.error('Could not start SHPS!');
+                            nmlGlobal.libs.coml.writeError('Could not start SHPS!');
                             throw $e;
                         });
                 }, 0))
